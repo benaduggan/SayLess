@@ -24,7 +24,7 @@ const TrimUI = () => {
   const outDur = resolved?.outputDuration || 0;
 
   return (
-    <div className={styles.trimWrap} style={{ padding: "0 24px 20px" }}>
+    <div className={styles.trimWrap} style={{ padding: "0 24px 20px", boxSizing: "border-box" }}>
       <div style={header}>
         <span style={{ fontWeight: 600 }}>Timeline</span>
         <span style={{ color: "#888", fontSize: 12 }}>
