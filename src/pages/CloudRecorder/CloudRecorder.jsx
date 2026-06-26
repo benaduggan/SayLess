@@ -434,7 +434,7 @@ const CloudRecorder = () => {
     const payload = { ts: Date.now(), event, ...data };
     // console.warn (not console.info); Terser drop_console removes
     // info/log/debug in prod builds.
-    console.warn("[Screenity][StartFlow]", payload);
+    console.warn("[SayLess][StartFlow]", payload);
     // Mirror to BG so the timeline is visible even if the cloud
     // recorder tab closes mid-sequence (e.g. an unhandled error
     // tearing the tab down before the user can read the console).
@@ -477,13 +477,13 @@ const CloudRecorder = () => {
         typeof countdownFinishedAt === "number" &&
         firstChunkAt < countdownFinishedAt
       ) {
-        console.error("[Screenity][StartFlow] Chunk before countdown end", {
+        console.error("[SayLess][StartFlow] Chunk before countdown end", {
           firstChunkAt,
           countdownFinishedAt,
         });
       }
     } catch (err) {
-      console.warn("[Screenity][StartFlow] Countdown assert failed", err);
+      console.warn("[SayLess][StartFlow] Countdown assert failed", err);
     }
   };
 
@@ -1853,7 +1853,7 @@ const CloudRecorder = () => {
         chrome.storage.local.remove(["recorderSession", sessionStateKey]);
         sendRecordingError(
           result?.error ||
-            "Another Screenity recorder is already running. Please close it and try again.",
+            "Another SayLess recorder is already running. Please close it and try again.",
         );
         return false;
       }
@@ -2202,7 +2202,7 @@ const CloudRecorder = () => {
       try {
         await chrome.downloads.download({
           url: objectUrl,
-          filename: `Screenity-Finalize-Diagnostics-${new Date().toISOString()}.json`,
+          filename: `SayLess-Finalize-Diagnostics-${new Date().toISOString()}.json`,
           saveAs: false,
         });
       } finally {
@@ -2275,7 +2275,7 @@ const CloudRecorder = () => {
       try {
         await chrome.downloads.download({
           url: objectUrl,
-          filename: `Screenity-Recovery-${new Date().toISOString()}-${reason}.webm`,
+          filename: `SayLess-Recovery-${new Date().toISOString()}-${reason}.webm`,
           saveAs: false,
         });
         chrome.runtime.sendMessage({
@@ -2443,7 +2443,7 @@ const CloudRecorder = () => {
             try {
               await chrome.downloads.download({
                 url: objectUrl,
-                filename: `Screenity-Recovered-${ts}.webm`,
+                filename: `SayLess-Recovered-${ts}.webm`,
                 saveAs: false,
               });
             } finally {
@@ -2472,7 +2472,7 @@ const CloudRecorder = () => {
             try {
               await chrome.downloads.download({
                 url: cameraObjectUrl,
-                filename: `Screenity-Recovered-Camera-${ts}.webm`,
+                filename: `SayLess-Recovered-Camera-${ts}.webm`,
                 saveAs: false,
               });
             } finally {
@@ -2886,7 +2886,7 @@ const CloudRecorder = () => {
     emptyCleanupRef.current = true;
 
     console.warn(
-      `[Screenity] empty upload cleanup reason=${reason} screenOffset=${screenOffset} cameraOffset=${cameraOffset}`,
+      `[SayLess] empty upload cleanup reason=${reason} screenOffset=${screenOffset} cameraOffset=${cameraOffset}`,
     );
 
     await Promise.allSettled([
@@ -2920,7 +2920,7 @@ const CloudRecorder = () => {
 
   const sendRecordingError = (why, cancel = false) => {
     console.error(
-      `[Screenity][CloudRecorder] sendRecordingError why=${typeof why === "string" ? why : JSON.stringify(why)} cancel=${cancel}`,
+      `[SayLess][CloudRecorder] sendRecordingError why=${typeof why === "string" ? why : JSON.stringify(why)} cancel=${cancel}`,
     );
     void cleanupIfEmptyUploads("error");
     sendRecordingErrorBase(why, cancel);
@@ -4887,7 +4887,7 @@ const CloudRecorder = () => {
 
     const shouldNotifyEditor = !multiMode || recordingToScene;
     if (!shouldNotifyEditor || !projectId || !sceneId) {
-      console.warn("[Screenity][CloudRecorder] Skipping editor-ready", {
+      console.warn("[SayLess][CloudRecorder] Skipping editor-ready", {
         shouldNotifyEditor,
         hasProjectId: Boolean(projectId),
         hasSceneId: Boolean(sceneId),
@@ -4897,7 +4897,7 @@ const CloudRecorder = () => {
       return;
     }
 
-    console.info("[Screenity][CloudRecorder] Sending editor-ready", {
+    console.info("[SayLess][CloudRecorder] Sending editor-ready", {
       projectId,
       sceneId,
       recordingToScene: Boolean(recordingToScene),
@@ -5274,7 +5274,7 @@ const CloudRecorder = () => {
     stopTick("stop-pressed", { reason, shouldFinalize });
 
     if (DEBUG_START_FLOW) {
-      console.debug("[Screenity] stopRecording invoked", {
+      console.debug("[SayLess] stopRecording invoked", {
         reason,
         shouldFinalize,
         screenState: screenRecorder.current?.state,

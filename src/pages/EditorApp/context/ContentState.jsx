@@ -455,7 +455,7 @@ const ContentState = (props) => {
       const handleStatus = (status) => {
         if (!status || done) return;
         if (DEBUG_POSTSTOP)
-          console.debug("[Screenity][Sandbox] waitForFinalizeReady status", {
+          console.debug("[SayLess][Sandbox] waitForFinalizeReady status", {
             status,
           });
         const rawPct = typeof status.percent === "number" ? status.percent : 0;
@@ -566,7 +566,7 @@ const ContentState = (props) => {
       debug("No chunks found in chunk reader");
       if (DEBUG_POSTSTOP)
         console.warn(
-          "[Screenity][Sandbox] buildBlobFromChunks: no parts found",
+          "[SayLess][Sandbox] buildBlobFromChunks: no parts found",
         );
       debugRecordingEventWithSession(recdbgSessionRef.current, "blob-empty", {
         chunkCount: 0,
@@ -576,7 +576,7 @@ const ContentState = (props) => {
     const blob = readResult.blob;
     if (DEBUG_POSTSTOP)
       console.debug(
-        "[Screenity][Sandbox] buildBlobFromChunks: reconstructed blob",
+        "[SayLess][Sandbox] buildBlobFromChunks: reconstructed blob",
         {
           size: blob.size,
           type: blob.type,
@@ -598,7 +598,7 @@ const ContentState = (props) => {
         minute: "2-digit",
         hour12: true,
       });
-      const fallbackTitle = `Screenity video - ${formattedDate}`;
+      const fallbackTitle = `SayLess video - ${formattedDate}`;
 
       try {
         const { recordingMeta } = await chrome.storage.local.get([
@@ -842,7 +842,7 @@ const ContentState = (props) => {
     }
     if (blob.type === "video/mp4" || isFastWebm) {
       if (DEBUG_RECORDER)
-        console.log("[Screenity][Sandbox] reconstructVideo: fast path taken", {
+        console.log("[SayLess][Sandbox] reconstructVideo: fast path taken", {
           size: blob.size,
           type: blob.type,
           isFastWebm,
@@ -927,7 +927,7 @@ const ContentState = (props) => {
     // If recordingDuration is missing or 0, try to probe it from the blob
     if (!recordingDuration || recordingDuration <= 0) {
       console.warn(
-        "[Screenity][WebM] recordingDuration missing or 0, probing from blob",
+        "[SayLess][WebM] recordingDuration missing or 0, probing from blob",
       );
       try {
         const probeDuration = await new Promise((resolve) => {
@@ -958,7 +958,7 @@ const ContentState = (props) => {
           recordingDuration = probeDuration;
         }
       } catch (err) {
-        console.warn("[Screenity][WebM] blob duration probe failed:", err);
+        console.warn("[SayLess][WebM] blob duration probe failed:", err);
       }
     }
 
@@ -1050,7 +1050,7 @@ const ContentState = (props) => {
         }
       } else {
         console.warn(
-          "[Screenity][WebM] skipping duration fix: safeDuration=0, blob will have broken seek metadata",
+          "[SayLess][WebM] skipping duration fix: safeDuration=0, blob will have broken seek metadata",
         );
         if (
           contentStateRef.current.updateChrome ||
@@ -1082,7 +1082,7 @@ const ContentState = (props) => {
       }
     } catch (error) {
       console.error(
-        "[Screenity][WebM] duration fix failed, using unfixed blob:",
+        "[SayLess][WebM] duration fix failed, using unfixed blob:",
         error,
       );
       setContentState((prevState) => ({
@@ -1100,7 +1100,7 @@ const ContentState = (props) => {
         const s = contentStateRef.current;
         if (s?.ready) return;
         console.warn(
-          "[Screenity][WebM] reconstructVideo(blob) safety timeout: forcing ready with raw blob",
+          "[SayLess][WebM] reconstructVideo(blob) safety timeout: forcing ready with raw blob",
         );
         setContentState((prev) => {
           if (prev.ready) return prev;
@@ -1174,7 +1174,7 @@ const ContentState = (props) => {
     makeVideoCheck.current = true;
     perfMark("Sandbox makeVideoTab.enter", { override: message?.override });
     if (DEBUG_POSTSTOP)
-      console.debug("[Screenity][Sandbox] makeVideoTab invoked", {
+      console.debug("[SayLess][Sandbox] makeVideoTab invoked", {
         override: message?.override,
       });
     setContentState((prevState) => ({
@@ -1294,7 +1294,7 @@ const ContentState = (props) => {
               err: String(err?.message || err).slice(0, 200),
             });
             console.warn(
-              "[Screenity][Sandbox] OPFS direct read failed",
+              "[SayLess][Sandbox] OPFS direct read failed",
               { attempt, err },
             );
             if (attempt < MAX_OPFS_READ_ATTEMPTS) {
@@ -1317,7 +1317,7 @@ const ContentState = (props) => {
         err: String(err?.message || err).slice(0, 200),
       });
       console.warn(
-        "[Screenity][Sandbox] OPFS direct read failed",
+        "[SayLess][Sandbox] OPFS direct read failed",
         err,
       );
     }
@@ -1389,7 +1389,7 @@ const ContentState = (props) => {
     const safetyCheck = () => {
       const s = contentStateRef.current;
       if (DEBUG_POSTSTOP)
-        console.debug("[Screenity][Sandbox] makeVideoTab: safety-check", {
+        console.debug("[SayLess][Sandbox] makeVideoTab: safety-check", {
           chunkCount: s?.chunkCount,
           chunkIndex: s?.chunkIndex,
           rawBlob: Boolean(s?.rawBlob),
@@ -1414,7 +1414,7 @@ const ContentState = (props) => {
         if (s?.webm) {
           if (DEBUG_RECORDER)
             console.log(
-              "[Screenity][WebM] safety timeout: webm already set by fix, marking ready",
+              "[SayLess][WebM] safety timeout: webm already set by fix, marking ready",
             );
           setContentState((prev) => ({
             ...prev,
@@ -1424,7 +1424,7 @@ const ContentState = (props) => {
           }));
         } else {
           console.warn(
-            "[Screenity][WebM] safety timeout: duration fix did not complete in time, using unfixed rawBlob",
+            "[SayLess][WebM] safety timeout: duration fix did not complete in time, using unfixed rawBlob",
           );
           setContentState((prev) => ({
             ...prev,
@@ -1445,7 +1445,7 @@ const ContentState = (props) => {
     setTimeout(() => {
       if (!contentStateRef.current?.ready) {
         console.warn(
-          "[Screenity][WebM] 60s safety timeout: force-marking ready",
+          "[SayLess][WebM] 60s safety timeout: force-marking ready",
         );
         safetyCheck();
       }
@@ -1469,7 +1469,7 @@ const ContentState = (props) => {
     (request, sender, sendResponse) => {
       const message = request;
       if (DEBUG_POSTSTOP)
-        console.debug("[Screenity][Sandbox] onChromeMessage", {
+        console.debug("[SayLess][Sandbox] onChromeMessage", {
           type: message?.type,
           senderTab: sender?.tab?.id,
         });
@@ -1482,7 +1482,7 @@ const ContentState = (props) => {
       }
       if (message.type === "chunk-count") {
         if (DEBUG_POSTSTOP)
-          console.debug("[Screenity][Sandbox] received chunk-count", {
+          console.debug("[SayLess][Sandbox] received chunk-count", {
             count: message.count,
           });
         diagForward("sandbox-chunk-count-received", {
@@ -1561,7 +1561,7 @@ const ContentState = (props) => {
         }));
       } else if (message.type === "make-video-tab") {
         if (DEBUG_POSTSTOP)
-          console.debug("[Screenity][Sandbox] received make-video-tab");
+          console.debug("[SayLess][Sandbox] received make-video-tab");
         diagMakeVideoAtRef.current = Date.now();
         diagForward("sandbox-make-video-tab", null);
         makeVideoTab(sendResponse, message);
@@ -1922,14 +1922,14 @@ const ContentState = (props) => {
         const key = `chunks_ready_for:${tabId}`;
         if (changes[key]) {
           if (DEBUG_POSTSTOP)
-            console.debug("[Screenity][Sandbox] storage fallback triggered", {
+            console.debug("[SayLess][Sandbox] storage fallback triggered", {
               key,
             });
           // guard against localforage throwing where IndexedDB is unavailable
           if (!window.indexedDB) {
             if (DEBUG_POSTSTOP)
               console.warn(
-                "[Screenity][Sandbox] storage fallback: no indexedDB in this context, skipping",
+                "[SayLess][Sandbox] storage fallback: no indexedDB in this context, skipping",
               );
             return;
           }
@@ -1939,13 +1939,13 @@ const ContentState = (props) => {
               if (!blob) {
                 if (DEBUG_POSTSTOP)
                   console.warn(
-                    "[Screenity][Sandbox] storage fallback: no blob built",
+                    "[SayLess][Sandbox] storage fallback: no blob built",
                   );
                 return;
               }
               if (DEBUG_POSTSTOP)
                 console.debug(
-                  "[Screenity][Sandbox] storage fallback: blob built",
+                  "[SayLess][Sandbox] storage fallback: blob built",
                   {
                     size: blob.size,
                   },
@@ -1954,14 +1954,14 @@ const ContentState = (props) => {
             .catch((err) => {
               if (DEBUG_POSTSTOP)
                 console.warn(
-                  "[Screenity][Sandbox] storage fallback build error",
+                  "[SayLess][Sandbox] storage fallback build error",
                   err,
                 );
             });
         }
       } catch (err) {
         if (DEBUG_POSTSTOP)
-          console.warn("[Screenity][Sandbox] storageListener error", err);
+          console.warn("[SayLess][Sandbox] storageListener error", err);
       }
     };
 
@@ -2091,7 +2091,7 @@ const ContentState = (props) => {
       video.preload = "metadata";
       video.onloadedmetadata = async () => {
         if (process.env.SCREENITY_DEV_MODE === "true") {
-          console.log("[Screenity][cut-debug] updated-blob received", {
+          console.log("[SayLess][cut-debug] updated-blob received", {
             blobSize: blob?.length ?? blob?.size,
             blobIsBlob: blob instanceof Blob,
             measuredDuration: video.duration,
@@ -2188,7 +2188,7 @@ const ContentState = (props) => {
         ffmpegLoaded: true,
         isFfmpegRunning: false,
       }));
-      console.log("[Screenity][Editor] recording-complete sent from ffmpeg-load-error fallback");
+      console.log("[SayLess][Editor] recording-complete sent from ffmpeg-load-error fallback");
       chrome.runtime.sendMessage({ type: "recording-complete" });
     } else if (event.data.type === "ffmpeg-error") {
       console.warn("FFmpeg error:", {
@@ -2422,7 +2422,7 @@ const ContentState = (props) => {
             : {}),
         };
       });
-      console.log("[Screenity][Editor] recording-complete sent from ffmpeg-load-timeout fallback");
+      console.log("[SayLess][Editor] recording-complete sent from ffmpeg-load-timeout fallback");
       chrome.runtime.sendMessage({ type: "recording-complete" });
     }, 30000);
 
@@ -2542,7 +2542,7 @@ const ContentState = (props) => {
     const opId = beginEditOp();
 
     if (process.env.SCREENITY_DEV_MODE === "true") {
-      console.log("[Screenity][cut-debug] handleTrim dispatch", {
+      console.log("[SayLess][cut-debug] handleTrim dispatch", {
         cut,
         opId,
         sourceBlobSize: sourceBlob?.size,
@@ -2689,7 +2689,7 @@ const ContentState = (props) => {
     out = out.replace(/\s+/g, " ").trim();
     out = out.replace(/[. ]+$/g, "");
 
-    if (!out) out = "Screenity recording";
+    if (!out) out = "SayLess recording";
     if (out.length > maxLen) out = out.slice(0, maxLen).trim();
 
     return out;
@@ -2698,7 +2698,7 @@ const ContentState = (props) => {
   const requestDownload = async (url, ext) => {
     // rapid double-click would otherwise create two downloads + double-revoke
     if (contentStateRef.current?.downloadInProgress) {
-      console.warn("[Screenity] download already in progress, ignoring");
+      console.warn("[SayLess] download already in progress, ignoring");
       return;
     }
     setContentState((prev) => ({
@@ -2707,7 +2707,7 @@ const ContentState = (props) => {
       downloadError: null,
     }));
 
-    const rawTitle = contentStateRef.current.title || "Screenity recording";
+    const rawTitle = contentStateRef.current.title || "SayLess recording";
 
     const base = sanitizeDownloadFilename(rawTitle);
     const filename = `${base}${ext}`;
@@ -2774,7 +2774,7 @@ const ContentState = (props) => {
         } catch {}
         revoke();
         console.warn(
-          "[Screenity] download status listener timed out, releasing handle",
+          "[SayLess] download status listener timed out, releasing handle",
           { downloadId, filename, timeoutMs },
         );
         // surface error so editor toasts fire; silent resolve would mask as success
@@ -3097,7 +3097,7 @@ const ContentState = (props) => {
       remuxPath = "offscreen-opfs";
       diagForward("remux-offscreen-ok", { inputBytes: inputSize });
     } catch (err) {
-      console.warn("[Screenity] offscreen remux failed, falling back", err);
+      console.warn("[SayLess] offscreen remux failed, falling back", err);
       diagForward("remux-offscreen-fail", {
         inputBytes: inputSize,
         err: String(err?.message || err).slice(0, 200),
@@ -3117,7 +3117,7 @@ const ContentState = (props) => {
         diagForward("remux-buffer-target-ok", { inputBytes: inputSize });
       } catch (err) {
         console.warn(
-          "[Screenity] buffer-target remux failed, falling back",
+          "[SayLess] buffer-target remux failed, falling back",
           err,
         );
         diagForward("remux-buffer-target-fail", {
@@ -3199,7 +3199,7 @@ const ContentState = (props) => {
       remuxedBlob = res.blob;
       remuxPath = res.path;
     } catch (err) {
-      console.warn("[Screenity] standard mp4 finalize failed", err);
+      console.warn("[SayLess] standard mp4 finalize failed", err);
     }
 
     const remuxDurationMs = Date.now() - remuxStartedAt;
@@ -3344,7 +3344,7 @@ const ContentState = (props) => {
         );
       } catch (err) {
         console.warn(
-          "[Screenity] offscreen webm convert failed, falling back",
+          "[SayLess] offscreen webm convert failed, falling back",
           err,
         );
       }
@@ -3356,7 +3356,7 @@ const ContentState = (props) => {
         await requestDownload(url, ext);
         URL.revokeObjectURL(url);
       } catch (err) {
-        console.error("[Screenity] webm download failed", err);
+        console.error("[SayLess] webm download failed", err);
       }
       setContentState((prevState) => ({
         ...prevState,
@@ -3417,7 +3417,7 @@ const ContentState = (props) => {
         await requestDownload(url, ext);
         URL.revokeObjectURL(url);
       } catch (err) {
-        console.error("[Screenity] webm fallback download failed", err);
+        console.error("[SayLess] webm fallback download failed", err);
       }
       setContentState((prevState) => ({
         ...prevState,

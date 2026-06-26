@@ -2,9 +2,13 @@ import React, { useContext, useEffect, useState, useRef, useMemo } from "react";
 import { default as Plyr } from "plyr-react";
 import "plyr-react/plyr.css";
 import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
+import { EdlContext } from "../../context/EdlContext";
+import { attachTimelinePreview } from "../../../../edl/timelinePreview";
 
 const VideoPlayer = (props) => {
   const [contentState, setContentState] = useContext(ContentStateContext); // Access the ContentState context
+  const edlCtx = useContext(EdlContext); // null outside EdlProvider
+  const tlRef = useRef(null);
   const playerRef = useRef(null);
   const [url, setUrl] = useState(null);
   const [source, setSource] = useState(null);
@@ -115,6 +119,35 @@ const VideoPlayer = (props) => {
       }
     };
   }, [playerRef]);
+
+  // Keep the latest timeline available to the preview controller's per-tick reader.
+  useEffect(() => {
+    tlRef.current = edlCtx?.timeline || null;
+  }, [edlCtx?.timeline]);
+
+  // Non-destructive preview: when the timeline has edits, drive the Plyr instance
+  // to play clips in output order (skip/reorder) and mute muted clips — no encode.
+  useEffect(() => {
+    if (!url || !edlCtx?.hasEdits) return;
+    const plyr = playerRef.current?.plyr;
+    if (!plyr) return;
+    const adapter = {
+      getCurrentTime: () => plyr.currentTime || 0,
+      seek: (t) => {
+        plyr.currentTime = t;
+      },
+      setMuted: (m) => {
+        plyr.muted = m;
+      },
+      pause: () => plyr.pause(),
+      onTimeUpdate: (cb) => {
+        plyr.on("timeupdate", cb);
+        return () => plyr.off("timeupdate", cb);
+      },
+    };
+    const handle = attachTimelinePreview(adapter, () => tlRef.current);
+    return () => handle.stop();
+  }, [url, edlCtx?.hasEdits]);
 
   const handleClick = () => {
     if (isSet) return;

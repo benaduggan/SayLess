@@ -1,7 +1,7 @@
 {
-  "name": "screenity",
+  "name": "sayless",
   "version": "4.5.3",
-  "description": "The free and privacy-friendly screen recorder with no sign in needed.",
+  "description": "SayLess — privacy-friendly screen recorder with transcript-based editing.",
   "scripts": {
     "build": "cross-env NODE_ENV=production node utils/build.js",
     "build:dev": "cross-env NODE_ENV=development node utils/build.js",
@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "^7.27.1",
+    "@huggingface/transformers": "^3.8.1",
     "@mediapipe/tasks-vision": "0.10.32",
     "@radix-ui/react-alert-dialog": "^1.0.4",
     "@radix-ui/react-collapsible": "^1.0.2",

@@ -115,7 +115,7 @@ const _startRecordingInner = async (caller) => {
       !countdownIsFresh
     ) {
       console.warn(
-        "[Screenity][BG] startRecording aborted: prior recording stopped",
+        "[SayLess][BG] startRecording aborted: prior recording stopped",
         sinceStopMs,
         "ms ago, caller:",
         caller,
@@ -493,7 +493,7 @@ export const startAfterCountdown = (caller = "startAfterCountdown") => {
     // sendMessageRecord routes via recorderSession/offscreen fallback if needed
     if (recordingTab === null && !offscreen) {
       console.warn(
-        "[Screenity] startAfterCountdown: no recordingTab/offscreen available, starting with fallback routing"
+        "[SayLess] startAfterCountdown: no recordingTab/offscreen available, starting with fallback routing"
       );
     }
     startRecording(caller);

@@ -294,7 +294,7 @@ export async function runEditorOp(message, reply, { viewer = false } = {}) {
     const errMsg = error instanceof Error ? error.message : String(error);
     const errStack = error instanceof Error ? error.stack : null;
     // Error props are non-enumerable; JSON.stringify drops them.
-    console.error("[Screenity][Editor] op failed", {
+    console.error("[SayLess][Editor] op failed", {
       type: message.type,
       message: errMsg,
       stack: errStack,

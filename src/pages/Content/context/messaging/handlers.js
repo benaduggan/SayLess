@@ -47,7 +47,7 @@ export const setupHandlers = () => {
     const targetOrigin = getProjectMessageTargetOrigin();
     if (!targetOrigin) {
       console.warn(
-        "[Screenity][Content] Ignoring project handoff on untrusted origin",
+        "[SayLess][Content] Ignoring project handoff on untrusted origin",
         {
           source: payload?.source || "unknown",
           pageOrigin: window.location.origin,
@@ -76,7 +76,7 @@ export const setupHandlers = () => {
   const revokeActiveLocalPlaybackSource = (reason = "unknown") => {
     if (activeLocalPlaybackSource?.url) {
       URL.revokeObjectURL(activeLocalPlaybackSource.url);
-      console.info("[Screenity][Content] Revoked local screen playback URL", {
+      console.info("[SayLess][Content] Revoked local screen playback URL", {
         reason,
         offerId: activeLocalPlaybackSource.offerId || null,
       });
@@ -311,7 +311,7 @@ export const setupHandlers = () => {
       offer,
     })
       .then((readySource) => {
-        console.info("[Screenity][Content] Local screen playback used", {
+        console.info("[SayLess][Content] Local screen playback used", {
           projectId: requestedProjectId,
           sceneId: requestedSceneId || latestLocalPlaybackSceneId || null,
           offerId: offer.offerId,
@@ -341,7 +341,7 @@ export const setupHandlers = () => {
       .catch((err) => {
         const reason = err?.message || "local-playback-build-failed";
         console.warn(
-          "[Screenity][Content] Local screen playback fallback",
+          "[SayLess][Content] Local screen playback fallback",
           {
             projectId: requestedProjectId,
             sceneId: requestedSceneId || latestLocalPlaybackSceneId || null,
@@ -700,7 +700,7 @@ export const setupHandlers = () => {
       state.recording ||
       state.pipEnded
     ) {
-      console.warn("[Screenity][Content] start-stream BLOCKED by guard state:", {
+      console.warn("[SayLess][Content] start-stream BLOCKED by guard state:", {
         preparingRecording: state.preparingRecording,
         pendingRecording: state.pendingRecording,
         recording: state.recording,
@@ -952,7 +952,7 @@ export const setupHandlers = () => {
         filename,
       });
       if (!resp?.ok || typeof resp.base64 !== "string") {
-        console.warn("[Screenity] troubleshooting zip failed:", resp?.error);
+        console.warn("[SayLess] troubleshooting zip failed:", resp?.error);
         return;
       }
       const bin = atob(resp.base64);
@@ -1249,7 +1249,7 @@ export const setupHandlers = () => {
     const projectId = message?.projectId || null;
     if (!projectId) {
       console.warn(
-        "[Screenity][Content] Ignoring update-project-ready without projectId",
+        "[SayLess][Content] Ignoring update-project-ready without projectId",
       );
       return;
     }
@@ -1317,7 +1317,7 @@ export const setupHandlers = () => {
     const capturedOffer = latestLocalPlaybackOffer;
     if (posted && capturedOffer?.offerId) {
       const capturedSceneId = message.sceneId || null;
-      console.info("[Screenity][Content] Local screen playback offered", {
+      console.info("[SayLess][Content] Local screen playback offered", {
         projectId,
         sceneId: capturedSceneId,
         offerId: capturedOffer.offerId,
@@ -1330,7 +1330,7 @@ export const setupHandlers = () => {
         offer: capturedOffer,
       })
         .then((readySource) => {
-          console.info("[Screenity][Content] Local screen playback ready", {
+          console.info("[SayLess][Content] Local screen playback ready", {
             projectId,
             sceneId: capturedSceneId,
             offerId: capturedOffer.offerId,
@@ -1345,7 +1345,7 @@ export const setupHandlers = () => {
         })
         .catch((err) => {
           const reason = err?.message || "local-playback-build-failed";
-          console.warn("[Screenity][Content] Local screen playback fallback", {
+          console.warn("[SayLess][Content] Local screen playback fallback", {
             projectId,
             sceneId: capturedSceneId,
             offerId: capturedOffer.offerId,

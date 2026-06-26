@@ -207,7 +207,7 @@ export const handleAlarm = async (alarm) => {
           errorCode: "recording-stall-unrecoverable",
         });
       } catch (err) {
-        console.warn("[Screenity][BG] stall-unrecoverable handler failed", err);
+        console.warn("[SayLess][BG] stall-unrecoverable handler failed", err);
       }
       return;
     }
@@ -286,7 +286,7 @@ export const handleAlarm = async (alarm) => {
             });
           }
         } catch (err) {
-          console.warn("[Screenity][BG] watchdog sticky-disable failed", err);
+          console.warn("[SayLess][BG] watchdog sticky-disable failed", err);
         }
         // handleRecordingError (not sendMessageRecord) so the editor gets notified
         try {
@@ -296,7 +296,7 @@ export const handleAlarm = async (alarm) => {
             errorCode: "no-first-chunk",
           });
         } catch (err) {
-          console.warn("[Screenity][BG] first-chunk watchdog handler failed", err);
+          console.warn("[SayLess][BG] first-chunk watchdog handler failed", err);
         }
       }
     }
@@ -344,7 +344,7 @@ export const handleAlarm = async (alarm) => {
 
     await chunksStore.clear().catch((err) => {
       console.warn(
-        "[Screenity][BG] Failed to clear chunksStore for local playback expiry",
+        "[SayLess][BG] Failed to clear chunksStore for local playback expiry",
         err,
       );
     });

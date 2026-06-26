@@ -218,7 +218,7 @@ const RecordingTab = (props) => {
             <TooltipWrap
               content={
                 !contentState.isLoggedIn
-                  ? "Record multiple scenes with Screenity Pro"
+                  ? "Record multiple scenes with SayLess Pro"
                   : "Record scenes one after another"
               }
               side={"bottom"}

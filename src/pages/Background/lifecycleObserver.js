@@ -66,7 +66,7 @@ export const initLifecycleObserver = () => {
             : "assets/icon-34.png",
         });
       } catch (err) {
-        console.warn("[Screenity][BG] reactive setIcon failed:", err);
+        console.warn("[SayLess][BG] reactive setIcon failed:", err);
       }
     }
   });

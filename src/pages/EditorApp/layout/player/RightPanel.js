@@ -246,7 +246,7 @@ const RightPanel = () => {
           const s = contentStateRef.current;
           const blob = s.rawBlob || s.blob;
           if (!blob) {
-            console.error("[Screenity] raw download: no rawBlob available");
+            console.error("[SayLess] raw download: no rawBlob available");
             chrome.runtime.sendMessage({
               type: "show-toast",
               message: chrome.i18n.getMessage("rawRecordingModalTitle") + ": no data",
@@ -303,7 +303,7 @@ const RightPanel = () => {
                 try {
                   await fallbackViaBackground();
                 } catch (err) {
-                  console.error("[Screenity] raw download fallback failed:", err);
+                  console.error("[SayLess] raw download fallback failed:", err);
                 }
               } else if (
                 delta.state.current === "complete" ||
@@ -316,14 +316,14 @@ const RightPanel = () => {
             chrome.downloads.onChanged.addListener(interruptHandler);
           } catch (err) {
             console.warn(
-              "[Screenity] raw download direct path failed, using fallback:",
+              "[SayLess] raw download direct path failed, using fallback:",
               err,
             );
             try {
               await fallbackViaBackground();
             } catch (fallbackErr) {
               console.error(
-                "[Screenity] raw download fallback failed:",
+                "[SayLess] raw download fallback failed:",
                 fallbackErr,
               );
               chrome.runtime.sendMessage({
@@ -374,7 +374,7 @@ const RightPanel = () => {
               },
             );
           } catch (err) {
-            console.error("[Screenity] Troubleshooting export failed:", err);
+            console.error("[SayLess] Troubleshooting export failed:", err);
           }
         },
         () => {},

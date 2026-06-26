@@ -36,7 +36,7 @@ const ProBanner = () => {
           </div>
           <div className="pro-banner-description">
             {chrome.i18n.getMessage(descriptionKey) ||
-              "Screenity will always be free, open-source, and ad-free. Pro helps cover cloud & infra costs, & supports development by a solo indie dev! ❤️"}
+              "SayLess will always be free, open-source, and ad-free. Pro helps cover cloud & infra costs, & supports development by a solo indie dev! ❤️"}
           </div>
         </div>
       </div>

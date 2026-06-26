@@ -307,7 +307,7 @@ const scheduleLocalPlaybackAlarm = async (offer) => {
       when: Number(offer.expiresAt),
     });
   } catch (err) {
-    console.warn("[Screenity][BG] Failed to schedule local playback alarm", err);
+    console.warn("[SayLess][BG] Failed to schedule local playback alarm", err);
   }
 };
 
@@ -335,7 +335,7 @@ const clearStoredLocalPlaybackOffer = async ({
     const targetStore = offerScreenStore(existing);
     await targetStore.clear().catch((err) => {
       console.warn(
-        "[Screenity][BG] Failed to clear screen chunks while clearing local playback offer",
+        "[SayLess][BG] Failed to clear screen chunks while clearing local playback offer",
         err,
       );
     });
@@ -358,7 +358,7 @@ const clearStoredLocalPlaybackOffer = async ({
   });
 
   if (existing?.offerId) {
-    console.info("[Screenity][BG] Cleared local screen playback offer", {
+    console.info("[SayLess][BG] Cleared local screen playback offer", {
       reason,
       offerId: existing.offerId,
       clearChunks: Boolean(clearChunks),
@@ -400,7 +400,7 @@ const logStopRecordingTabEvent = (message, sender) => {
     const senderTabId = message?.tabId || sender?.tab?.id || null;
     const senderUrl = sender?.url || null;
     const stack = new Error().stack;
-    console.warn("[Screenity][BG] stop-recording-tab received", {
+    console.warn("[SayLess][BG] stop-recording-tab received", {
       reason,
       senderTabId,
       senderUrl,
@@ -415,7 +415,7 @@ const logStopRecordingTabEvent = (message, sender) => {
       },
     });
   } catch (err) {
-    console.warn("[Screenity][BG] stop-recording-tab logging failed", err);
+    console.warn("[SayLess][BG] stop-recording-tab logging failed", err);
   }
 };
 
@@ -623,13 +623,13 @@ export const handleFinishMultiRecording = async () => {
           projectId: projectId || null,
         }).catch((err) =>
           console.warn(
-            "[Screenity][BG] Failed to send update-project-ready (finish-multi-recording)",
+            "[SayLess][BG] Failed to send update-project-ready (finish-multi-recording)",
             err,
           ),
         );
       } else {
         console.warn(
-          "[Screenity][BG] No tab available for update-project-ready (finish-multi-recording)",
+          "[SayLess][BG] No tab available for update-project-ready (finish-multi-recording)",
           { projectId, instantMode: Boolean(instantMode) },
         );
       }
@@ -721,7 +721,7 @@ const registerRecordingTabListener = (ownerTabId) => {
         }),
       ).catch((err) => {
         console.error(
-          "[Screenity][BG] handleStopRecordingTab failed in tab-removed",
+          "[SayLess][BG] handleStopRecordingTab failed in tab-removed",
           err,
         );
       });
@@ -807,7 +807,7 @@ const resolveActiveSessionConflict = async (incomingSession) => {
 
   const alive = await isActiveSessionAlive(activeRecordingSession);
   if (alive) {
-    console.warn("[Screenity][BG] session_conflict_rejected", {
+    console.warn("[SayLess][BG] session_conflict_rejected", {
       activeId: activeRecordingSession.id,
       incomingId: incomingSession.id,
       activeRecorderTabId:
@@ -819,7 +819,7 @@ const resolveActiveSessionConflict = async (incomingSession) => {
   await clearRecordingSessionSafe("stale-conflict-recovered", {
     incomingId: incomingSession.id,
   });
-  console.warn("[Screenity][BG] session_conflict_stale_recovered", {
+  console.warn("[SayLess][BG] session_conflict_stale_recovered", {
     incomingId: incomingSession.id,
   });
   return { allow: true, staleRecovered: true };
@@ -1082,7 +1082,7 @@ export const setupHandlers = () => {
     } catch {
       payloadStr = String(message.payload);
     }
-    console.warn("[Screenity][OffscreenDiag]", message.source, payloadStr);
+    console.warn("[SayLess][OffscreenDiag]", message.source, payloadStr);
     return { ok: true };
   });
   registerMessage("offscreen-ready", async () => {
@@ -1378,7 +1378,7 @@ export const setupHandlers = () => {
     ) {
       if (DEBUG_POSTSTOP) {
         console.warn(
-          "[Screenity][BG] Suppressed duplicate stop-recording-tab message",
+          "[SayLess][BG] Suppressed duplicate stop-recording-tab message",
           {
             inFlight: stopRecordingTabInFlight,
             deltaMs: now - stopRecordingTabLastAt,
@@ -2141,7 +2141,7 @@ export const setupHandlers = () => {
       },
     });
 
-    console.info("[Screenity][BG] prepare-open-editor", {
+    console.info("[SayLess][BG] prepare-open-editor", {
       projectId: expectedProjectId,
       targetUrl,
       instantMode: Boolean(message.instantMode),
@@ -2155,7 +2155,7 @@ export const setupHandlers = () => {
       expectedKind,
       reason: "prepare-open-editor",
     });
-    console.info("[Screenity][BG] prepare-open-editor resolved", {
+    console.info("[SayLess][BG] prepare-open-editor resolved", {
       tabId: resolved.tabId || null,
       reused: Boolean(resolved.reused),
       opened: Boolean(resolved.opened),
@@ -2204,7 +2204,7 @@ export const setupHandlers = () => {
         projectId: activeProjectId || null,
       }).catch((err) =>
         console.warn(
-          "[Screenity][BG] Failed to send update-project-loading",
+          "[SayLess][BG] Failed to send update-project-loading",
           err,
         ),
       );
@@ -2254,7 +2254,7 @@ export const setupHandlers = () => {
       })) ||
       null;
 
-    console.info("[Screenity][BG] editor-ready received", {
+    console.info("[SayLess][BG] editor-ready received", {
       newProject: Boolean(message.newProject),
       multiMode: Boolean(message.multiMode),
       projectId,
@@ -2327,7 +2327,7 @@ export const setupHandlers = () => {
               trackType: "screen",
             },
       }).catch((err) =>
-        console.warn("[Screenity][BG] Failed to send update-project-ready", err),
+        console.warn("[SayLess][BG] Failed to send update-project-ready", err),
       );
     } else {
       console.warn("❗ No valid messageTab found in editor-ready");
@@ -2368,7 +2368,7 @@ export const setupHandlers = () => {
     });
     await scheduleLocalPlaybackAlarm(normalizedOffer);
 
-    console.info("[Screenity][BG] Registered local screen playback offer", {
+    console.info("[SayLess][BG] Registered local screen playback offer", {
       offerId: normalizedOffer.offerId,
       projectId: normalizedOffer.projectId,
       sceneId: normalizedOffer.sceneId,
@@ -2475,7 +2475,7 @@ export const setupHandlers = () => {
         sceneId: updated.sceneId,
       },
     });
-    console.info("[Screenity][BG] Local screen playback offer marked used", {
+    console.info("[SayLess][BG] Local screen playback offer marked used", {
       offerId: updated.offerId,
       projectId: updated.projectId,
       sceneId: updated.sceneId,
@@ -2507,7 +2507,7 @@ export const setupHandlers = () => {
         reason: updated.fallbackReason,
       },
     });
-    console.info("[Screenity][BG] Local screen playback offer fallback", {
+    console.info("[SayLess][BG] Local screen playback offer fallback", {
       offerId: updated.offerId,
       reason: updated.fallbackReason,
     });
@@ -2773,7 +2773,7 @@ export const setupHandlers = () => {
       try {
         await chrome.tabs.update(tabId, { active: true });
       } catch (err) {
-        console.warn("[Screenity] activate-recorder-tab failed:", String(err));
+        console.warn("[SayLess] activate-recorder-tab failed:", String(err));
       }
     }
   });

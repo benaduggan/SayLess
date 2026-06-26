@@ -327,6 +327,15 @@ const config = {
           to: path.join(__dirname, "build/_locales"),
           force: true,
         },
+        {
+          // ONNX Runtime Web (used by @huggingface/transformers for on-device
+          // Whisper). Hosted locally because the extension CSP (script-src
+          // 'self') blocks transformers' default jsdelivr CDN import. The
+          // provider points env.backends.onnx.wasm.wasmPaths at build/ort/.
+          from: "node_modules/@huggingface/transformers/dist/ort-wasm-*",
+          to: path.join(__dirname, "build/ort/[name].[ext]"),
+          force: true,
+        },
       ],
     }),
     ...htmlPlugins,

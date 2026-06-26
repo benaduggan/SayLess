@@ -55,7 +55,7 @@ const Countdown = () => {
   const logStartFlow = (event, data = {}) => {
     if (!DEBUG_START_FLOW) return;
     const payload = { ts: Date.now(), event, ...data };
-    console.info("[Screenity][StartFlow]", payload);
+    console.info("[SayLess][StartFlow]", payload);
     try {
       const update = {
         startFlowDebug: {

@@ -86,7 +86,7 @@ const acquirePostStopEditorLock = async (recordingId = null) => {
     ]);
   } catch {
     console.warn(
-      "[Screenity][BG] acquirePostStopEditorLock storage mirror timed out; in-memory lock holds",
+      "[SayLess][BG] acquirePostStopEditorLock storage mirror timed out; in-memory lock holds",
     );
     chrome.storage.local.set(writePayload).catch(() => {});
   } finally {
@@ -539,7 +539,7 @@ export const handleStopRecordingTab = async (request) => {
     endLock({ lockAcquired });
     if (!lockAcquired) {
       console.warn(
-        "[Screenity][BG] Duplicate stop-recording-tab suppressed (editor opening)",
+        "[SayLess][BG] Duplicate stop-recording-tab suppressed (editor opening)",
       );
       sendMessageRecord({ type: "stop-recording-tab" });
       return;
@@ -589,7 +589,7 @@ export const handleStopRecordingTab = async (request) => {
               }
             } catch {}
             settled = true;
-            console.warn("[Screenity][BG] Editor tab load timed out; releasing lock");
+            console.warn("[SayLess][BG] Editor tab load timed out; releasing lock");
             diagEvent("editor-open-timeout", { tabId: tab.id, type: "editor" });
             releasePostStopEditorLock();
             markEditorStartFailed(
@@ -669,7 +669,7 @@ export const handleStopRecordingTab = async (request) => {
             }
           } catch {}
           settled = true;
-          console.warn("[Screenity][BG] Editor tab load timed out; releasing lock");
+          console.warn("[SayLess][BG] Editor tab load timed out; releasing lock");
           diagEvent("editor-open-timeout", { tabId: tab.id, type: editorUrl });
           releasePostStopEditorLock({ postStopRecordingId: null });
           markEditorStartFailed(
@@ -715,7 +715,7 @@ export const handleStopRecordingTab = async (request) => {
                   sendMessageTab(tab.id, { type: "make-video-tab" }).catch(
                     (err) => {
                       console.warn(
-                        "[Screenity][BG] make-video-tab direct send failed",
+                        "[SayLess][BG] make-video-tab direct send failed",
                         err,
                       );
                     },
@@ -760,7 +760,7 @@ export const handleStopRecordingTab = async (request) => {
                 endChunkLoop({ sent, timedOut });
                 if (!sent) {
                   console.warn(
-                    "[Screenity][BG] editor opened but chunks are still unavailable",
+                    "[SayLess][BG] editor opened but chunks are still unavailable",
                   );
                   // editor watches editorRecordingError via storage.onChanged
                   try {
@@ -780,7 +780,7 @@ export const handleStopRecordingTab = async (request) => {
                     });
                   } catch (writeErr) {
                     console.error(
-                      "[Screenity][BG] failed to write editorRecordingError",
+                      "[SayLess][BG] failed to write editorRecordingError",
                       writeErr,
                     );
                   }

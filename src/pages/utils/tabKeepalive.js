@@ -120,8 +120,8 @@ const startMediaSession = (state) => {
     if (typeof navigator === "undefined" || !navigator.mediaSession) return;
     if (typeof window.MediaMetadata === "function") {
       navigator.mediaSession.metadata = new window.MediaMetadata({
-        title: "Screenity recording",
-        artist: "Screenity",
+        title: "SayLess recording",
+        artist: "SayLess",
       });
     }
     navigator.mediaSession.playbackState = "playing";

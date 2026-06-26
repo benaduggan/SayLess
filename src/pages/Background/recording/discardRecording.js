@@ -18,7 +18,7 @@ export const discardRecording = async ({
       ]);
       if (currentProjectId && currentProjectId !== projectId) {
         console.warn(
-          "[Screenity][BG] discardRecording skipped: project mismatch",
+          "[SayLess][BG] discardRecording skipped: project mismatch",
           { reason, target: projectId, current: currentProjectId },
         );
         return;

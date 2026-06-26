@@ -85,7 +85,7 @@ export const restoreCloudRecording = async () => {
     settled = true;
     chrome.tabs.onUpdated.removeListener(listener);
     console.warn(
-      "[Screenity][BG] cloud-restore tab load timed out",
+      "[SayLess][BG] cloud-restore tab load timed out",
       tab.id,
     );
   }, 30000);

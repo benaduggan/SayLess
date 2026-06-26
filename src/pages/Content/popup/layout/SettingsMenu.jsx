@@ -93,7 +93,7 @@ const SettingsMenu = (props) => {
             a.remove();
             setTimeout(() => window.URL.revokeObjectURL(url), 1000);
           } catch (err) {
-            console.error("[Screenity] Troubleshooting export failed:", err);
+            console.error("[SayLess] Troubleshooting export failed:", err);
           }
         },
         () => {},

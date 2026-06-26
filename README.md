@@ -1,17 +1,12 @@
-# Screenity
+# SayLess
 
-> _✨ Screenity's open source work is sponsored by_
-> ### Recall.ai - API for desktop recording [<img src="https://github.com/user-attachments/assets/eee643f1-1b64-4d14-bb04-498c321fd937" align="right">](https://www.recall.ai/product/desktop-recording-sdk?utm_source=github&utm_medium=sponsorship&utm_campaign=alyssaxuu-screenity)
->
-> If you’re looking for a hosted desktop recording API, consider checking out [Recall.ai](https://www.recall.ai/product/desktop-recording-sdk?utm_source=github&utm_medium=sponsorship&utm_campaign=alyssaxuu-screenity), an API that records Zoom, Google Meet, Microsoft Teams, in-person meetings, and more.
+The privacy-friendly screen recorder with **transcript-based editing** 🎥✍️
 
-[![jiewjjc232](https://github.com/alyssaxuu/screenity/assets/7581348/ed55e52e-4adf-442b-b774-6856abacdffb)](https://screenity.io)
+_Record, transcribe on-device, then edit your video by editing the words — delete or mute parts just by selecting them in the transcript._
 
-The free and privacy-friendly screen recorder with no limits 🎥
+SayLess is a powerful, privacy-friendly screen recorder, annotation tool, and in-browser video editor. Record your screen, tab, region, or camera; annotate live; then trim, cut, and mute — including by transcript. Everything runs locally, no sign in needed.
 
-[Get it now - it's free!](https://chrome.google.com/webstore/detail/screenity-screen-recorder/kbbdabhdfibnancpjfhlkhafgdilcnji)
-
-Screenity is a powerful privacy-friendly screen recorder and annotation tool to make better videos for work, education, and more. You can create stunning product demos, tutorials, presentations, or share feedback with your team - all for free.
+> SayLess is a fork of [Screenity](https://github.com/alyssaxuu/screenity) (GPLv3) by [Alyssa X](https://alyssax.com), with cloud/Pro paths removed and a transcript-driven, non-destructive editing layer added. See [`docs/FORK_PLAN.md`](docs/FORK_PLAN.md) and [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md).
 
 <a href="https://www.producthunt.com/posts/screenity?utm_source=badge-top-post-badge&utm_medium=badge&utm_source=badge-screenity" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/top-post-badge.svg?post_id=275308&theme=light&period=daily" alt="Screenity - The most powerful screen recorder for Chrome | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 <a href="https://news.ycombinator.com/item?id=25150804" target="_blank"><img height=53 src="https://hackerbadge.now.sh/api?id=25150804&type=orange" alt="Featured on HackerNews"></a>

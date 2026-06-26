@@ -61,7 +61,7 @@ let pendingStartToken = 0;
 const logDebug = (event, payload = {}) => {
   if (!DEBUG) return;
   // eslint-disable-next-line no-console
-  console.debug("[Screenity][Onboarding]", event, payload);
+  console.debug("[SayLess][Onboarding]", event, payload);
 };
 
 const getRoot = (context) => (context?.querySelector ? context : document);
@@ -77,7 +77,7 @@ const t = (key, fallback) => {
 const getOnboardingText = () => ({
   welcomeTitle: t(
     "proOnboardingWelcomeTitle",
-    "Welcome to the Screenity Pro extension",
+    "Welcome to the SayLess Pro extension",
   ),
   welcomeDescription: t(
     "proOnboardingWelcomeDescription",
