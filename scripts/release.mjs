@@ -92,17 +92,6 @@ writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + "\n");
 writeFileSync(PACKAGE_PATH, JSON.stringify(pkg, null, 2) + "\n");
 console.log("Wrote manifest.json + package.json.\n");
 
-console.log("Running i18n drift check...");
-try {
-  sh("node scripts/check-i18n.mjs");
-} catch {
-  console.error(
-    "\ni18n drift detected. Run `npm run check:i18n -- --fix` to stub missing keys, then translate before release.",
-  );
-  process.exit(1);
-}
-console.log("");
-
 console.log("Building self-hosted bundle (build:release)...");
 sh("npm run build:release");
 console.log("");

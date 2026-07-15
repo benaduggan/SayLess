@@ -8,20 +8,11 @@ SayLess is a powerful, privacy-friendly screen recorder, annotation tool, and in
 
 > SayLess is a fork of [Screenity](https://github.com/alyssaxuu/screenity) (GPLv3) by [Alyssa X](https://alyssax.com), with cloud/Pro paths removed and a transcript-driven, non-destructive editing layer added. See [`docs/FORK_PLAN.md`](docs/FORK_PLAN.md) and [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md).
 
-<a href="https://www.producthunt.com/posts/screenity?utm_source=badge-top-post-badge&utm_medium=badge&utm_source=badge-screenity" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/top-post-badge.svg?post_id=275308&theme=light&period=daily" alt="Screenity - The most powerful screen recorder for Chrome | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
-<a href="https://news.ycombinator.com/item?id=25150804" target="_blank"><img height=53 src="https://hackerbadge.now.sh/api?id=25150804&type=orange" alt="Featured on HackerNews"></a>
-
-> Want to support the project (and the solo developer behind it)?  
->
-> Check out [**Screenity Pro**](https://screenity.io/pro): a privacy-friendly, EU-hosted platform with link sharing, multi-scene editing, zoom keyframes, captions, and more ❤️  
-
-Made by [Alyssa X](https://alyssax.com)
-
 ## Table of contents
-- [Screenity](#screenity)
+- [SayLess](#sayless)
 	- [Table of contents](#table-of-contents)
 	- [Features](#features)
-	- [Self-hosting Screenity](#self-hosting-screenity)
+	- [Self-hosting](#self-hosting)
 	- [Creating a development version](#creating-a-development-version)
 		- [Enabling Save to Google Drive](#enabling-save-to-google-drive)
 	- [Acknowledgements](#acknowledgements)
@@ -35,31 +26,27 @@ Made by [Alyssa X](https://alyssax.com)
 🔎 Zoom in smoothly in your recordings to focus on specific areas<br>
 🪄 Blur out any sensitive content of any page to keep it private<br>
 ✂️ Remove or add audio, cut, trim, or crop your recordings with a comprehensive editor<br>
+📝 Edit by transcript — transcribe on-device, then delete or mute parts by selecting the words<br>
 👀 Highlight your clicks and cursor, and go in spotlight mode<br>
 ⏱️ Set up alarms to automatically stop your recording<br>
 💾 Export as mp4, gif, and webm, or save the video directly to Google Drive to share a link<br>
 ⚙️ Set a countdown, hide parts of the UI, or move it anywhere<br>
-🔒 Only you can see your videos, we don’t collect any of your data. You can even go offline!<br>
-💙 No limits, make as many videos as you want, for as long as you want<br> …and much more - all for free & no sign in needed!
+🔒 Only you can see your videos — no data is collected. You can even go offline!<br>
+💙 No limits, make as many videos as you want, for as long as you want — all for free & no sign in needed!
 
-## Self-hosting Screenity
-> 🛠️ Note: When self-hosted, the extension runs entirely in local-only mode.  
-> No API calls, sign-in flows, or platform features are enabled, nothing is sent anywhere.  
-> Some internal code paths connect to [Screenity Pro](https://screenity.io/pro), but these are only active in the official Chrome Store version.
+## Self-hosting
+> 🛠️ Note: SayLess runs entirely in local-only mode. No API calls, sign-in flows, or platform features are enabled — nothing is sent anywhere.
 
-You can run Screenity locally without having to install it from the Chrome Store. Here's how:
+You can run SayLess locally as an unpacked extension. Here's how:
 
-1. Download the latest Build.zip from the [releases page](https://github.com/alyssaxuu/screenity/releases)
+1. Build the extension (see [Creating a development version](#creating-a-development-version)), or download a `Build.zip` from this repository's releases page if available.
 2. Load the extension by pasting `chrome://extensions/` in the address bar, and [enabling developer mode](https://developer.chrome.com/docs/extensions/mv2/faq/#:~:text=You%20can%20start%20by%20turning,a%20packaged%20extension%2C%20and%20more.).
-3. Drag the folder that contains the code (make sure it's a folder and not a ZIP file, so unzip first), or click on the "Load unpacked" button and locate the folder.
-4. That's it, you should now be able to use Screenity locally. [Follow these instructions](#enabling-save-to-google-drive) to set up the Google Drive integration.
-
-<small>Self-hosting is totally fine for personal, educational, or internal use.
-If you’re thinking of building a commercial product from this, feel free to [reach out](mailto:alyssa@screenity.io), I’m open to chatting 💜</small>
+3. Click **Load unpacked** and select the `build` folder (unzip first if you downloaded a ZIP).
+4. That's it. [Follow these instructions](#enabling-save-to-google-drive) to set up the Google Drive integration.
 
 ## Creating a development version
 
-> ❗️ Note that the license has changed to [GPLv3](https://github.com/alyssaxuu/screenity/blob/master/LICENSE) for the current MV3 version (Screenity version 3.0.0 and higher). Make sure to read the license and the [Terms of Service](https://screenity.io/en/terms/) regarding intellectual property.
+> ❗️ SayLess is licensed under [GPLv3](LICENSE), inherited from Screenity 3.0.0+. Make sure to read the license regarding intellectual property.
 
 1. Check if your [Node.js](https://nodejs.org/) version is >= **14**.
 2. Clone this repository.
@@ -78,7 +65,4 @@ You can create it accessing [Google Cloud Console](https://console.cloud.google.
 
 ## Acknowledgements
 
-- Thanks to [HelpKit](https://www.helpkit.so/) for sponsoring this project by hosting the [Screenity Help Center](https://help.screenity.io/).
-- Thanks to [Mei Xuan](https://www.behance.net/meixuanloo) for helping with the Chinese translation of the extension.
-
-If you need any help, or want to become a Screenity expert, you can browse articles and guides in the [help center](https://help.screenity.io). You can also submit any feedback or ideas in this [form](https://tally.so/r/3ElpXq), or contact through [this page](https://help.screenity.io/contact)
+SayLess is built on [Screenity](https://github.com/alyssaxuu/screenity) by [Alyssa X](https://alyssax.com), licensed under GPLv3. Huge thanks to Alyssa and the Screenity contributors for the original work.

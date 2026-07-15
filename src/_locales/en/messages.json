@@ -68,7 +68,7 @@
     "description": "Modal title shown when the editor cannot read the recording file from the device's storage"
   },
   "opfsLoadErrorDescription": {
-    "message": "Looks like SayLess couldn't load the recording from your device's storage. It may have been cleared or moved. If this keeps happening, please contact us at support@screenity.io.",
+    "message": "Looks like SayLess couldn't load the recording from your device's storage. It may have been cleared or moved.",
     "description": "Modal description shown when the editor cannot read the recording file from the device's storage"
   },
   "editorStuckTitle": {
@@ -852,7 +852,7 @@
     "description": "Stream error modal title"
   },
   "streamErrorModalDescription": {
-    "message": "Looks like something went wrong with the recording. Restart your browser and try again. If the issue persists, please contact us at support@screenity.io.",
+    "message": "Looks like something went wrong with the recording. Restart your browser and try again.",
     "description": "Stream error modal description"
   },
   "copyDebugInfoButton": {
@@ -980,7 +980,7 @@
     "description": "Troubleshoot modal title"
   },
   "troubleshootModalDescription": {
-    "message": "This will download a diagnostic report with system info and recent recording session data. Send it to support@screenity.io to help us troubleshoot your issue. No video or audio data is included.",
+    "message": "This will download a diagnostic report with system info and recent recording session data. No video or audio data is included.",
     "description": "Troubleshoot modal description"
   },
   "troubleshootModalButton": {
@@ -1606,7 +1606,7 @@
     "description": "Title of the modal shown when recording fails to start"
   },
   "recordingFailedModalDescription": {
-    "message": "Something prevented the recording from starting. Please try again. If this keeps happening, contact us at support@screenity.io.",
+    "message": "Something prevented the recording from starting. Please try again.",
     "description": "Description of the modal shown when recording fails to start"
   },
   "toastStorageLow": {

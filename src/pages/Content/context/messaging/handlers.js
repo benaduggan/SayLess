@@ -945,7 +945,7 @@ export const setupHandlers = () => {
       // Hand the zip step off to BG (see Background `make-zip` handler).
       // No JSZip in content; content collects fields, BG runs JSZip,
       // content downloads the resulting ArrayBuffer.
-      const filename = "screenity-troubleshooting.zip";
+      const filename = "sayless-troubleshooting.zip";
       const resp = await chrome.runtime.sendMessage({
         type: "make-zip",
         files: { "troubleshooting.json": JSON.stringify(data) },
