@@ -16,7 +16,17 @@ build/
 *.tsbuildinfo
 .cws-credentials.json
 docs/
+!docs/
+docs/*
+!docs/CAPABILITIES.md
+!docs/FORK_PLAN.md
 tests/
+!tests/
+tests/*
+!tests/e2e/
+tests/e2e/*
+!tests/e2e/local-recordings.entry.mjs
+!tests/e2e/run-local-recordings.cjs
 test-results/
 playwright-report/
 tools/diagnostics-viewer/

@@ -15,9 +15,11 @@ import {
   TempMarketing,
   TempSubstack,
 } from "../../images/popup/images";
+import { listLocalRecordings } from "../../../localRecordings/localRecordingLibrary";
 
 const CLOUD_FEATURES_ENABLED =
   process.env.SCREENITY_ENABLE_CLOUD_FEATURES === "true";
+const LOCAL_RECORDINGS_ENABLED = true;
 
 const VideosTab = (props) => {
   const [videos, setVideos] = useState([]);
@@ -35,13 +37,17 @@ const VideosTab = (props) => {
   const PAGE_SIZE = 8;
   const sortBy = contentState.sortBy || "newest";
   const filter = "all";
+  const showCloudVideos =
+    !LOCAL_RECORDINGS_ENABLED &&
+    CLOUD_FEATURES_ENABLED &&
+    Boolean(contentState.isSubscribed);
 
   const lastFetchTimeRef = useRef(0);
   const FETCH_COOLDOWN_MS = 1500;
 
   useEffect(() => {
-    if (!CLOUD_FEATURES_ENABLED) {
-      // show only local placeholder videos
+    if (LOCAL_RECORDINGS_ENABLED) {
+      loadLocalVideos();
       return;
     }
 
@@ -87,8 +93,8 @@ const VideosTab = (props) => {
   }, []);
 
   useEffect(() => {
-    if (!CLOUD_FEATURES_ENABLED) {
-      // show only local placeholder videos
+    if (LOCAL_RECORDINGS_ENABLED) {
+      loadLocalVideos();
       return;
     }
 
@@ -101,9 +107,35 @@ const VideosTab = (props) => {
     }
   }, [sortBy]);
 
+  useEffect(() => {
+    if (!LOCAL_RECORDINGS_ENABLED) return;
+    const listener = (changes, areaName) => {
+      if (areaName !== "local") return;
+      if (!changes.localRecordingLibraryIndex && !changes.sortBy) return;
+      loadLocalVideos();
+    };
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  }, [loadLocalVideos]);
+
+  const loadLocalVideos = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const localVideos = await listLocalRecordings({ sortBy });
+      setVideos(localVideos);
+      setHasMore(false);
+    } catch (err) {
+      console.error("Failed to load local recordings:", err);
+      setError("Failed to load local recordings");
+      setVideos([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [sortBy]);
+
   const fetchVideos = useCallback(async () => {
-    if (!CLOUD_FEATURES_ENABLED) {
-      // show only local placeholder videos
+    if (LOCAL_RECORDINGS_ENABLED || !CLOUD_FEATURES_ENABLED) {
       return;
     }
 
@@ -205,8 +237,11 @@ const VideosTab = (props) => {
   }, [fetchVideos, hasMore]);
 
   const handleVideoClick = (videoId) => {
-    if (!CLOUD_FEATURES_ENABLED) {
-      // show only local placeholder videos
+    if (LOCAL_RECORDINGS_ENABLED || !CLOUD_FEATURES_ENABLED) {
+      const url = chrome.runtime.getURL(
+        `editor.html?localRecordingId=${encodeURIComponent(videoId)}`,
+      );
+      window.open(url, "_blank");
       return;
     }
     const url = process.env.SCREENITY_APP_BASE + `/editor/${videoId}/edit`;
@@ -214,8 +249,8 @@ const VideosTab = (props) => {
   };
 
   const handleCopyLink = (videoId) => {
-    if (!CLOUD_FEATURES_ENABLED) {
-      // show only local placeholder videos
+    if (LOCAL_RECORDINGS_ENABLED || !CLOUD_FEATURES_ENABLED) {
+      contentState.openToast?.("Local recordings are stored on this device.", 3000);
       return;
     }
     const link = process.env.SCREENITY_APP_BASE + `/view/${videoId}`;
@@ -237,8 +272,7 @@ const VideosTab = (props) => {
   };
 
   useEffect(() => {
-    if (!CLOUD_FEATURES_ENABLED) {
-      // show only local placeholder videos
+    if (LOCAL_RECORDINGS_ENABLED || !CLOUD_FEATURES_ENABLED) {
       return;
     }
     chrome.storage.local.get(["sortBy"], (result) => {
@@ -257,9 +291,9 @@ const VideosTab = (props) => {
 
   return (
     <div
-      className={contentState.isSubscribed ? "video-ui" : "video-ui blurred"}
+      className={showCloudVideos || LOCAL_RECORDINGS_ENABLED || !CLOUD_FEATURES_ENABLED ? "video-ui" : "video-ui blurred"}
     >
-      {!contentState.isSubscribed && (
+      {!LOCAL_RECORDINGS_ENABLED && CLOUD_FEATURES_ENABLED && !contentState.isSubscribed && (
         <div className="ModalSoon">
           {/* 👇 Embed the video here */}
           <video
@@ -407,15 +441,12 @@ const VideosTab = (props) => {
             {videos.length === 0 &&
               !loading &&
               !error &&
-              contentState.isSubscribed && (
+              (showCloudVideos || LOCAL_RECORDINGS_ENABLED || !CLOUD_FEATURES_ENABLED) && (
                 <div className="empty-state">
-                  <div style={{ fontSize: "32px", marginBottom: "10px" }}>
-                    👻
-                  </div>
                   <span>{chrome.i18n.getMessage("noVideosFound")}</span>
                 </div>
               )}
-            {(contentState.isSubscribed
+            {(showCloudVideos || LOCAL_RECORDINGS_ENABLED || !CLOUD_FEATURES_ENABLED
               ? videos
               : [
                   {
@@ -453,7 +484,7 @@ const VideosTab = (props) => {
               <VideoItem
                 key={i}
                 title={video.title}
-                date={video.createdAt}
+                date={video.createdAt || video.updatedAt}
                 thumbnail={
                   video.signedThumbnail ||
                   (video.data?.useCustomThumbnail &&
@@ -462,13 +493,13 @@ const VideosTab = (props) => {
                   PlaceholderThumb
                 }
                 onOpen={
-                  contentState.isSubscribed
-                    ? () => handleVideoClick(video._id)
+                  showCloudVideos || LOCAL_RECORDINGS_ENABLED || !CLOUD_FEATURES_ENABLED
+                    ? () => handleVideoClick(video._id || video.id)
                     : undefined
                 }
                 onCopyLink={
-                  contentState.isSubscribed
-                    ? () => handleCopyLink(video._id)
+                  showCloudVideos || LOCAL_RECORDINGS_ENABLED || !CLOUD_FEATURES_ENABLED
+                    ? () => handleCopyLink(video._id || video.id)
                     : undefined
                 }
               />

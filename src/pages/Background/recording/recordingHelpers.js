@@ -14,6 +14,10 @@ import { perfMark, perfSpan } from "../../utils/perfMarks";
 import { classifyError } from "../../utils/errorCodes";
 import { resetWatchdogState } from "./resetWatchdogState";
 import { sweepRecorderTabs } from "./sweepRecorderTabs";
+import {
+  localRecordingIdFromBackendRef,
+  saveLocalRecordingEntry,
+} from "../../localRecordings/localRecordingLibrary";
 
 // Mirrors CloudRecorder.appendUploadTelemetryEvent so BG-side projectId mutations
 // land in the same `cloudUploadTelemetryEvents` storage key surfaced by
@@ -346,15 +350,38 @@ export const handleGetStreamingData = async () => {
 
 export const videoReady = async () => {
   perfMark("BG.recordingHelpers videoReady.enter");
-  const { recordingDuration, recordingTab, lastRecordingBackendRef } =
+  const { recordingDuration, recordingTab, lastRecordingBackendRef, recordingMeta, recordingAttemptId } =
     await chrome.storage.local.get([
       "recordingDuration",
       "recordingTab",
       "lastRecordingBackendRef",
+      "recordingMeta",
+      "recordingAttemptId",
     ]);
   diagEvent("sw-received-video-ready", {
     recordingDurationMs: Number(recordingDuration) || 0,
   });
+  if (lastRecordingBackendRef?.backend === "opfs") {
+    try {
+      const id = localRecordingIdFromBackendRef(
+        lastRecordingBackendRef,
+        recordingAttemptId,
+      );
+      await saveLocalRecordingEntry({
+        id,
+        title: recordingMeta?.title || null,
+        createdAt: recordingMeta?.startedAt || Date.now(),
+        durationMs: Number(recordingDuration) || 0,
+        backendRef: lastRecordingBackendRef,
+        recordingMeta: recordingMeta || null,
+      });
+    } catch (err) {
+      diagEvent("warning", {
+        note: "local-recording-register-failed",
+        err: String(err?.message || err).slice(0, 120),
+      });
+    }
+  }
   chrome.runtime
     .sendMessage({
       type: "clear-recording-session-safe",

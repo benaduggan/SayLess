@@ -1,68 +1,65 @@
 # SayLess
 
-The privacy-friendly screen recorder with **transcript-based editing** 🎥✍️
+SayLess is a local-first Chrome extension for screen recording, annotation, and transcript-based video editing.
 
-_Record, transcribe on-device, then edit your video by editing the words — delete or mute parts just by selecting them in the transcript._
+It records screen, tab, region, and camera video in the browser; stores recordings on the device; lets you annotate while recording; and opens the result in an in-browser editor. The current fork adds a local recording library plus an on-device transcription and non-destructive timeline foundation for editing video by selecting words.
 
-SayLess is a powerful, privacy-friendly screen recorder, annotation tool, and in-browser video editor. Record your screen, tab, region, or camera; annotate live; then trim, cut, and mute — including by transcript. Everything runs locally, no sign in needed.
+SayLess is a fork of [Screenity](https://github.com/alyssaxuu/screenity) by [Alyssa X](https://alyssax.com), licensed under GPLv3. See [docs/CAPABILITIES.md](docs/CAPABILITIES.md) for the current feature inventory and [docs/FORK_PLAN.md](docs/FORK_PLAN.md) for the roadmap.
 
-> SayLess is a fork of [Screenity](https://github.com/alyssaxuu/screenity) (GPLv3) by [Alyssa X](https://alyssax.com), with cloud/Pro paths removed and a transcript-driven, non-destructive editing layer added. See [`docs/FORK_PLAN.md`](docs/FORK_PLAN.md) and [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md).
+## Current Features
 
-## Table of contents
-- [SayLess](#sayless)
-	- [Table of contents](#table-of-contents)
-	- [Features](#features)
-	- [Self-hosting](#self-hosting)
-	- [Creating a development version](#creating-a-development-version)
-		- [Enabling Save to Google Drive](#enabling-save-to-google-drive)
-	- [Acknowledgements](#acknowledgements)
+- Record desktop, application window, browser tab/region, or camera-only video.
+- Capture microphone audio, system audio where Chrome exposes it, and mixed audio sources.
+- Use a local-first recorder pipeline with WebCodecs MP4 when available and MediaRecorder WebM fallback.
+- Store recording chunks in OPFS when available, with IndexedDB fallback.
+- Recover recordings after service worker restarts, tab closure, encoder stalls, or incomplete finalization.
+- Annotate pages while recording with pen, highlighter, shapes, arrows, text, image insert, eraser, undo/redo, blur, cursor effects, countdown, and camera overlay controls.
+- Apply local MediaPipe camera blur and background replacement.
+- Browse local recordings from the extension's Videos tab and reopen them in the editor.
+- Edit recordings in-browser: trim, cut, mute, crop, add/replace audio, adjust volume, and export MP4, WebM, or GIF.
+- Generate transcripts with the local Whisper provider, then delete or mute selected words through the EDL/timeline editor.
+- Autosave edited local recordings back into the local library.
+- Export support diagnostics as a local ZIP for debugging.
 
-## Features
+## Local-First Notes
 
-🎥 Make unlimited recordings of your tab, a specific area, desktop, any application, or camera<br>
-🎙️ Record your microphone or internal audio, and use features like push to talk<br>
-✏️ Annotate by drawing anywhere on the screen, adding text, arrows, shapes, and more<br>
-✨ Use AI-powered camera backgrounds or blur to enhance your recordings<br>
-🔎 Zoom in smoothly in your recordings to focus on specific areas<br>
-🪄 Blur out any sensitive content of any page to keep it private<br>
-✂️ Remove or add audio, cut, trim, or crop your recordings with a comprehensive editor<br>
-📝 Edit by transcript — transcribe on-device, then delete or mute parts by selecting the words<br>
-👀 Highlight your clicks and cursor, and go in spotlight mode<br>
-⏱️ Set up alarms to automatically stop your recording<br>
-💾 Export as mp4, gif, and webm, or save the video directly to Google Drive to share a link<br>
-⚙️ Set a countdown, hide parts of the UI, or move it anywhere<br>
-🔒 Only you can see your videos — no data is collected. You can even go offline!<br>
-💙 No limits, make as many videos as you want, for as long as you want — all for free & no sign in needed!
+The intended product direction is offline and local-only. The current codebase is partway through that migration:
 
-## Self-hosting
-> 🛠️ Note: SayLess runs entirely in local-only mode. No API calls, sign-in flows, or platform features are enabled — nothing is sent anywhere.
+- Recording, annotation, local library, editing, EDL/timeline logic, and transcription inference all run in the browser.
+- First-run transcription may still download a Whisper model through `@huggingface/transformers` unless a local model path is configured. After the model is cached, inference is local.
+- Inherited Screenity cloud, auth, Pro, Google Drive OAuth, external-connectable, and telemetry-related code still exists in places. Most cloud video listing is disabled in the current local library path, but the code has not been fully removed yet.
+- The roadmap prioritizes removing those inherited network surfaces before adding new hosted features.
 
-You can run SayLess locally as an unpacked extension. Here's how:
+## Development
 
-1. Build the extension (see [Creating a development version](#creating-a-development-version)), or download a `Build.zip` from this repository's releases page if available.
-2. Load the extension by pasting `chrome://extensions/` in the address bar, and [enabling developer mode](https://developer.chrome.com/docs/extensions/mv2/faq/#:~:text=You%20can%20start%20by%20turning,a%20packaged%20extension%2C%20and%20more.).
-3. Click **Load unpacked** and select the `build` folder (unzip first if you downloaded a ZIP).
-4. That's it. [Follow these instructions](#enabling-save-to-google-drive) to set up the Google Drive integration.
+Requirements:
 
-## Creating a development version
+- Node.js 14 or newer.
+- Chrome or a Chromium browser that supports Manifest V3 extensions.
 
-> ❗️ SayLess is licensed under [GPLv3](LICENSE), inherited from Screenity 3.0.0+. Make sure to read the license regarding intellectual property.
+Install and run:
 
-1. Check if your [Node.js](https://nodejs.org/) version is >= **14**.
-2. Clone this repository.
-3. Run `npm install` to install dependencies.
-4. Run `npm start` to start the local development server.
-5. Open `chrome://extensions/` in your browser and [enable developer mode](https://developer.chrome.com/docs/extensions/mv2/faq/#:~:text=You%20can%20start%20by%20turning,a%20packaged%20extension%2C%20and%20more.).
-6. Click **Load unpacked** and select the `build` folder.
-7. The extension should now be available locally.  
-   To rebuild after code changes, run `npm run build`.
+```sh
+npm install
+npm start
+```
 
-### Enabling Save to Google Drive
+Then open `chrome://extensions/`, enable Developer Mode, choose **Load unpacked**, and select the generated `build` folder.
 
-To enable the Google Drive Upload (authorization consent screen) you must change the client_id in the manifest.json file with your linked extension key.
+Useful commands:
 
-You can create it accessing [Google Cloud Console](https://console.cloud.google.com/apis/credentials) and selecting Create Credential > OAuth Client ID > Chrome App. To create a persistent extension key, you can follow the steps detailed [here](https://developer.chrome.com/docs/extensions/reference/manifest/key).
+```sh
+npm run build:dev
+npm run build:release
+npm run test:unit
+npm run test:e2e:local-recordings
+```
+
+## Documentation
+
+- [Capabilities inventory](docs/CAPABILITIES.md)
+- [Fork plan and roadmap](docs/FORK_PLAN.md)
 
 ## Acknowledgements
 
-SayLess is built on [Screenity](https://github.com/alyssaxuu/screenity) by [Alyssa X](https://alyssax.com), licensed under GPLv3. Huge thanks to Alyssa and the Screenity contributors for the original work.
+SayLess is built from Screenity 4.5.3. The original recording, annotation, and editor foundation comes from Screenity and its contributors.

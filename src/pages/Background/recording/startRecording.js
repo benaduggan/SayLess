@@ -192,37 +192,9 @@ const _startRecordingInner = async (caller) => {
     "recordingType",
   ]);
 
-  // Close every prior editor tab by URL (sandboxTab only tracks the last).
-  // OPFS wipes on new recording, so a stale editor would read missing data.
-  try {
-    // editor.html covers viewer mode too (editor.html?view=1); startsWith match.
-    const editorUrls = [chrome.runtime.getURL("editor.html")];
-    const allTabs = await chrome.tabs.query({});
-    const editorTabs = allTabs.filter(
-      (t) =>
-        t.id != null &&
-        t.url &&
-        editorUrls.some((prefix) => t.url.startsWith(prefix)),
-    );
-    if (editorTabs.length > 0) {
-      // Best-effort: tell each editor to clear its beforeunload.
-      // 100ms global race cap; we don't await per-tab so a single
-      // unresponsive tab can't block start.
-      await Promise.race([
-        Promise.allSettled(
-          editorTabs.map((t) =>
-            chrome.tabs.sendMessage(t.id, { type: "editor-force-close" }),
-          ),
-        ),
-        new Promise((r) => setTimeout(r, 100)),
-      ]);
-      // Fire all removes in parallel; failures are silent (tab may
-      // have closed in the interim).
-      for (const t of editorTabs) {
-        chrome.tabs.remove(t.id).catch(() => {});
-      }
-    }
-  } catch {}
+  // Older builds closed every editor here because each new OPFS recording wiped
+  // the prior file. Recordings are now retained and indexed locally, so existing
+  // editor tabs must stay open while a new recording starts.
 
   chrome.storage.local.set({
     restarting: false,

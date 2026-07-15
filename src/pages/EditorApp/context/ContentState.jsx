@@ -26,6 +26,14 @@ import { perfMark, perfSpan } from "../../utils/perfMarks";
 import { triggerSupportDownload } from "../../utils/triggerSupportDownload";
 import { chooseReader } from "../recorderStorage/chooseReader";
 import { runEditorOp } from "../editorOps";
+import {
+  checkpointEditedLocalRecording,
+  localRecordingIdFromBackendRef,
+  readLocalRecordingBlob,
+  registerLocalRecording,
+  saveLocalRecordingEntry,
+  getLocalRecordingIndex,
+} from "../../localRecordings/localRecordingLibrary";
 // mediabunny is ~630KB, only used by export/remux/conversion on user action.
 // Lazy-load to keep parse cost off editor mount. Cached promise.
 let _mbPromise = null;
@@ -271,12 +279,14 @@ const ContentState = (props) => {
     reviewEligible: false,
     backupBlob: null,
     recordingMeta: null,
+    localRecordingId: null,
   };
 
   const [contentState, _setContentState] = useState(defaultState);
   const contentStateRef = useRef(contentState);
   const launchModeRef = useRef("normal");
   const launchRecordingIdRef = useRef(null);
+  const launchLocalRecordingIdRef = useRef(null);
   const pseudoProgressTimerRef = useRef(null);
   const pseudoProgressStartRef = useRef(null);
   const pseudoProgressStartAtRef = useRef(null);
@@ -303,8 +313,63 @@ const ContentState = (props) => {
       const params = new URLSearchParams(window.location.search);
       launchModeRef.current = params.get("mode") || "normal";
       launchRecordingIdRef.current = params.get("recordingId") || null;
+      launchLocalRecordingIdRef.current = params.get("localRecordingId") || null;
     } catch {}
   }, []);
+
+  const registerLoadedLocalRecording = useCallback(
+    async (blob, backendRef = null) => {
+      if (!blob) return null;
+      try {
+        const current = contentStateRef.current || {};
+        const { recordingAttemptId, recordingDuration, recordingMeta } =
+          await chrome.storage.local.get([
+            "recordingAttemptId",
+            "recordingDuration",
+            "recordingMeta",
+          ]);
+        const id =
+          current.localRecordingId ||
+          launchLocalRecordingIdRef.current ||
+          localRecordingIdFromBackendRef(backendRef, recordingAttemptId);
+        const entry = await registerLocalRecording({
+          id,
+          title: current.title || null,
+          blob,
+          backendRef,
+          durationMs:
+            Number(current.duration) > 0
+              ? Math.round(Number(current.duration) * 1000)
+              : Number(recordingDuration) || 0,
+          recordingMeta: current.recordingMeta || recordingMeta || null,
+        });
+        setContentState((prev) => ({
+          ...prev,
+          localRecordingId: entry.id,
+          title: prev.title || entry.title,
+        }));
+        return entry;
+      } catch (error) {
+        console.warn("[SayLess] Failed to register local recording", error);
+        return null;
+      }
+    },
+    [setContentState],
+  );
+
+  const checkpointCurrentLocalEdit = useCallback(
+    async (blob) => {
+      const id = contentStateRef.current?.localRecordingId;
+      if (!id || !blob) return;
+      try {
+        await checkpointEditedLocalRecording(id, blob);
+        setContentState((prev) => ({ ...prev, saved: true }));
+      } catch (error) {
+        console.warn("[SayLess] Failed to checkpoint local edit", error);
+      }
+    },
+    [setContentState],
+  );
 
   useEffect(() => {
     // emit diag-editor-ready once; WebM has many "ready:true" branches
@@ -583,6 +648,7 @@ const ContentState = (props) => {
           chunkCount: readResult.chunkCount,
         },
       );
+    registerLoadedLocalRecording(blob, lastRecordingBackendRef).catch(() => {});
     reconstructVideo(blob);
     return blob;
   };
@@ -616,6 +682,16 @@ const ContentState = (props) => {
             title: `${baseTitle}; ${timestamp}`,
             recordingMeta,
           }));
+          const localId =
+            contentStateRef.current?.localRecordingId ||
+            launchLocalRecordingIdRef.current;
+          if (localId) {
+            saveLocalRecordingEntry({
+              id: localId,
+              title: `${baseTitle}; ${timestamp}`,
+              recordingMeta,
+            }).catch(() => {});
+          }
           chrome.storage.local.remove(["recordingMeta"]);
           return;
         }
@@ -628,6 +704,15 @@ const ContentState = (props) => {
         title: fallbackTitle,
         recordingMeta: null,
       }));
+      const localId =
+        contentStateRef.current?.localRecordingId ||
+        launchLocalRecordingIdRef.current;
+      if (localId) {
+        saveLocalRecordingEntry({
+          id: localId,
+          title: fallbackTitle,
+        }).catch(() => {});
+      }
     };
 
     loadInitialTitle();
@@ -792,6 +877,23 @@ const ContentState = (props) => {
     };
     video.src = URL.createObjectURL(contentState.blob);
   }, [contentState.blob]);
+
+  useEffect(() => {
+    if (!contentState.localRecordingId) return;
+    if (!contentState.hasBeenEdited) return;
+    if (!contentState.blob) return;
+    const timer = setTimeout(() => {
+      checkpointEditedLocalRecording(
+        contentState.localRecordingId,
+        contentState.blob,
+      )
+        .then(() => setContentState((prev) => ({ ...prev, saved: true })))
+        .catch((error) =>
+          console.warn("[SayLess] Failed to autosave local edit", error),
+        );
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [contentState.localRecordingId, contentState.hasBeenEdited, contentState.blob]);
 
   const reconstructVideo = async (withBlob) => {
     // callers always pass a reconstructed blob; bail on null (caller surfaces
@@ -1382,6 +1484,9 @@ const ContentState = (props) => {
     }
     // null directBlob means the read failed and the modal already fired
     if (directBlob) {
+      registerLoadedLocalRecording(directBlob, backendRefForThisLoad).catch(
+        () => {},
+      );
       reconstructVideo(directBlob);
     }
 
@@ -1765,7 +1870,8 @@ const ContentState = (props) => {
     let cancelled = false;
     const params = new URLSearchParams(window.location.search || "");
     const isRecoveryMode = params.get("mode") === "recover";
-    if (isRecoveryMode) return;
+    const localRecordingId = params.get("localRecordingId");
+    if (isRecoveryMode || localRecordingId) return;
 
     // 500ms retry in case backendRef hasn't propagated yet
     const attemptSelfTrigger = async (isRetry = false) => {
@@ -1805,6 +1911,61 @@ const ContentState = (props) => {
       }
     })();
 
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadLocalRecording = async () => {
+      const params = new URLSearchParams(window.location.search || "");
+      const localRecordingId = params.get("localRecordingId");
+      if (!localRecordingId) return;
+      try {
+        const index = await getLocalRecordingIndex();
+        const entry = index[localRecordingId];
+        if (!entry) throw new Error("local-recording-index-miss");
+        const blob = await readLocalRecordingBlob(entry);
+        if (cancelled) return;
+        setContentState((prev) => ({
+          ...prev,
+          localRecordingId: entry.id,
+          title: entry.title || prev.title,
+          recordingMeta: entry.recordingMeta || null,
+          isFfmpegRunning: false,
+          noffmpeg: false,
+          editLimit: MAX_EDIT_LIMIT_S,
+          lastRecordingBackend: entry.backendRef?.backend || "local",
+        }));
+        reconstructVideo(blob);
+      } catch (error) {
+        console.warn("[SayLess] Failed to load local recording", error);
+        if (
+          !cancelled &&
+          typeof contentStateRef.current?.openModal === "function"
+        ) {
+          contentStateRef.current.openModal(
+            chrome.i18n.getMessage("opfsLoadErrorTitle"),
+            chrome.i18n.getMessage("opfsLoadErrorDescription"),
+            null,
+            chrome.i18n.getMessage("permissionsModalDismiss"),
+            () => {},
+            () => {},
+            null,
+            null,
+            null,
+            true,
+          );
+        }
+        setContentState((prev) => ({
+          ...prev,
+          ready: true,
+          recordingFailed: true,
+        }));
+      }
+    };
+    loadLocalRecording();
     return () => {
       cancelled = true;
     };
@@ -2061,6 +2222,7 @@ const ContentState = (props) => {
       }
 
       clearEditOp();
+      checkpointCurrentLocalEdit(blob);
 
       setContentState((prev) => {
         const wasFirstReady = !prev.mp4ready && isTopLevel;

@@ -18,17 +18,11 @@ let offset = 0;
 let chunkCount = 0;
 let closed = false;
 
-// Keep exactly one recoverable recording (matches chunksStore.clear()
-// on the IDB path); old recording stays until a new one actually starts.
-const clearPreviousRecordings = async (exceptName = null) => {
-  try {
-    const dir = await navigator.storage.getDirectory();
-    for await (const [name] of dir.entries()) {
-      if (!name.startsWith(FILE_PREFIX)) continue;
-      if (exceptName && name === exceptName) continue;
-      await dir.removeEntry(name).catch(() => {});
-    }
-  } catch {}
+// Keep completed recordings. The local recording library indexes these files,
+// so deleting older OPFS files on every new recording breaks "all videos" and
+// tab-close recovery for previous edits.
+const clearPreviousRecordings = async () => {
+  return;
 };
 
 const post = (payload) => {
@@ -69,7 +63,7 @@ const openFile = async (recordingId, extension) => {
   offset = 0;
   chunkCount = 0;
   closed = false;
-  await clearPreviousRecordings(name);
+  await clearPreviousRecordings();
   devLog("open", { fileName: name });
   return { fileName: name };
 };
