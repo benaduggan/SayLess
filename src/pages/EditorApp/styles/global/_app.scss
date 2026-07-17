@@ -11,24 +11,29 @@ body {
 }
 
 .saylessEditor {
-  min-height: 100vh;
+  height: 100vh;
   background: #f6f7fb;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .saylessEditor__workspace {
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
   box-sizing: border-box;
-  padding-top: 80px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+  padding-top: 80px;
 }
 
 .saylessEditor__mediaColumn {
-  position: relative;
   min-width: 0;
   min-height: 0;
   background: #f6f7fb;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(176px, auto);
+  overflow: hidden;
 }
 
 .saylessEditor__transcriptPanel {
@@ -40,32 +45,29 @@ body {
 }
 
 .saylessEditor .videoPlayer {
-  position: absolute;
-  inset: 0;
-  height: auto;
+  min-height: 0;
+  height: 100%;
 }
 
 .saylessEditor .playerWrap {
-  top: 0;
-  height: calc(100% - 230px);
+  min-height: 0;
+  height: 100%;
 }
 
 .saylessEditor .plyr {
-  max-width: min(900px, calc(100% - 48px)) !important;
+  max-width: min(960px, calc(100% - 48px)) !important;
+  max-height: calc(100% - 32px) !important;
 }
 
 .saylessEditor .trimWrap {
-  left: 0;
-  right: 0;
   width: 100%;
+  min-height: 0;
 }
 
 @media (max-width: 1100px) {
   .saylessEditor__workspace {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(520px, 60vh) minmax(360px, 40vh);
-    height: auto;
-    min-height: 100vh;
+    grid-template-rows: minmax(620px, 70vh) minmax(360px, 30vh);
     overflow-y: auto;
   }
 
@@ -75,7 +77,7 @@ body {
   }
 
   .saylessEditor__mediaColumn {
-    min-height: 520px;
+    min-height: 620px;
   }
 
   .saylessEditor__transcriptPanel {

@@ -2234,7 +2234,10 @@ const Recorder = () => {
   };
 
   function startAudioStream(id) {
-    return acquireMicStream(id);
+    return acquireMicStream(id, {
+      bluetoothDiag: true,
+      logger: { debug, warn: debugWarn },
+    });
   }
   function setAudioInputVolume(volume) {
     if (!audioInputGain.current) return;

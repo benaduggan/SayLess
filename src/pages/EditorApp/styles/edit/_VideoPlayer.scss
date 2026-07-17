@@ -5,24 +5,20 @@
 }
 
 .videoPlayer {
-  position: absolute;
-  top: 0px;
-  left: 0px;
-  right: 0px;
-  margin: auto;
-  height: 100vh;
+  min-height: 0;
+  height: 100%;
 }
 .playerWrap {
-  height: calc(100% - 300px);
-  position: absolute;
-  top: 80px;
-  left: 0px;
+  height: 100%;
+  min-height: 0;
+  position: relative;
   width: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 32px;
+  padding: 16px 24px;
+  box-sizing: border-box;
 }
 .plyr {
   max-width: 900px !important;
@@ -34,6 +30,7 @@
   position: relative !important;
   border-radius: 15px !important;
   width: 90% !important;
+  max-height: 100% !important;
 }
 .sayless-native-player-shell {
   background: #000;
@@ -61,9 +58,7 @@
   .playerWrap {
     position: relative !important;
     height: 100% !important;
-    padding-top: 40px !important;
-    padding-bottom: 60px !important;
+    padding: 12px 16px !important;
     top: 0px !important;
-    position: relative !important;
   }
 }

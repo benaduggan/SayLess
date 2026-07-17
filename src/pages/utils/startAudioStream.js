@@ -1,12 +1,25 @@
 // Microphone acquisition shared by recorder contexts.
-// getUserMediaWithFallback re-resolves the device by label if the id drifted; falls
-// back to generic getUserMedia({audio:true}) before giving up with null.
+// getUserMediaWithFallback re-resolves the device by label if the id drifted;
+// falls back to generic getUserMedia({ audio: ... }) before giving up with null.
 // Per-page options:
 //   bailOnNone:     return null for a "none"/empty id (Recorder)
 //   bluetoothDiag:  diag-forward when the mic comes up at a low sample rate (Recorder)
 //   toastOnBlocked: toast when even the generic fallback fails.
 //   logger:         optional { debug, warn } for dev breadcrumbs
 import { getUserMediaWithFallback } from "./mediaDeviceFallback";
+
+const buildAudioConstraints = (id) => {
+  const base = {
+    sampleRate: { ideal: 48000 },
+    channelCount: { ideal: 1 },
+    echoCancellation: { ideal: false },
+    noiseSuppression: { ideal: true },
+    autoGainControl: { ideal: false },
+  };
+  return id && id !== "none"
+    ? { ...base, deviceId: { exact: id } }
+    : base;
+};
 
 export async function startAudioStream(
   id,
@@ -23,7 +36,7 @@ export async function startAudioStream(
   const useExact = id && id !== "none";
   const audioStreamOptions = {
     mimeType: "video/webm;codecs=vp8,opus",
-    audio: useExact ? { deviceId: { exact: id } } : true,
+    audio: buildAudioConstraints(useExact ? id : null),
   };
 
   const { defaultAudioInputLabel, audioinput } = await chrome.storage.local.get([
@@ -74,6 +87,14 @@ export async function startAudioStream(
               data: { trackSampleRate, label },
             });
           } catch {}
+          try {
+            chrome.runtime.sendMessage({
+              type: "show-toast",
+              message:
+                "Your microphone is running in a low-quality Bluetooth call mode. Use the built-in mic, a wired mic, or switch your Bluetooth headphones to a different input.",
+              timeout: 10000,
+            });
+          } catch {}
         }
       } catch {}
     }
@@ -82,7 +103,9 @@ export async function startAudioStream(
   } catch (err) {
     logger?.warn?.("startAudioStream() exact device failed, retrying generic", err);
     try {
-      return await navigator.mediaDevices.getUserMedia({ audio: true });
+      return await navigator.mediaDevices.getUserMedia({
+        audio: buildAudioConstraints(null),
+      });
     } catch (err2) {
       logger?.warn?.("startAudioStream() failed completely", err2);
       if (toastOnBlocked) {
