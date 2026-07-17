@@ -1446,9 +1446,10 @@ if (
   !/sayless-extension-v\*\.json/.test(ciWorkflowText) ||
   !/softprops\/action-gh-release@v2/.test(ciWorkflowText) ||
   !/refs\/tags\/v/.test(ciWorkflowText) ||
-  !/inputs\.release_tag/.test(ciWorkflowText)
+  !/inputs\.release_tag/.test(ciWorkflowText) ||
+  !/draft:\s*false/.test(ciWorkflowText)
 ) {
-  fail("GitHub Actions CI must run release checks, upload evidence, build a verified downloadable extension bundle, and publish draft release assets only from tags or explicit manual tags.");
+  fail("GitHub Actions CI must run release checks, upload evidence, build a verified downloadable extension bundle, and publish direct-download release assets only from tags or explicit manual tags.");
 }
 if ((packageJson.scripts?.["preflight:cws"] || "") !== "npm run qa:release:status -- --require-ready") {
   fail("preflight:cws must require ready qa:release:status so CWS store actions keep every release evidence gate.");
