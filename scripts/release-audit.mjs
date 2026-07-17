@@ -1432,7 +1432,7 @@ if (
   !/push:/.test(ciWorkflowText) ||
   !/workflow_dispatch:/.test(ciWorkflowText) ||
   !/npm ci/.test(ciWorkflowText) ||
-  !/npx playwright install chrome/.test(ciWorkflowText) ||
+  !/npx playwright install chrome chromium/.test(ciWorkflowText) ||
   !/xvfb-run -a npm run qa:release:auto/.test(ciWorkflowText) ||
   !/npm run qa:release:status/.test(ciWorkflowText) ||
   !/release-artifacts\/release-qa-automated\.json/.test(ciWorkflowText) ||

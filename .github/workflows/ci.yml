@@ -45,8 +45,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright Chrome
-        run: npx playwright install chrome
+      - name: Install Playwright browsers
+        run: npx playwright install chrome chromium
 
       - name: Run automated release QA
         run: xvfb-run -a npm run qa:release:auto

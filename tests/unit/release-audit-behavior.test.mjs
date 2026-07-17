@@ -129,7 +129,7 @@ Release defaults use the bundled Whisper model and run transcription locally wit
   );
   writeFileSync(
     join(dir, ".github", "workflows", "ci.yml"),
-    "pull_request:\npush:\nworkflow_dispatch:\nnpm ci\nnpx playwright install chrome\nxvfb-run -a npm run qa:release:auto\nnpm run qa:release:status\nrelease-artifacts/release-qa-automated.json\nneeds: release-checks\nnpm run build:release\nnpm run verify:release\nnpm run package:ci-extension\nactions/upload-artifact@v4\nsayless-extension-v*.zip\nsayless-extension-v*.sha256\nsayless-extension-v*.json\nsoftprops/action-gh-release@v2\nrefs/tags/v\ninputs.release_tag\ndraft: false\n",
+    "pull_request:\npush:\nworkflow_dispatch:\nnpm ci\nnpx playwright install chrome chromium\nxvfb-run -a npm run qa:release:auto\nnpm run qa:release:status\nrelease-artifacts/release-qa-automated.json\nneeds: release-checks\nnpm run build:release\nnpm run verify:release\nnpm run package:ci-extension\nactions/upload-artifact@v4\nsayless-extension-v*.zip\nsayless-extension-v*.sha256\nsayless-extension-v*.json\nsoftprops/action-gh-release@v2\nrefs/tags/v\ninputs.release_tag\ndraft: false\n",
   );
   writeFileSync(
     join(dir, "scripts", "release-qa-automated.mjs"),
