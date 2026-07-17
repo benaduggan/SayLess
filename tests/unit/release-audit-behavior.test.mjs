@@ -149,7 +149,7 @@ Release defaults use the bundled Whisper model and run transcription locally wit
   );
   writeFileSync(
     join(dir, "tests", "e2e", "run-built-extension-surface.cjs"),
-    "recordPageErrors\npattern: \"pageerror\"\nrecordPageErrors(hits, pageName, pageErrors)\nrecordPageErrors(hits, \"content-script-popup\", contentErrors)\nrecordConsoleErrors\npattern: \"console-error\"\nmessage.type() === \"error\"\nrecordConsoleErrors(hits, pageName, consoleErrors)\nrecordConsoleErrors(hits, \"content-script-popup\", contentConsoleErrors)\n",
+    "recordPageErrors\npattern: \"pageerror\"\nscanExtensionPage\nisTargetClosedError\nrecordPageErrors(hits, pageName, surface.pageErrors)\nrecordPageErrors(hits, \"content-script-popup\", contentErrors)\nrecordConsoleErrors\npattern: \"console-error\"\nmessage.type() === \"error\"\nrecordConsoleErrors(hits, pageName, surface.consoleErrors)\nrecordConsoleErrors(hits, \"content-script-popup\", contentConsoleErrors)\n",
   );
   writeFileSync(
     join(dir, "scripts", "verify-cws-package.mjs"),

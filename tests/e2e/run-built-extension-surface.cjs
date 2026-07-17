@@ -117,6 +117,89 @@ const recordConsoleErrors = (hits, pageName, consoleErrors) => {
   }
 };
 
+const isTargetClosedError = (error) =>
+  /Target page, context or browser has been closed|Page closed|has been closed/i.test(
+    String(error?.message || error),
+  );
+
+const scanExtensionPage = async (context, extensionId, pageName) => {
+  const url = `chrome-extension://${extensionId}/${pageName}`;
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const page = await context.newPage();
+    const pageErrors = [];
+    const consoleErrors = [];
+    page.on("pageerror", (error) => pageErrors.push(formatPageError(error)));
+    page.on("console", (message) => {
+      if (message.type() === "error") {
+        consoleErrors.push(formatConsoleError(message));
+      }
+    });
+
+    try {
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+      const openedUrl = page.url();
+      const chromeError = openedUrl.startsWith("chrome-error://")
+        ? openedUrl
+        : null;
+      const text = await page.evaluate(collectSurfaceText);
+
+      // Give async page errors a short chance to surface. Some CI Chrome builds
+      // close extension pages during this idle window; once text is collected,
+      // that should not turn a completed surface probe into a runner crash.
+      try {
+        await page.waitForTimeout(750);
+      } catch (error) {
+        if (!isTargetClosedError(error)) throw error;
+      }
+
+      await page.close().catch(() => {});
+      return {
+        pageName,
+        url,
+        openedUrl,
+        chromeError,
+        text,
+        textBytes: Buffer.byteLength(text, "utf8"),
+        pageErrors,
+        consoleErrors,
+      };
+    } catch (error) {
+      lastError = error;
+      await page.close().catch(() => {});
+      if (attempt === 0 && isTargetClosedError(error)) {
+        await sleep(500);
+        continue;
+      }
+      return {
+        pageName,
+        url,
+        openedUrl: url,
+        chromeError: null,
+        text: "",
+        textBytes: 0,
+        pageErrors: [
+          ...pageErrors,
+          `surface probe failed: ${formatPageError(error)}`,
+        ],
+        consoleErrors,
+      };
+    }
+  }
+
+  return {
+    pageName,
+    url,
+    openedUrl: url,
+    chromeError: null,
+    text: "",
+    textBytes: 0,
+    pageErrors: [`surface probe failed: ${formatPageError(lastError)}`],
+    consoleErrors: [],
+  };
+};
+
 const startLocalPageServer = async () => {
   const server = http.createServer((req, res) => {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -611,38 +694,29 @@ const launchExtensionContext = async (userDataDir) => {
       });
     }
     for (const pageName of PAGES) {
-      const page = await context.newPage();
-      const pageErrors = [];
-      const consoleErrors = [];
-      page.on("pageerror", (error) => pageErrors.push(formatPageError(error)));
-      page.on("console", (message) => {
-        if (message.type() === "error") {
-          consoleErrors.push(formatConsoleError(message));
-        }
-      });
-      const url = `chrome-extension://${extensionId}/${pageName}`;
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-      await page.waitForTimeout(750);
-      if (page.url().startsWith("chrome-error://")) {
-        hits.push({ pageName, pattern: "chrome-error", match: page.url() });
+      const surface = await scanExtensionPage(context, extensionId, pageName);
+      if (surface.chromeError) {
+        hits.push({
+          pageName,
+          pattern: "chrome-error",
+          match: surface.chromeError,
+        });
       }
-      const text = await page.evaluate(collectSurfaceText);
       for (const pattern of FORBIDDEN_SURFACE_PATTERNS) {
-        const match = text.match(pattern);
+        const match = surface.text.match(pattern);
         if (match) {
           hits.push({ pageName, pattern: pattern.source, match: match[0] });
         }
       }
-      recordPageErrors(hits, pageName, pageErrors);
-      recordConsoleErrors(hits, pageName, consoleErrors);
+      recordPageErrors(hits, pageName, surface.pageErrors);
+      recordConsoleErrors(hits, pageName, surface.consoleErrors);
       summaries.push({
         page: pageName,
-        url,
-        textBytes: Buffer.byteLength(text, "utf8"),
-        pageErrors: pageErrors.slice(0, 3),
-        consoleErrors: consoleErrors.slice(0, 3),
+        url: surface.url,
+        textBytes: surface.textBytes,
+        pageErrors: surface.pageErrors.slice(0, 3),
+        consoleErrors: surface.consoleErrors.slice(0, 3),
       });
-      await page.close();
     }
 
     const contentPage = await context.newPage();

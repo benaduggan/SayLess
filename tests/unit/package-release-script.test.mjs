@@ -359,7 +359,7 @@ test("release audit guards package release script gates", () => {
   assert.ok(releaseAuditScript.includes("writeNonPassingEvidence"));
   assert.ok(releaseAuditScript.includes("writeNonPassingPackageEvidence"));
   assert.ok(releaseAuditScript.includes("writeNonPassingCwsEvidence"));
-  assert.ok(releaseAuditScript.includes("recordPageErrors\\(hits, pageName, pageErrors\\)"));
+  assert.ok(releaseAuditScript.includes("recordPageErrors\\(hits, pageName, surface\\.pageErrors\\)"));
   assert.ok(
     releaseAuditScript.includes(
       'recordPageErrors\\(hits, "content-script-popup", contentErrors\\)',
@@ -369,8 +369,10 @@ test("release audit guards package release script gates", () => {
   assert.ok(releaseAuditScript.includes('pattern:\\s*"console-error"'));
   assert.ok(releaseAuditScript.includes('message\\.type\\(\\) === "error"'));
   assert.ok(
-    releaseAuditScript.includes("recordConsoleErrors\\(hits, pageName, consoleErrors\\)"),
+    releaseAuditScript.includes("recordConsoleErrors\\(hits, pageName, surface\\.consoleErrors\\)"),
   );
+  assert.ok(releaseAuditScript.includes("scanExtensionPage"));
+  assert.ok(releaseAuditScript.includes("isTargetClosedError"));
   assert.ok(
     releaseAuditScript.includes(
       'recordConsoleErrors\\(hits, "content-script-popup", contentConsoleErrors\\)',
@@ -385,7 +387,7 @@ test("release audit guards package release script gates", () => {
 test("built extension surface smoke fails on page JavaScript and console errors", () => {
   assert.match(builtExtensionSurfaceScript, /const recordPageErrors = \(hits, pageName, pageErrors\) =>/);
   assert.match(builtExtensionSurfaceScript, /pattern:\s*"pageerror"/);
-  assert.match(builtExtensionSurfaceScript, /recordPageErrors\(hits, pageName, pageErrors\)/);
+  assert.match(builtExtensionSurfaceScript, /recordPageErrors\(hits, pageName, surface\.pageErrors\)/);
   assert.match(
     builtExtensionSurfaceScript,
     /recordPageErrors\(hits, "content-script-popup", contentErrors\)/,
@@ -396,7 +398,9 @@ test("built extension surface smoke fails on page JavaScript and console errors"
   );
   assert.match(builtExtensionSurfaceScript, /pattern:\s*"console-error"/);
   assert.match(builtExtensionSurfaceScript, /message\.type\(\) === "error"/);
-  assert.match(builtExtensionSurfaceScript, /recordConsoleErrors\(hits, pageName, consoleErrors\)/);
+  assert.match(builtExtensionSurfaceScript, /recordConsoleErrors\(hits, pageName, surface\.consoleErrors\)/);
+  assert.match(builtExtensionSurfaceScript, /const scanExtensionPage = async/);
+  assert.match(builtExtensionSurfaceScript, /isTargetClosedError/);
   assert.match(
     builtExtensionSurfaceScript,
     /recordConsoleErrors\(hits, "content-script-popup", contentConsoleErrors\)/,

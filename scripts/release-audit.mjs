@@ -1124,19 +1124,23 @@ if ((packageJson.scripts?.["verify:release-package"] || "") !== "node scripts/ve
 if (
   !/recordPageErrors/.test(builtExtensionSurfaceTestText) ||
   !/pattern:\s*"pageerror"/.test(builtExtensionSurfaceTestText) ||
-  !/recordPageErrors\(hits, pageName, pageErrors\)/.test(builtExtensionSurfaceTestText) ||
+  !/recordPageErrors\(hits, pageName, surface\.pageErrors\)/.test(
+    builtExtensionSurfaceTestText,
+  ) ||
   !/recordPageErrors\(hits, "content-script-popup", contentErrors\)/.test(
     builtExtensionSurfaceTestText,
   ) ||
   !/recordConsoleErrors/.test(builtExtensionSurfaceTestText) ||
   !/pattern:\s*"console-error"/.test(builtExtensionSurfaceTestText) ||
   !/message\.type\(\) === "error"/.test(builtExtensionSurfaceTestText) ||
-  !/recordConsoleErrors\(hits, pageName, consoleErrors\)/.test(
+  !/recordConsoleErrors\(hits, pageName, surface\.consoleErrors\)/.test(
     builtExtensionSurfaceTestText,
   ) ||
   !/recordConsoleErrors\(hits, "content-script-popup", contentConsoleErrors\)/.test(
     builtExtensionSurfaceTestText,
-  )
+  ) ||
+  !/isTargetClosedError/.test(builtExtensionSurfaceTestText) ||
+  !/scanExtensionPage/.test(builtExtensionSurfaceTestText)
 ) {
   fail("tests/e2e/run-built-extension-surface.cjs must fail packaged surface smoke on page JavaScript and console errors.");
 }
