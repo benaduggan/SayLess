@@ -6,7 +6,7 @@
 //   bluetoothDiag:  diag-forward when the mic comes up at a low sample rate (Recorder)
 //   toastOnBlocked: toast when even the generic fallback fails.
 //   logger:         optional { debug, warn } for dev breadcrumbs
-import { getUserMediaWithFallback } from "./mediaDeviceFallback";
+import { getUserMediaWithFallback } from "./mediaDeviceFallback.js";
 
 const buildAudioConstraints = (id) => {
   const base = {
