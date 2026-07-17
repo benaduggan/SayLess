@@ -143,25 +143,31 @@ const bundleHarness = (work) =>
     const lib = window.LOCAL_RECORDINGS;
     const transcriptCache = window.TRANSCRIPT_CACHE;
     const blobText = async (blob) => await blob.text();
-    const genEditableRecording = async (sec = 4) => {
+    const genEditableRecording = async (sec = 4, { includeAudio = true } = {}) => {
       const canvas = document.createElement("canvas");
       canvas.width = 320;
       canvas.height = 180;
       const ctx = canvas.getContext("2d");
       const video = canvas.captureStream(30);
-      const ac = new AudioContext();
-      const osc = ac.createOscillator();
-      const t0 = ac.currentTime;
-      osc.frequency.setValueAtTime(300, t0);
-      osc.frequency.setValueAtTime(900, t0 + 1.2);
-      osc.frequency.setValueAtTime(500, t0 + 2.7);
-      const audioDest = ac.createMediaStreamDestination();
-      osc.connect(audioDest);
-      osc.start();
-      const stream = new MediaStream([
-        ...video.getVideoTracks(),
-        ...audioDest.stream.getAudioTracks(),
-      ]);
+      let ac = null;
+      let osc = null;
+      let audioDest = null;
+      if (includeAudio) {
+        ac = new AudioContext();
+        osc = ac.createOscillator();
+        const t0 = ac.currentTime;
+        osc.frequency.setValueAtTime(300, t0);
+        osc.frequency.setValueAtTime(900, t0 + 1.2);
+        osc.frequency.setValueAtTime(500, t0 + 2.7);
+        audioDest = ac.createMediaStreamDestination();
+        osc.connect(audioDest);
+        osc.start();
+      }
+      const stream = new MediaStream(
+        includeAudio
+          ? [...video.getVideoTracks(), ...audioDest.stream.getAudioTracks()]
+          : [...video.getVideoTracks()],
+      );
       const recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
       const chunks = [];
       recorder.ondataavailable = (event) => {
@@ -184,10 +190,29 @@ const bundleHarness = (work) =>
         recorder.onstop = resolve;
         recorder.stop();
       });
-      osc.stop();
-      await ac.close();
+      if (osc) osc.stop();
+      if (ac) await ac.close();
       stream.getTracks().forEach((track) => track.stop());
       return new Blob(chunks, { type: "video/webm" });
+    };
+    const browserCanEncodeTimelineAac = async () => {
+      if (
+        typeof AudioEncoder === "undefined" ||
+        typeof AudioEncoder.isConfigSupported !== "function"
+      ) {
+        return false;
+      }
+      try {
+        const support = await AudioEncoder.isConfigSupported({
+          codec: "mp4a.40.2",
+          bitrate: 192000,
+          numberOfChannels: 2,
+          sampleRate: 48000,
+        });
+        return support.supported === true;
+      } catch {
+        return false;
+      }
     };
     const genSilenceAudioRecording = async (sec = 3.2) => {
       const ac = new AudioContext();
@@ -475,23 +500,31 @@ const bundleHarness = (work) =>
       "rec-transcript-flow",
     );
     const transcriptFlowVtt = await transcriptFlowCaption.blob.text();
+    const timelineAacSupported = await browserCanEncodeTimelineAac();
+    const transcriptRenderSourceBlob = timelineAacSupported
+      ? await lib.readLocalRecordingBlob(
+          (await lib.getLocalRecordingIndex())["rec-transcript-flow"],
+        )
+      : await genEditableRecording(4, { includeAudio: false });
+    const resolvedTranscriptSegments = window.LOCAL_TIMELINE.resolveTimeline(
+      reopenedTranscriptProject.timeline,
+    ).segments;
+    const transcriptFlowExpectedDuration = resolvedTranscriptSegments.reduce(
+      (duration, segment) =>
+        duration + Math.max(0, segment.sourceEnd - segment.sourceStart),
+      0,
+    );
     const transcriptFlowExport = await window.RENDER_TIMELINE(
-      await lib.readLocalRecordingBlob(
-        (await lib.getLocalRecordingIndex())["rec-transcript-flow"],
-      ),
-      window.LOCAL_TIMELINE.resolveTimeline(reopenedTranscriptProject.timeline)
-        .segments,
+      transcriptRenderSourceBlob,
+      resolvedTranscriptSegments,
     );
     const abortVideoController = new AbortController();
     let abortVideoProgressCount = 0;
     let abortVideoErrorName = null;
     try {
       await window.RENDER_TIMELINE(
-        await lib.readLocalRecordingBlob(
-          (await lib.getLocalRecordingIndex())["rec-transcript-flow"],
-        ),
-        window.LOCAL_TIMELINE.resolveTimeline(reopenedTranscriptProject.timeline)
-          .segments,
+        transcriptRenderSourceBlob,
+        resolvedTranscriptSegments,
         () => {
           abortVideoProgressCount += 1;
           abortVideoController.abort();
@@ -553,11 +586,8 @@ const bundleHarness = (work) =>
       ? await sampleImageCenterPixel(generatedThumbnailDataUrl)
       : null;
     const captionBurnInExport = await window.RENDER_TIMELINE(
-      await lib.readLocalRecordingBlob(
-        (await lib.getLocalRecordingIndex())["rec-transcript-flow"],
-      ),
-      window.LOCAL_TIMELINE.resolveTimeline(reopenedTranscriptProject.timeline)
-        .segments,
+      transcriptRenderSourceBlob,
+      resolvedTranscriptSegments,
       undefined,
       {
         captions: [{ start: 0.1, end: 0.8, text: "caption smoke" }],
@@ -591,9 +621,9 @@ const bundleHarness = (work) =>
       undefined,
       { format: "m4a" },
     );
-    const editAudioAfter = await window.TRANSCRIPTION_AUDIO.blobToMono16k(
-      transcriptFlowExport,
-    );
+    const editAudioAfter = timelineAacSupported
+      ? await window.TRANSCRIPTION_AUDIO.blobToMono16k(transcriptFlowExport)
+      : { duration: transcriptFlowExpectedDuration };
     const silenceAudioBlob = await genSilenceAudioRecording();
     const decodedSilenceAudio = await window.TRANSCRIPTION_AUDIO.blobToMono16k(
       silenceAudioBlob,
@@ -1025,6 +1055,7 @@ const bundleHarness = (work) =>
         transcriptFlowVtt.includes("keep") && transcriptFlowVtt.includes("tail"),
       transcriptFlowDurationBefore: editAudioBefore.duration,
       transcriptFlowDurationAfter: editAudioAfter.duration,
+      timelineAacSupported,
       abortVideoProgressCount,
       abortVideoErrorName,
       captionBurnInExportBytes: captionBurnInExport.size,
