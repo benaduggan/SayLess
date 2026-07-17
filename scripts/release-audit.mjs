@@ -17,6 +17,7 @@ const PACKAGE_PATH = join(ROOT, "package.json");
 const PACKAGE_LOCK_PATH = join(ROOT, "package-lock.json");
 const GITIGNORE_PATH = join(ROOT, ".gitignore");
 const BUILD_SCRIPT_PATH = join(ROOT, "utils", "build.js");
+const CI_WORKFLOW_PATH = join(ROOT, ".github", "workflows", "ci.yml");
 const STORE_LISTING_PATH = join(ROOT, "docs", "STORE_LISTING.md");
 const BUILT_EXTENSION_SURFACE_TEST_PATH = join(
   ROOT,
@@ -902,6 +903,11 @@ const buildScriptText = readFileSync(BUILD_SCRIPT_PATH, "utf8");
 const webpackConfigText = readFileSync(WEBPACK_CONFIG_PATH, "utf8");
 const packageReleaseScriptText = readFileSync(join(ROOT, "scripts", "package-release.mjs"), "utf8");
 const packageCwsScriptText = readFileSync(join(ROOT, "scripts", "package-cws.mjs"), "utf8");
+const packageCiExtensionScriptText = readFileSync(
+  join(ROOT, "scripts", "package-ci-extension.mjs"),
+  "utf8",
+);
+const ciWorkflowText = readFileSync(CI_WORKFLOW_PATH, "utf8");
 const releaseScriptText = readFileSync(join(ROOT, "scripts", "release.mjs"), "utf8");
 const builtExtensionSurfaceTestText = readFileSync(BUILT_EXTENSION_SURFACE_TEST_PATH, "utf8");
 const releaseQaAutomatedScriptText = readFileSync(
@@ -1027,7 +1033,7 @@ for (const [label, version] of [
     );
   }
 }
-for (const ignoredPattern of ["build/", "release-artifacts/", "*.zip"]) {
+for (const ignoredPattern of ["build/", "release-artifacts/", "dist/", "*.zip"]) {
   if (!new RegExp(`^${ignoredPattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m").test(gitignoreText)) {
     fail(`.gitignore must keep generated release artifact path ignored: ${ignoredPattern}`);
   }
@@ -1059,6 +1065,21 @@ for (const scriptName of [
 }
 if ((packageJson.scripts?.package || "") !== "npm run package:release") {
   fail("package must delegate to package:release so generic packaging keeps the release evidence gate.");
+}
+if ((packageJson.scripts?.["package:ci-extension"] || "") !== "node scripts/package-ci-extension.mjs") {
+  fail("package:ci-extension must run scripts/package-ci-extension.mjs for the GitHub Actions downloadable extension artifact.");
+}
+if (
+  !/JSZip/.test(packageCiExtensionScriptText) ||
+  !/build\/manifest\.json/.test(packageCiExtensionScriptText) ||
+  !/package\.json version/.test(packageCiExtensionScriptText) ||
+  !/sayless-extension-v\$\{manifest\.version\}/.test(packageCiExtensionScriptText) ||
+  !/sayless\.ciExtensionPackage/.test(packageCiExtensionScriptText) ||
+  !/createHash\("sha256"\)\.update\(zipBuffer\)/.test(packageCiExtensionScriptText) ||
+  !/platform:\s*"UNIX"/.test(packageCiExtensionScriptText) ||
+  !/dist/.test(packageCiExtensionScriptText)
+) {
+  fail("scripts/package-ci-extension.mjs must create a deterministic versioned zip, SHA-256 file, and CI package metadata from build/.");
 }
 if (!/verify-no-secrets\.mjs/.test(packageReleaseScriptText)) {
   fail("scripts/package-release.mjs must run the no-secrets scan before writing extension.zip.");
@@ -1405,6 +1426,29 @@ if (
 }
 if ((packageJson.scripts?.["verify:cws-package"] || "") !== "node scripts/verify-cws-package.mjs") {
   fail("verify:cws-package must run scripts/verify-cws-package.mjs.");
+}
+if (
+  !/pull_request:/.test(ciWorkflowText) ||
+  !/push:/.test(ciWorkflowText) ||
+  !/workflow_dispatch:/.test(ciWorkflowText) ||
+  !/npm ci/.test(ciWorkflowText) ||
+  !/npx playwright install chrome/.test(ciWorkflowText) ||
+  !/xvfb-run -a npm run qa:release:auto/.test(ciWorkflowText) ||
+  !/npm run qa:release:status/.test(ciWorkflowText) ||
+  !/release-artifacts\/release-qa-automated\.json/.test(ciWorkflowText) ||
+  !/needs:\s*release-checks/.test(ciWorkflowText) ||
+  !/npm run build:release/.test(ciWorkflowText) ||
+  !/npm run verify:release/.test(ciWorkflowText) ||
+  !/npm run package:ci-extension/.test(ciWorkflowText) ||
+  !/actions\/upload-artifact@v4/.test(ciWorkflowText) ||
+  !/sayless-extension-v\*\.zip/.test(ciWorkflowText) ||
+  !/sayless-extension-v\*\.sha256/.test(ciWorkflowText) ||
+  !/sayless-extension-v\*\.json/.test(ciWorkflowText) ||
+  !/softprops\/action-gh-release@v2/.test(ciWorkflowText) ||
+  !/refs\/tags\/v/.test(ciWorkflowText) ||
+  !/inputs\.release_tag/.test(ciWorkflowText)
+) {
+  fail("GitHub Actions CI must run release checks, upload evidence, build a verified downloadable extension bundle, and publish draft release assets only from tags or explicit manual tags.");
 }
 if ((packageJson.scripts?.["preflight:cws"] || "") !== "npm run qa:release:status -- --require-ready") {
   fail("preflight:cws must require ready qa:release:status so CWS store actions keep every release evidence gate.");

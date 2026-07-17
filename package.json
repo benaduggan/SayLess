@@ -16,6 +16,7 @@
     "postinstall": "patch-package && node scripts/patch-radix.js",
     "package": "npm run package:release",
     "package:release": "node scripts/package-release.mjs",
+    "package:ci-extension": "node scripts/package-ci-extension.mjs",
     "build:cws": "node scripts/package-cws.mjs",
     "preflight:cws": "npm run qa:release:status -- --require-ready",
     "verify:cws-package": "node scripts/verify-cws-package.mjs",

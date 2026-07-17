@@ -28,6 +28,7 @@ const makeFixture = ({
   const defaultScripts = {
     package: "npm run package:release",
     "package:release": "node scripts/package-release.mjs",
+    "package:ci-extension": "node scripts/package-ci-extension.mjs",
     "build:cws": "node scripts/package-cws.mjs",
     "preflight:cws": "npm run qa:release:status -- --require-ready",
     "release:cws":
@@ -44,6 +45,7 @@ const makeFixture = ({
     "qa:release:manual:template:force": "node scripts/verify-manual-qa-evidence.mjs --write-template --force",
   };
   mkdirSync(join(dir, "build"), { recursive: true });
+  mkdirSync(join(dir, ".github", "workflows"), { recursive: true });
   mkdirSync(join(dir, "build", "_locales", "en"), { recursive: true });
   mkdirSync(join(dir, "build", "assets", "whisper", "models"), { recursive: true });
   mkdirSync(join(dir, "docs"), { recursive: true });
@@ -76,7 +78,7 @@ const makeFixture = ({
   });
   writeFileSync(
     join(dir, ".gitignore"),
-    "build/\nrelease-artifacts/\n*.zip\n!docs/STORE_LISTING.md\n",
+    "build/\nrelease-artifacts/\ndist/\n*.zip\n!docs/STORE_LISTING.md\n",
   );
   writeFileSync(
     join(dir, "docs", "STORE_LISTING.md"),
@@ -120,6 +122,14 @@ Release defaults use the bundled Whisper model and run transcription locally wit
   writeFileSync(
     join(dir, "scripts", "package-cws.mjs"),
     "package-release.mjs\nRELEASE_PACKAGER_PATH\nSAYLESS_PACKAGE_RELEASE_ROOT\npackage-release.json\ncws-package.json\nbuild-cws.zip\ngit: packageEvidence.git\nverify-cws-package.mjs\nverifyWrittenCwsPackage()\nSAYLESS_CWS_VERIFY_ROOT\nwriteNonPassingCwsEvidence\nsayless.cwsPackageIncomplete\nsayless.cwsPackageFailed\nremainingReleaseWork\nfailedStep\n",
+  );
+  writeFileSync(
+    join(dir, "scripts", "package-ci-extension.mjs"),
+    "JSZip\nbuild/manifest.json\npackage.json version\nsayless-extension-v${manifest.version}\nsayless.ciExtensionPackage\ncreateHash(\"sha256\").update(zipBuffer)\nplatform: \"UNIX\"\ndist\n",
+  );
+  writeFileSync(
+    join(dir, ".github", "workflows", "ci.yml"),
+    "pull_request:\npush:\nworkflow_dispatch:\nnpm ci\nnpx playwright install chrome\nxvfb-run -a npm run qa:release:auto\nnpm run qa:release:status\nrelease-artifacts/release-qa-automated.json\nneeds: release-checks\nnpm run build:release\nnpm run verify:release\nnpm run package:ci-extension\nactions/upload-artifact@v4\nsayless-extension-v*.zip\nsayless-extension-v*.sha256\nsayless-extension-v*.json\nsoftprops/action-gh-release@v2\nrefs/tags/v\ninputs.release_tag\n",
   );
   writeFileSync(
     join(dir, "scripts", "release-qa-automated.mjs"),
@@ -230,7 +240,7 @@ test("release audit requires a machine-scanned store listing draft", () => {
 test("release audit requires the store listing draft to be trackable", () => {
   const fixture = makeFixture();
   try {
-    writeFileSync(join(fixture, ".gitignore"), "build/\nrelease-artifacts/\n*.zip\n");
+    writeFileSync(join(fixture, ".gitignore"), "build/\nrelease-artifacts/\ndist/\n*.zip\n");
 
     const result = runAudit(fixture);
 
@@ -315,6 +325,40 @@ test("release audit rejects gated release metadata", () => {
     assert.match(result.stderr, /package\.json: premium/);
     assert.match(result.stderr, /package\.json: cloud upload/);
     assert.match(result.stderr, /forbidden publication-surface string\(s\) found in release metadata/);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+test("release audit requires CI extension package wiring", () => {
+  const fixture = makeFixture({
+    packageJsonOverrides: {
+      scripts: {
+        "package:ci-extension": "node scripts/package-release.mjs",
+      },
+    },
+  });
+  try {
+    const result = runAudit(fixture);
+
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /package:ci-extension must run scripts\/package-ci-extension\.mjs/);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+test("release audit requires GitHub Actions release checks and downloadable bundle publishing", () => {
+  const fixture = makeFixture();
+  try {
+    writeFileSync(join(fixture, ".github", "workflows", "ci.yml"), "pull_request:\n");
+
+    const result = runAudit(fixture);
+
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /GitHub Actions CI must run release checks/);
+    assert.match(result.stderr, /downloadable extension bundle/);
+    assert.match(result.stderr, /explicit manual tags/);
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }

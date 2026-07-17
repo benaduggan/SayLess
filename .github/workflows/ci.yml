@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Create/update a draft GitHub Release when release_tag is also set"
+        required: false
+        default: false
+        type: boolean
+      release_tag:
+        description: "Tag name for a manual draft release, for example v4.5.3-ci"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-checks:
+    name: Release checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chrome
+        run: npx playwright install chrome
+
+      - name: Run automated release QA
+        run: xvfb-run -a npm run qa:release:auto
+
+      - name: Report release status
+        if: always()
+        run: npm run qa:release:status
+
+      - name: Upload automated release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-qa-automated
+          path: release-artifacts/release-qa-automated.json
+          if-no-files-found: ignore
+
+  extension-bundle:
+    name: Downloadable extension bundle
+    needs: release-checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build release extension
+        run: npm run build:release
+
+      - name: Verify release build
+        run: npm run verify:release
+
+      - name: Package downloadable extension
+        run: npm run package:ci-extension
+
+      - name: Upload extension bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sayless-extension
+          path: |
+            dist/sayless-extension-v*.zip
+            dist/sayless-extension-v*.sha256
+            dist/sayless-extension-v*.json
+          if-no-files-found: error
+
+      - name: Publish GitHub Release asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: false
+          files: |
+            dist/sayless-extension-v*.zip
+            dist/sayless-extension-v*.sha256
+            dist/sayless-extension-v*.json
+
+      - name: Publish manual draft GitHub Release asset
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_release && inputs.release_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          draft: true
+          prerelease: false
+          files: |
+            dist/sayless-extension-v*.zip
+            dist/sayless-extension-v*.sha256
+            dist/sayless-extension-v*.json

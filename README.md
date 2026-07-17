@@ -60,11 +60,14 @@ npm run qa:release:manual:template
 npm run qa:release:manual:profile
 npm run qa:release:manual
 npm run package:release
+npm run package:ci-extension
 npm run test:unit
 npm run test:e2e:local-recordings
 ```
 
 `npm run package`, `npm run package:release`, and Chrome Web Store publish scripts use the release evidence gate; release-specific manual QA evidence is required before packaging or publishing. `npm run qa:release:status` reports the next blocked action and, once ready, prints the release handoff. It validates automated QA command inventory, run timing, git/worktree provenance, current build, bundled Whisper assets, versions, manifest surface, and the machine-scanned `docs/STORE_LISTING.md` publication draft before manual QA can be the next action. If the manual evidence file is still a template, status tells the releaser to use `npm run qa:release:manual:profile` for a clean Chrome profile command, complete the checklist, and fill `release-artifacts/manual-qa-evidence.json` before running `npm run qa:release:manual`. `npm run package:release` writes `release-artifacts/package-release.json` with the generated `extension.zip` path, size, SHA-256, and hashes of the automated and manual evidence files used for packaging. Failed or interrupted package attempts overwrite that evidence with a non-passing status and the failed step, so old passing package evidence cannot be reused accidentally. `npm run build:cws` writes `release-artifacts/cws-package.json` tying the canonical `build-cws.zip` path back to the verified `extension.zip`, package evidence, and the automated/manual QA evidence summaries used for the package; CWS upload/publish scripts run `npm run qa:release:status -- --require-ready` before store actions so automated, manual, release-package, and CWS package evidence all have to verify together. Release handoff should attach `release-artifacts/release-qa-automated.json`, `release-artifacts/manual-qa-evidence.json`, `release-artifacts/package-release.json`, `release-artifacts/cws-package.json`, `docs/STORE_LISTING.md`, `extension.zip`, and `build-cws.zip`.
+
+GitHub Actions runs automated release QA on pull requests and `main`, then builds a verified extension zip with `npm run package:ci-extension`. That CI package is uploaded as the `sayless-extension` workflow artifact with a SHA-256 file and metadata JSON. Version tags matching `v*` create a draft GitHub Release with the same downloadable files; manual workflow dispatch can publish a draft only when an explicit `release_tag` is supplied.
 
 ## Documentation
 
