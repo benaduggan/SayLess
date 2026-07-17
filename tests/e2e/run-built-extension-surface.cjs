@@ -144,18 +144,43 @@ const startLocalPageServer = async () => {
 
 const getExtensionIdFromPreferences = async (userDataDir) => {
   const preferencesPath = path.join(userDataDir, "Default", "Preferences");
+  const expectedBuildDir = fs.realpathSync(BUILD_DIR);
+  const preferenceSnapshots = [];
   const deadline = Date.now() + 15000;
   while (Date.now() < deadline) {
     try {
       const preferences = JSON.parse(fs.readFileSync(preferencesPath, "utf8"));
       const settings = preferences?.extensions?.settings || {};
+      preferenceSnapshots.length = 0;
       for (const [id, entry] of Object.entries(settings)) {
-        if (path.resolve(entry?.path || "") === BUILD_DIR) {
+        const entryPath = entry?.path ? path.resolve(entry.path) : "";
+        const realEntryPath = entryPath && fs.existsSync(entryPath)
+          ? fs.realpathSync(entryPath)
+          : entryPath;
+        const manifest = entry?.manifest || {};
+        preferenceSnapshots.push({
+          id,
+          path: entry?.path || "",
+          realPath: realEntryPath,
+          manifestName: manifest.name || "",
+          serviceWorker: manifest.background?.service_worker || "",
+        });
+        if (
+          realEntryPath === expectedBuildDir ||
+          (manifest.name === "__MSG_extName__" &&
+            manifest.background?.service_worker === "background.bundle.js")
+        ) {
           return id;
         }
       }
     } catch {}
     await sleep(250);
+  }
+  if (preferenceSnapshots.length) {
+    console.warn(
+      "  [extension preferences]",
+      JSON.stringify(preferenceSnapshots, null, 2),
+    );
   }
   return null;
 };
@@ -176,11 +201,33 @@ const getExtensionId = async (context, userDataDir) => {
   throw new Error("Unable to derive extension id from service worker or Chrome Preferences");
 };
 
-const sendMessageToTab = async (context, tabUrl, message) => {
-  let worker = context.serviceWorkers()[0];
+const ensureServiceWorker = async (context, extensionId) => {
+  let worker = context.serviceWorkers().find((candidate) =>
+    candidate.url().startsWith(`chrome-extension://${extensionId}/`),
+  );
+  if (worker) return worker;
+
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${extensionId}/setup.html`);
+  await page.waitForLoadState("domcontentloaded").catch(() => {});
+  await sleep(500);
+  worker = context.serviceWorkers().find((candidate) =>
+    candidate.url().startsWith(`chrome-extension://${extensionId}/`),
+  );
   if (!worker) {
-    worker = await context.waitForEvent("serviceworker", { timeout: 5000 });
+    try {
+      worker = await context.waitForEvent("serviceworker", { timeout: 10000 });
+    } catch {}
   }
+  await page.close().catch(() => {});
+  if (!worker) {
+    throw new Error(`Unable to start extension service worker for ${extensionId}`);
+  }
+  return worker;
+};
+
+const sendMessageToTab = async (context, extensionId, tabUrl, message) => {
+  const worker = await ensureServiceWorker(context, extensionId);
   return worker.evaluate(
     ({ tabUrl, message }) =>
       new Promise((resolve, reject) => {
@@ -204,11 +251,8 @@ const sendMessageToTab = async (context, tabUrl, message) => {
   );
 };
 
-const injectContentScriptIntoTab = async (context, tabUrl) => {
-  let worker = context.serviceWorkers()[0];
-  if (!worker) {
-    worker = await context.waitForEvent("serviceworker", { timeout: 5000 });
-  }
+const injectContentScriptIntoTab = async (context, extensionId, tabUrl) => {
+  const worker = await ensureServiceWorker(context, extensionId);
   return worker.evaluate(
     (tabUrl) =>
       new Promise((resolve, reject) => {
@@ -233,11 +277,8 @@ const injectContentScriptIntoTab = async (context, tabUrl) => {
   );
 };
 
-const exerciseDownloadId = async (context) => {
-  let worker = context.serviceWorkers()[0];
-  if (!worker) {
-    worker = await context.waitForEvent("serviceworker", { timeout: 5000 });
-  }
+const exerciseDownloadId = async (context, extensionId) => {
+  const worker = await ensureServiceWorker(context, extensionId);
   return worker.evaluate(
     () =>
       new Promise((resolve, reject) => {
@@ -313,11 +354,8 @@ const exerciseDownloadId = async (context) => {
   );
 };
 
-const probePackagedWhisperAssets = async (context) => {
-  let worker = context.serviceWorkers()[0];
-  if (!worker) {
-    worker = await context.waitForEvent("serviceworker", { timeout: 5000 });
-  }
+const probePackagedWhisperAssets = async (context, extensionId) => {
+  const worker = await ensureServiceWorker(context, extensionId);
   return worker.evaluate(
     async () => {
       const manifestUrl = chrome.runtime.getURL("assets/whisper/model-manifest.json");
@@ -517,7 +555,7 @@ const launchExtensionContext = async (userDataDir) => {
   try {
     const extensionId = await getExtensionId(context, userDataDir);
     try {
-      const whisperProbe = await probePackagedWhisperAssets(context);
+      const whisperProbe = await probePackagedWhisperAssets(context, extensionId);
       if (
         whisperProbe.defaultModel !== "onnx-community/whisper-base_timestamped" ||
         whisperProbe.requiredCount !== 7 ||
@@ -545,7 +583,7 @@ const launchExtensionContext = async (userDataDir) => {
       });
     }
     try {
-      const downloadProbe = await exerciseDownloadId(context);
+      const downloadProbe = await exerciseDownloadId(context, extensionId);
       if (
         !Number.isInteger(downloadProbe.id) ||
         downloadProbe.id <= 0 ||
@@ -622,7 +660,7 @@ const launchExtensionContext = async (userDataDir) => {
       waitUntil: "domcontentloaded",
       timeout: 30000,
     });
-    await injectContentScriptIntoTab(context, contentPage.url());
+    await injectContentScriptIntoTab(context, extensionId, contentPage.url());
     let popupMounted = true;
     try {
       await contentPage.waitForFunction(
@@ -664,7 +702,7 @@ const launchExtensionContext = async (userDataDir) => {
       popupMounted = false;
     }
     if (popupMounted) {
-      const toggleResponse = await sendMessageToTab(context, contentPage.url(), {
+      const toggleResponse = await sendMessageToTab(context, extensionId, contentPage.url(), {
         type: "toggle-popup",
       });
       try {
