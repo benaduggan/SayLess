@@ -1436,6 +1436,9 @@ if (
   !/push:/.test(ciWorkflowText) ||
   !/workflow_dispatch:/.test(ciWorkflowText) ||
   !/npm ci/.test(ciWorkflowText) ||
+  !/actions\/cache@v4/.test(ciWorkflowText) ||
+  !/~\/\.cache\/ms-playwright/.test(ciWorkflowText) ||
+  !/playwright-core\/package\.json/.test(ciWorkflowText) ||
   !/npx playwright install chrome chromium/.test(ciWorkflowText) ||
   !/xvfb-run -a npm run qa:release:auto/.test(ciWorkflowText) ||
   !/npm run qa:release:status/.test(ciWorkflowText) ||

@@ -315,6 +315,9 @@ test("release audit guards package release script gates", () => {
   assert.ok(releaseAuditScript.includes("screenity-(?:player-loading|spin)"));
   assert.ok(releaseAuditScript.includes("screenitySandboxToast(?:In|Out)"));
   assert.ok(releaseAuditScript.includes("stale active Screenity UI/debug name"));
+  assert.ok(releaseAuditScript.includes("actions\\/cache@v4"));
+  assert.ok(releaseAuditScript.includes("~\\/\\.cache\\/ms-playwright"));
+  assert.ok(releaseAuditScript.includes("playwright-core\\/package\\.json"));
   assert.match(
     releaseAuditScript,
     /execFileSync\(process\.execPath, \[WHISPER_ASSET_VERIFIER_PATH, "--build"\]/,
