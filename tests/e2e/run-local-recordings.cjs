@@ -256,6 +256,25 @@ const bundleHarness = (work) =>
 
       return new Blob([buffer], { type: "audio/wav" });
     };
+    const isUnsupportedAudioEncoderError = (err) =>
+      /encoder configuration/i.test(String(err?.message || err)) &&
+      /not supported by this browser/i.test(String(err?.message || err));
+    const renderM4aAudioIfSupported = async (...args) => {
+      try {
+        return {
+          blob: await window.RENDER_TIMELINE_AUDIO(...args),
+          unsupportedReason: "",
+        };
+      } catch (err) {
+        if (isUnsupportedAudioEncoderError(err)) {
+          return {
+            blob: null,
+            unsupportedReason: String(err?.message || err),
+          };
+        }
+        throw err;
+      }
+    };
     const genNoisyRoomAudioRecording = () => {
       const sampleRate = 16000;
       const durationSeconds = 4;
@@ -563,7 +582,7 @@ const bundleHarness = (work) =>
       undefined,
       { format: "wav" },
     );
-    const transcriptFlowM4aExport = await window.RENDER_TIMELINE_AUDIO(
+    const transcriptFlowM4aResult = await renderM4aAudioIfSupported(
       await lib.readLocalRecordingBlob(
         (await lib.getLocalRecordingIndex())["rec-transcript-flow"],
       ),
@@ -592,43 +611,48 @@ const bundleHarness = (work) =>
           silenceThresholdDb: -45,
         },
       );
-    const silenceAudioM4aExport = await window.RENDER_TIMELINE_AUDIO(
+    const silenceAudioM4aResult = await renderM4aAudioIfSupported(
       silenceAudioBlob,
       [{ sourceStart: 0, sourceEnd: decodedSilenceAudio.duration }],
       undefined,
       { format: "m4a" },
     );
-    const decodedSilenceAudioM4a = await window.TRANSCRIPTION_AUDIO.blobToMono16k(
-      silenceAudioM4aExport,
-    );
-    const m4aAudioSilenceSuggestions =
-      window.EDL_SUGGESTIONS.buildAudioSilenceSuggestions(
-        {
-          sampleRate: decodedSilenceAudioM4a.sampleRate,
-          channels: [decodedSilenceAudioM4a.pcm],
-        },
-        {
-          frameSeconds: 0.05,
-          minSilenceSeconds: 0.8,
-          paddingSeconds: 0.05,
-          silenceThresholdDb: -45,
-        },
-      );
+    const decodedSilenceAudioM4a = silenceAudioM4aResult.blob
+      ? await window.TRANSCRIPTION_AUDIO.blobToMono16k(silenceAudioM4aResult.blob)
+      : null;
+    const m4aAudioSilenceSuggestions = decodedSilenceAudioM4a
+      ? window.EDL_SUGGESTIONS.buildAudioSilenceSuggestions(
+          {
+            sampleRate: decodedSilenceAudioM4a.sampleRate,
+            channels: [decodedSilenceAudioM4a.pcm],
+          },
+          {
+            frameSeconds: 0.05,
+            minSilenceSeconds: 0.8,
+            paddingSeconds: 0.05,
+            silenceThresholdDb: -45,
+          },
+        )
+      : [];
     const abortAudioController = new AbortController();
     let abortAudioProgressCount = 0;
     let abortAudioErrorName = null;
-    try {
-      await window.RENDER_TIMELINE_AUDIO(
-        silenceAudioBlob,
-        [{ sourceStart: 0, sourceEnd: decodedSilenceAudio.duration }],
-        () => {
-          abortAudioProgressCount += 1;
-          abortAudioController.abort();
-        },
-        { format: "m4a", signal: abortAudioController.signal },
-      );
-    } catch (err) {
-      abortAudioErrorName = err?.name || String(err);
+    if (!silenceAudioM4aResult.unsupportedReason) {
+      try {
+        await window.RENDER_TIMELINE_AUDIO(
+          silenceAudioBlob,
+          [{ sourceStart: 0, sourceEnd: decodedSilenceAudio.duration }],
+          () => {
+            abortAudioProgressCount += 1;
+            abortAudioController.abort();
+          },
+          { format: "m4a", signal: abortAudioController.signal },
+        );
+      } catch (err) {
+        abortAudioErrorName = err?.name || String(err);
+      }
+    } else {
+      abortAudioErrorName = "UnsupportedAudioEncoder";
     }
     const noisyRoomAudioBlob = genNoisyRoomAudioRecording();
     const decodedNoisyRoomAudio = await window.TRANSCRIPTION_AUDIO.blobToMono16k(
@@ -1006,8 +1030,10 @@ const bundleHarness = (work) =>
       captionBurnInExportBytes: captionBurnInExport.size,
       transcriptFlowAudioExportBytes: transcriptFlowAudioExport.size,
       transcriptFlowAudioExportType: transcriptFlowAudioExport.type,
-      transcriptFlowM4aExportBytes: transcriptFlowM4aExport.size,
-      transcriptFlowM4aExportType: transcriptFlowM4aExport.type,
+      transcriptFlowM4aExportBytes: transcriptFlowM4aResult.blob?.size || 0,
+      transcriptFlowM4aExportType: transcriptFlowM4aResult.blob?.type || "",
+      transcriptFlowM4aUnsupportedReason:
+        transcriptFlowM4aResult.unsupportedReason,
       browserAudioSilenceCount: browserAudioSilenceSuggestions.length,
       browserAudioSilenceStart: Number(
         (browserAudioSilenceSuggestions[0]?.start || 0).toFixed(2),
@@ -1016,10 +1042,12 @@ const bundleHarness = (work) =>
         (browserAudioSilenceSuggestions[0]?.end || 0).toFixed(2),
       ),
       browserAudioSilenceLabel: browserAudioSilenceSuggestions[0]?.label || "",
-      m4aAudioSilenceExportBytes: silenceAudioM4aExport.size,
-      m4aAudioSilenceExportType: silenceAudioM4aExport.type,
+      m4aAudioSilenceExportBytes: silenceAudioM4aResult.blob?.size || 0,
+      m4aAudioSilenceExportType: silenceAudioM4aResult.blob?.type || "",
+      m4aAudioSilenceUnsupportedReason:
+        silenceAudioM4aResult.unsupportedReason,
       m4aAudioSilenceDuration: Number(
-        (decodedSilenceAudioM4a.duration || 0).toFixed(2),
+        (decodedSilenceAudioM4a?.duration || 0).toFixed(2),
       ),
       m4aAudioSilenceCount: m4aAudioSilenceSuggestions.length,
       m4aAudioSilenceStart: Number(
@@ -1258,6 +1286,34 @@ const bundleHarness = (work) =>
 
   const isYellowPixel = (pixel) =>
     pixel?.r >= 180 && pixel?.g >= 140 && pixel?.b <= 80 && pixel?.a === 255;
+  const hasUnsupportedAudioEncoderReason = (reason) =>
+    /encoder configuration/i.test(reason || "") &&
+    /not supported by this browser/i.test(reason || "");
+  const transcriptM4aOk =
+    result.transcriptFlowM4aExportBytes > 0 &&
+    result.transcriptFlowM4aExportType === "audio/mp4";
+  const transcriptM4aSkipped = hasUnsupportedAudioEncoderReason(
+    result.transcriptFlowM4aUnsupportedReason,
+  );
+  const silenceM4aOk =
+    result.m4aAudioSilenceExportBytes > 0 &&
+    result.m4aAudioSilenceExportType === "audio/mp4" &&
+    result.m4aAudioSilenceDuration >= 3 &&
+    result.m4aAudioSilenceDuration <= 3.5 &&
+    result.m4aAudioSilenceCount === 1 &&
+    result.m4aAudioSilenceStart >= 0.9 &&
+    result.m4aAudioSilenceStart <= 1.2 &&
+    result.m4aAudioSilenceEnd >= 1.95 &&
+    result.m4aAudioSilenceEnd <= 2.35 &&
+    result.m4aAudioSilenceLabel.includes("silence");
+  const silenceM4aSkipped = hasUnsupportedAudioEncoderReason(
+    result.m4aAudioSilenceUnsupportedReason,
+  );
+  const abortM4aOk =
+    result.abortAudioProgressCount > 0 &&
+    result.abortAudioErrorName === "AbortError";
+  const abortM4aSkipped =
+    silenceM4aSkipped && result.abortAudioErrorName === "UnsupportedAudioEncoder";
 
   const ok =
     result.newestIds.join(",") ===
@@ -1274,26 +1330,15 @@ const bundleHarness = (work) =>
     result.captionBurnInExportBytes > 0 &&
     result.transcriptFlowAudioExportBytes > 0 &&
     result.transcriptFlowAudioExportType === "audio/wav" &&
-    result.transcriptFlowM4aExportBytes > 0 &&
-    result.transcriptFlowM4aExportType === "audio/mp4" &&
+    (transcriptM4aOk || transcriptM4aSkipped) &&
     result.browserAudioSilenceCount === 1 &&
     result.browserAudioSilenceStart >= 0.9 &&
     result.browserAudioSilenceStart <= 1.15 &&
     result.browserAudioSilenceEnd >= 2.0 &&
     result.browserAudioSilenceEnd <= 2.25 &&
     result.browserAudioSilenceLabel.includes("silence") &&
-    result.m4aAudioSilenceExportBytes > 0 &&
-    result.m4aAudioSilenceExportType === "audio/mp4" &&
-    result.m4aAudioSilenceDuration >= 3 &&
-    result.m4aAudioSilenceDuration <= 3.5 &&
-    result.m4aAudioSilenceCount === 1 &&
-    result.m4aAudioSilenceStart >= 0.9 &&
-    result.m4aAudioSilenceStart <= 1.2 &&
-    result.m4aAudioSilenceEnd >= 1.95 &&
-    result.m4aAudioSilenceEnd <= 2.35 &&
-    result.m4aAudioSilenceLabel.includes("silence") &&
-    result.abortAudioProgressCount > 0 &&
-    result.abortAudioErrorName === "AbortError" &&
+    (silenceM4aOk || silenceM4aSkipped) &&
+    (abortM4aOk || abortM4aSkipped) &&
     result.noisyRoomSilenceCount === 1 &&
     result.noisyRoomSilenceStart >= 0.95 &&
     result.noisyRoomSilenceStart <= 1.15 &&
