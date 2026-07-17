@@ -50,6 +50,7 @@ jobs:
 
       - name: Run automated release QA
         run: |
+          set -o pipefail
           mkdir -p release-artifacts
           xvfb-run -a npm run qa:release:auto 2>&1 | tee release-artifacts/release-qa-automated.log
 

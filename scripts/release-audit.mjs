@@ -1438,6 +1438,7 @@ if (
   !/release-artifacts\/release-qa-automated\.json/.test(ciWorkflowText) ||
   !/release-artifacts\/release-qa-automated\.log/.test(ciWorkflowText) ||
   !/tee release-artifacts\/release-qa-automated\.log/.test(ciWorkflowText) ||
+  !/set -o pipefail/.test(ciWorkflowText) ||
   !/needs:\s*release-checks/.test(ciWorkflowText) ||
   !/npm run build:release/.test(ciWorkflowText) ||
   !/npm run verify:release/.test(ciWorkflowText) ||
