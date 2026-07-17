@@ -67,6 +67,7 @@ const makeFixture = ({ failCommand = null } = {}) => {
       "test:e2e:offline-transcription-speech":
         "node scripts/fixture-command.mjs offline-transcription-speech",
       "test:e2e:local-recordings": "node scripts/fixture-command.mjs local-recordings",
+      "test:e2e:editor-layout": "node scripts/fixture-command.mjs editor-layout",
       "build:release": "node scripts/fixture-build.mjs",
       "test:e2e:built-extension-surface":
         "node scripts/fixture-command.mjs built-extension-surface",
@@ -169,6 +170,7 @@ test("automated release QA writes traceable build evidence atomically", () => {
       "test:e2e:offline-whisper-assets",
       "test:e2e:offline-transcription-smoke",
       "test:e2e:local-recordings",
+      "test:e2e:editor-layout",
       "build:release",
       "test:e2e:built-extension-surface",
       "verify:release",

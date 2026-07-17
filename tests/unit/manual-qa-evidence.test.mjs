@@ -32,6 +32,7 @@ const REQUIRED_COMMANDS = [
   "test:e2e:offline-whisper-assets",
   "test:e2e:offline-transcription-smoke",
   "test:e2e:local-recordings",
+  "test:e2e:editor-layout",
   "build:release",
   "test:e2e:built-extension-surface",
   "verify:release",

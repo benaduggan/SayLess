@@ -52,6 +52,11 @@ const commands = [
     command: npm,
     args: ["run", "test:e2e:local-recordings"],
   },
+  {
+    label: "test:e2e:editor-layout",
+    command: npm,
+    args: ["run", "test:e2e:editor-layout"],
+  },
   { label: "build:release", command: npm, args: ["run", "build:release"] },
   {
     label: "test:e2e:built-extension-surface",

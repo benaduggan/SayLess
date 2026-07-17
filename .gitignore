@@ -43,6 +43,8 @@ tests/e2e/*
 !tests/e2e/offline-transcription-smoke.entry.mjs
 !tests/e2e/run-offline-transcription-smoke.cjs
 !tests/e2e/run-offline-transcription-speech.cjs
+!tests/e2e/editor-layout.entry.mjs
+!tests/e2e/run-editor-layout.cjs
 !tests/e2e/run-built-extension-surface.cjs
 test-results/
 playwright-report/
