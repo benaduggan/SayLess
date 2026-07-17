@@ -1,19 +1,14 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useContext } from "react";
 import styles from "../../styles/player/_RightPanel.module.scss";
-
-// Components
-import Dropdown from "../../components/editor/Dropdown";
 
 import { ReactSVG } from "react-svg";
 
-const URL =
-  "chrome-extension://" + chrome.i18n.getMessage("@@extension_id") + "/assets/";
+const URL = chrome.runtime.getURL("assets/");
 
-// Context
-import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
+import { ContentStateContext } from "../../context/ContentState";
 
 const CropUI = (props) => {
-  const [contentState, setContentState] = useContext(ContentStateContext); // Access the ContentState context
+  const [contentState, setContentState] = useContext(ContentStateContext);
 
   const handleWidth = (e) => {
     let value = e.target.value;
@@ -108,7 +103,7 @@ const CropUI = (props) => {
         <div
           className={styles.buttonRight}
           onClick={() => {
-            chrome.runtime.sendMessage({ type: "upgrade-info" });
+            chrome.runtime.sendMessage({ type: "open-processing-info" });
           }}
         >
           {chrome.i18n.getMessage("learnMoreLabel")}

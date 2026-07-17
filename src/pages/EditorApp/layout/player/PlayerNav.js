@@ -5,11 +5,9 @@ import { ContentStateContext } from "../../context/ContentState"; // Import the 
 // Icons
 import { ReactSVG } from "react-svg";
 
-const URL = "/assets/";
+const URL = chrome.runtime.getURL("assets/");
 
 const StarIcon = URL + "editor/icons/help-nav.svg";
-const HeartIcon = URL + "editor/icons/heart.svg";
-const UnlockIcon = URL + "editor/icons/unlock.svg";
 
 const PlayerNav = () => {
   const [contentState, setContentState] = useContext(ContentStateContext); // Access the ContentState context
@@ -40,16 +38,6 @@ const PlayerNav = () => {
           >
             <ReactSVG src={StarIcon} />
             {chrome.i18n.getMessage("getHelpNav")}
-          </button>
-          <button
-            className="button primaryButton"
-            onClick={() => {
-              chrome.runtime.sendMessage({ type: "pricing" });
-            }}
-          >
-            <ReactSVG src={UnlockIcon} />{" "}
-            {chrome.i18n.getMessage("unlockMoreFeatures") ||
-              "Unlock more features"}
           </button>
         </div>
       </div>

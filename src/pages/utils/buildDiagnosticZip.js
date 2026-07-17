@@ -70,7 +70,7 @@ const FAST_RECORDER_KEYS = [
   "lastStartRecordingCaller",
   "lastCountdownFinishedDecision",
   "lastStartAfterCountdown",
-  "lastSubscriptionLoss",
+  "lastLocalRecorderSourceLoss",
 ];
 
 export const buildDiagnosticZip = async ({
@@ -85,7 +85,7 @@ export const buildDiagnosticZip = async ({
     fastRecorderData,
     lifecycleData,
     perfTimeline,
-    uploadTelemetry,
+    localRecordingEvents,
   ] = await Promise.all([
       chrome.runtime.sendMessage({ type: "get-platform-info" }),
       chrome.runtime.sendMessage({ type: "get-diagnostic-log" }),
@@ -112,10 +112,10 @@ export const buildDiagnosticZip = async ({
         }),
       ),
       new Promise((resolve) =>
-        chrome.storage.local.get(["cloudUploadTelemetryEvents"], (r) =>
+        chrome.storage.local.get(["localRecordingEvents"], (r) =>
           resolve(
-            Array.isArray(r?.cloudUploadTelemetryEvents)
-              ? r.cloudUploadTelemetryEvents
+            Array.isArray(r?.localRecordingEvents)
+              ? r.localRecordingEvents
               : [],
           ),
         ),
@@ -199,8 +199,10 @@ export const buildDiagnosticZip = async ({
     files["perf-timeline.json"] = JSON.stringify(perfTimeline);
   }
 
-  if (Array.isArray(uploadTelemetry) && uploadTelemetry.length > 0) {
-    files["upload-telemetry.json"] = JSON.stringify(redactPii(uploadTelemetry));
+  if (Array.isArray(localRecordingEvents) && localRecordingEvents.length > 0) {
+    files["local-recording-events.json"] = JSON.stringify(
+      redactPii(localRecordingEvents),
+    );
   }
 
   const filename = `sayless-diagnostics-${ts}.zip`;

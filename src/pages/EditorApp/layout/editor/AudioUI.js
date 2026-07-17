@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import styles from "../../styles/player/_RightPanel.module.scss";
 
-import Dropdown from "../../components/editor/Dropdown";
 import * as Slider from "@radix-ui/react-slider";
-import Switch from "../../components/editor/Switch";
 
-const URL = "/assets/";
+const URL = chrome.runtime.getURL("assets/");
 
 import { ReactSVG } from "react-svg";
 
@@ -34,9 +32,6 @@ const AudioUI = (props) => {
       return;
     }
 
-    // Fall back to rawBlob (webm from recovery) if mp4 blob isn't ready.
-    const videoBlob =
-      contentState.blob || contentState.rawBlob || contentState.webm;
     setAudio(file);
     setContentState((prev) => ({
       ...prev,

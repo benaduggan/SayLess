@@ -5,7 +5,7 @@ import { lifecycle } from "../../utils/lifecycleLog";
 
 const COUNTDOWN_TIME = 3;
 const DEBUG_START_FLOW =
-  typeof window !== "undefined" ? !!window.SCREENITY_DEBUG_RECORDER : false;
+  typeof window !== "undefined" ? !!window.SAYLESS_DEBUG_RECORDER : false;
 
 const Countdown = () => {
   const [contentState, setContentState] = useContext(contentStateContext);

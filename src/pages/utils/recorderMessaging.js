@@ -1,4 +1,4 @@
-// recorder -> background messaging, shared by CloudRecorder and Recorder.
+// recorder -> background messaging.
 // iframe-context reload on error is a no-op for the offscreen Recorder, so it's safe to share.
 // sendStopRecording accepts a string or object reason, plus optional extra fields.
 import { classifyError } from "./errorCodes";

@@ -1,9 +1,4 @@
 import { executeScripts } from "../utils/executeScripts";
-import { supportContextQuery } from "../../utils/buildSupportContext";
-import { tryResumePendingUploads } from "../recording/resumePendingUploads";
-
-const cloudFeaturesEnabled =
-  process.env.SCREENITY_ENABLE_CLOUD_FEATURES === "true";
 
 export const onInstalledListener = () => {
   chrome.runtime.onInstalled.addListener(async (details) => {
@@ -12,15 +7,10 @@ export const onInstalledListener = () => {
     if (details.reason === "install") {
       chrome.storage.local.clear();
 
-      const installQs = await supportContextQuery({ source: "uninstall" });
-      const installUrl = `https://tally.so/r/w8Zro5?${installQs}`;
-      chrome.runtime.setUninstallURL(installUrl);
-
       chrome.storage.local.set({
         firstTime: true,
-        onboarding: cloudFeaturesEnabled,
+        onboarding: false,
         bannerSupport: true,
-        firstTimePro: cloudFeaturesEnabled,
         extensionInstalledAt: Date.now(),
       });
 
@@ -43,14 +33,6 @@ export const onInstalledListener = () => {
         chrome.storage.local.set({ updatingFromOld: true });
       } else {
         chrome.storage.local.set({ updatingFromOld: false });
-
-        if (details.previousVersion === "3.1.16" && cloudFeaturesEnabled) {
-          chrome.storage.local.set({
-            showProSplash: cloudFeaturesEnabled,
-            bannerSupport: true,
-            onboarding: cloudFeaturesEnabled,
-          });
-        }
       }
 
       // Existing users are already established, so backfill an install time in
@@ -61,10 +43,6 @@ export const onInstalledListener = () => {
       if (typeof extensionInstalledAt !== "number") {
         chrome.storage.local.set({ extensionInstalledAt: 0 });
       }
-
-      const updateQs = await supportContextQuery({ source: "uninstall" });
-      const updateUrl = `https://tally.so/r/3Ex6kX?${updateQs}`;
-      chrome.runtime.setUninstallURL(updateUrl);
     }
 
     if (details.reason === "install") {
@@ -80,11 +58,5 @@ export const onInstalledListener = () => {
     if (details.reason === "install" || details.reason === "update") {
       executeScripts();
     }
-
-    setTimeout(() => {
-      tryResumePendingUploads({ trigger: `onInstalled:${details.reason}` }).catch(
-        () => {},
-      );
-    }, 5000);
   });
 };

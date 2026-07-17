@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // gate before publishing the self-hosted zip: scan build/ for API URLs,
 // OAuth client IDs, sentry DSNs, raw .env values. build:release with
-// SCREENITY_SKIP_ENV should already strip these; this is the catch-all.
+// SAYLESS_SKIP_ENV should already strip these; this is the catch-all.
 // usage: node scripts/verify-no-secrets.mjs [build-dir]  (default: build/)
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -29,7 +29,6 @@ const SKIP_EXTENSIONS = new Set([
   ".jpg",
   ".jpeg",
   ".gif",
-  ".svg",
   ".woff",
   ".woff2",
   ".ttf",

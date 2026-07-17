@@ -2,9 +2,6 @@ import { getContextRefs } from "../context/CameraContext";
 import { setPipMode } from "./uiState";
 import { getUserMediaWithFallback } from "../../utils/mediaDeviceFallback";
 
-const CLOUD_FEATURES_ENABLED =
-  process.env.SCREENITY_ENABLE_CLOUD_FEATURES === "true";
-
 export const getCameraStream = async (
   constraints,
   streamRef,
@@ -354,38 +351,8 @@ export const surfaceHandler = async (request, videoRef) => {
     return;
   }
 
-  if (!CLOUD_FEATURES_ENABLED) {
-    const shouldEnterPip = request.surface === "monitor";
-    if (shouldEnterPip && videoRef.current) {
-      try {
-        await videoRef.current.requestPictureInPicture();
-      } catch (err) {
-        console.error("❌ Failed to enter PiP:", err);
-        setPipMode(false);
-        chrome.runtime.sendMessage({ type: "pip-ended" });
-      }
-    }
-    return;
-  }
-
-  // Auth data is passed along with the set-surface message from the background
-  // script (setSurface.js) to avoid an async round-trip that would lose the
-  // user gesture context required by requestPictureInPicture().
   try {
-    const isSubscribed = request.subscribed || false;
-    const instantMode = request.instantMode || false;
-
-    // PiP rule: enter PiP when the bubble needs to be visible to the
-    // capture (free+monitor, pro+instant+monitor) or as a draggable
-    // preview when the camera is already a separate cloud track
-    // (pro+non-instant+non-monitor). Skip PiP when the on-page bubble
-    // is captured naturally (pro+instant+non-monitor) or would imply
-    // the camera's part of the screen recording when it isn't
-    // (pro+non-instant+monitor).
-    const shouldEnterPip =
-      (request.surface === "monitor" && (!isSubscribed || instantMode)) ||
-      (request.surface !== "monitor" && isSubscribed && !instantMode);
-
+    const shouldEnterPip = request.surface === "monitor";
     if (shouldEnterPip && videoRef.current) {
       await videoRef.current.requestPictureInPicture();
     }

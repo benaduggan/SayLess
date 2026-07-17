@@ -14,6 +14,14 @@ const sendProxy = async (type, payload) => {
   }
 };
 
+const assertLocalExtensionUrl = (url) => {
+  const baseUrl = chrome.runtime.getURL("");
+  if (typeof url !== "string" || !url.startsWith(baseUrl)) {
+    throw new Error("Expected local extension URL.");
+  }
+  return url;
+};
+
 const makeStorageArea = (area) => ({
   get(keys, callback) {
     const normalised = keys === undefined ? null : keys;
@@ -110,7 +118,9 @@ export function installChromeShims() {
         const xhr = new XMLHttpRequest();
         xhr.open(
           "GET",
-          chrome.runtime.getURL(`_locales/${locale}/messages.json`),
+          assertLocalExtensionUrl(
+            chrome.runtime.getURL(`_locales/${locale}/messages.json`),
+          ),
           false,
         );
         xhr.send();

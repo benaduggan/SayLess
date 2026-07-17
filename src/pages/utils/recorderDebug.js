@@ -1,4 +1,4 @@
-// Dev-only recorder logger, gated by window.SCREENITY_DEBUG_RECORDER (stripped from prod).
+// Dev-only recorder logger, gated by window.SAYLESS_DEBUG_RECORDER (stripped from prod).
 export const createDebugLogger = (prefix, enabled) => ({
   debug: (...args) => {
     if (!enabled) return;

@@ -2,7 +2,23 @@ import React from "react";
 
 import { CopyLinkIcon, MoreActionsIcon } from "../../images/popup/images";
 
-const VideoItem = ({ title, date, thumbnail, onOpen, onCopyLink }) => {
+const VideoItem = ({
+  title,
+  date,
+  meta,
+  status,
+  thumbnail,
+  selected = false,
+  onSelectToggle,
+  onOpen,
+  onCopyLink,
+  onRename,
+  onDuplicate,
+  onExport,
+  onSaveToFile,
+  onRepair,
+  onDelete,
+}) => {
   const formatRelativeTime = (timestamp) => {
     const now = new Date();
     const then = new Date(timestamp);
@@ -35,7 +51,8 @@ const VideoItem = ({ title, date, thumbnail, onOpen, onCopyLink }) => {
       onClick={(e) => {
         if (
           e.target.closest(".copy-link") ||
-          e.target.closest(".more-actions")
+          e.target.closest(".more-actions") ||
+          e.target.closest(".video-item-select")
         ) {
           e.stopPropagation();
           return;
@@ -45,22 +62,42 @@ const VideoItem = ({ title, date, thumbnail, onOpen, onCopyLink }) => {
     >
       <div className="video-item">
         <div className="video-item-left">
-          {/*
-					Need a better way to handle thumbnails - proxy from server?
-
-					<div
+          {onSelectToggle && (
+            <input
+              type="checkbox"
+              className="video-item-select"
+              checked={selected}
+              aria-label={`Select ${title || "recording"}`}
+              onChange={(e) => {
+                e.stopPropagation();
+                onSelectToggle();
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+          {thumbnail && (
+            <div
             className="video-item-thumbnail"
             style={{
               backgroundImage: `url(${thumbnail})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
-          ></div> */}
+            />
+          )}
           <div className="video-item-info">
             <div className="video-item-info-title">{title}</div>
-            <div className="video-item-info-date">
-              {formatRelativeTime(date)}
-            </div>
+            <div className="video-item-info-date">{formatRelativeTime(date)}</div>
+            {meta && <div className="video-item-info-meta">{meta}</div>}
+            {status && (
+              <div
+                className={`video-item-info-status ${
+                  status.kind === "warning" ? "is-warning" : ""
+                }`}
+              >
+                {status.label}
+              </div>
+            )}
           </div>
         </div>
         <div className="video-item-right">
@@ -76,6 +113,96 @@ const VideoItem = ({ title, date, thumbnail, onOpen, onCopyLink }) => {
           >
             <img src={CopyLinkIcon} alt="Copy link" />
           </button>
+          {onRename && (
+            <button
+              role="button"
+              tabIndex="0"
+              title="Rename"
+              className="more-actions"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRename();
+              }}
+            >
+              <img src={MoreActionsIcon} alt="Rename" />
+            </button>
+          )}
+          {onDuplicate && (
+            <button
+              role="button"
+              tabIndex="0"
+              title="Duplicate"
+              className="more-actions"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDuplicate();
+              }}
+            >
+              <img src={MoreActionsIcon} alt="Duplicate" />
+            </button>
+          )}
+          {onExport && (
+            <button
+              role="button"
+              tabIndex="0"
+              title="Export"
+              className="more-actions"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onExport();
+              }}
+            >
+              <img src={CopyLinkIcon} alt="Export" />
+            </button>
+          )}
+          {onSaveToFile && (
+            <button
+              role="button"
+              tabIndex="0"
+              title="Save to file"
+              className="more-actions"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onSaveToFile();
+              }}
+            >
+              S
+            </button>
+          )}
+          {onRepair && (
+            <button
+              role="button"
+              tabIndex="0"
+              title="Repair"
+              className="more-actions"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRepair();
+              }}
+            >
+              !
+            </button>
+          )}
+          {onDelete && (
+            <button
+              role="button"
+              tabIndex="0"
+              title="Delete"
+              className="more-actions"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete();
+              }}
+            >
+              ×
+            </button>
+          )}
           {/* <button
             role="button"
             tabIndex="0"

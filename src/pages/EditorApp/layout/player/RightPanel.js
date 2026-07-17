@@ -1,22 +1,73 @@
-import React, { useContext, useEffect, useState, useRef } from "react";
+import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import styles from "../../styles/player/_RightPanel.module.scss";
 
 import { buildDiagnosticZip } from "../../../utils/buildDiagnosticZip";
+import {
+  getLocalRecordingCaptionExport,
+  getLocalRecordingProjectExport,
+  getLocalRecordingTranscriptExport,
+} from "../../../localRecordings/localRecordingLibrary";
+import {
+  assertLocalBlobUrl,
+  hasFileSystemSavePicker,
+  saveOrDownloadBlob,
+} from "../../../utils/localFileExport";
+import {
+  buildExportCompletionFromSaveResult,
+  buildExportJobDescription,
+  buildExportRetrySnapshot,
+  buildExportJobTitle,
+  buildRetryExportSettings,
+  canRetryExportJob,
+  canRevealExportJob,
+} from "./exportPanelState";
+import { buildProjectSummary } from "./projectPanelState";
 
 import { ReactSVG } from "react-svg";
 
-const URL =
-  "chrome-extension://" + chrome.i18n.getMessage("@@extension_id") + "/assets/";
+const ASSET_URL = chrome.runtime.getURL("assets/");
 
 import CropUI from "../editor/CropUI";
 import AudioUI from "../editor/AudioUI";
 
 import { ContentStateContext } from "../../context/ContentState";
+import { EdlContext } from "../../context/EdlContext";
+
+const EXPORT_FORMAT_OPTIONS = [
+  { value: "mp4", label: "MP4" },
+  { value: "webm", label: "WebM" },
+  { value: "gif", label: "GIF" },
+  { value: "audio", label: "Audio" },
+];
+
+const EXPORT_QUALITY_OPTIONS = [
+  { value: "original", label: "Original" },
+  { value: "compressed", label: "Smaller file" },
+];
+
+const CAPTION_STYLE_OPTIONS = [
+  { value: "clean", label: "Clean" },
+  { value: "large", label: "Large" },
+  { value: "high-contrast", label: "High contrast" },
+];
+
+const AUDIO_FORMAT_OPTIONS = [
+  { value: "wav", label: "WAV" },
+  { value: "m4a", label: "M4A" },
+];
+
+const clampNumber = (value, fallback, min, max) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
+};
 
 const RightPanel = () => {
   const [contentState, setContentState] = useContext(ContentStateContext);
+  const edlCtx = useContext(EdlContext);
   const contentStateRef = useRef(contentState);
   const consoleErrorRef = useRef([]);
+  const lastSelectedExportRef = useRef(null);
 
   useEffect(() => {
     console.error = (error) => {
@@ -47,108 +98,137 @@ const RightPanel = () => {
     return base;
   };
 
-  const saveToDrive = () => {
-    setContentState((prevContentState) => ({
-      ...prevContentState,
-      saveDrive: true,
-    }));
+  const exportSettings = edlCtx?.exportSettings || {};
+  const updateExportSettings =
+    edlCtx?.updateExportSettings || (() => undefined);
 
-    const handleDriveResponse = (response) => {
-      if (!response || response.status === "ew" || response.error) {
-        console.error("[Drive] drive_save_failed:", response?.error || "unknown error");
-        setContentState((prevContentState) => ({
-          ...prevContentState,
-          saveDrive: false,
-        }));
-      }
-      // On success, saveDrive is reset by the "saved-to-drive" message from background.
+  const updateGifSetting = (key, value) => {
+    const gif = exportSettings.gif || {};
+    const duration = Math.max(0.1, Number(contentState.duration) || 0.1);
+    const limits = {
+      startSeconds: [0, Math.max(0, duration)],
+      durationSeconds: [0.1, Math.min(30, duration)],
+      fps: [4, 30],
+      width: [320, 1920],
     };
+    const [min, max] = limits[key] || [0, Infinity];
+    updateExportSettings({
+      gif: {
+        ...gif,
+        [key]: clampNumber(value, gif[key], min, max),
+      },
+    });
+  };
 
-    const handleDriveError = (err) => {
-      console.error("[Drive] drive_save_error:", err);
-      setContentState((prevContentState) => ({
-        ...prevContentState,
-        saveDrive: false,
-      }));
-    };
+  const downloadNamedBlob = async ({ blob, fileName }) => {
+    if (!blob || !fileName) return;
+    return saveOrDownloadBlob(blob, fileName, {
+      preferPicker: Boolean(contentStateRef.current?.preferFilePicker),
+    });
+  };
 
-    if (contentState.noffmpeg || !contentState.mp4ready || !contentState.blob) {
-      // Prefer duration-fixed webm over rebuilding from raw chunks.
-      const fixedWebm = contentState.webm;
-      if (fixedWebm && fixedWebm instanceof Blob && fixedWebm.size > 0) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result;
-          const base64 = dataUrl.split(",")[1];
-          chrome.runtime
-            .sendMessage({
-              type: "save-to-drive",
-              base64: base64,
-              title: contentState.title,
-              isWebm: true,
-            })
-            .then(handleDriveResponse)
-            .catch(handleDriveError);
-        };
-        reader.onerror = () => {
-          chrome.runtime
-            .sendMessage({
-              type: "save-to-drive-fallback",
-              title: contentState.title,
-            })
-            .then(handleDriveResponse)
-            .catch(handleDriveError);
-        };
-        reader.readAsDataURL(fixedWebm);
-      } else {
-        chrome.runtime
-          .sendMessage({
-            type: "save-to-drive-fallback",
-            title: contentState.title,
-          })
-          .then(handleDriveResponse)
-          .catch(handleDriveError);
-      }
-    } else {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result;
-        const base64 = dataUrl.split(",")[1];
+  const safeDownloadBaseName = (name) => {
+    const cleaned = String(name || "SayLess recording")
+      .replace(/[\\/:*?"<>|]/g, " ")
+      .replace(/[\u0000-\u001F\u007F]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/[. ]+$/g, "");
+    return cleaned || "SayLess recording";
+  };
 
-        chrome.runtime
-          .sendMessage({
-            type: "save-to-drive",
-            base64: base64,
-            title: contentState.title,
-          })
-          .then(handleDriveResponse)
-          .catch(handleDriveError);
-      };
-      reader.onerror = () => {
-        console.error("[Drive] FileReader failed to read blob for Drive upload");
-        setContentState((prevContentState) => ({
-          ...prevContentState,
-          saveDrive: false,
-        }));
-      };
-      if (
-        !contentState.noffmpeg &&
-        contentState.mp4ready &&
-        contentState.blob
-      ) {
-        reader.readAsDataURL(contentState.blob);
-      } else {
-        reader.readAsDataURL(contentState.webm);
-      }
+  const downloadSelectedSidecars = async () => {
+    const recordingId = contentStateRef.current?.localRecordingId;
+    if (!recordingId) return;
+    const exports = [];
+    if (exportSettings.includeProjectSidecar) {
+      exports.push(getLocalRecordingProjectExport(recordingId));
+    }
+    if (exportSettings.includeTranscriptSidecar) {
+      exports.push(getLocalRecordingTranscriptExport(recordingId));
+    }
+    if (exportSettings.includeCaptionSidecar) {
+      exports.push(getLocalRecordingCaptionExport(recordingId));
+    }
+    for (const sidecar of await Promise.all(exports)) {
+      await downloadNamedBlob(sidecar);
     }
   };
 
-  const signOutDrive = () => {
-    chrome.runtime.sendMessage({ type: "sign-out-drive" });
-    setContentState((prevContentState) => ({
-      ...prevContentState,
-      driveEnabled: false,
-    }));
+  const getSelectedExportDisabled = () => {
+    if (contentState.exportJob?.status === "running") return true;
+    if (contentState.isFfmpegRunning) return true;
+    if (!contentState.mp4ready) return true;
+    if (exportSettings.format === "audio") {
+      return typeof edlCtx?.renderTimelineAudioForExport !== "function";
+    }
+    if (exportSettings.format === "gif") {
+      return contentState.downloadingGIF || contentState.noffmpeg;
+    }
+    if (exportSettings.format === "webm") {
+      return contentState.downloadingWEBM;
+    }
+    return contentState.downloading;
+  };
+
+  const handleSelectedExport = async (overrideSettings = null) => {
+    if (getSelectedExportDisabled()) return;
+    const selectedSettings = overrideSettings || exportSettings;
+    lastSelectedExportRef.current = buildExportRetrySnapshot(selectedSettings);
+    if (selectedSettings.format === "audio") {
+      const audioFormat = selectedSettings.audioFormat || "wav";
+      contentState.beginExportJob?.({
+        kind: "audio",
+        label: `${audioFormat.toUpperCase()} audio export`,
+        canCancel: false,
+      });
+      try {
+        const blob = await edlCtx.renderTimelineAudioForExport(
+          (progress) => contentState.updateExportJobProgress?.(progress * 100),
+          { format: audioFormat },
+        );
+        const saveResult = await downloadNamedBlob({
+          blob,
+          fileName: `${safeDownloadBaseName(contentState.title)}.${audioFormat}`,
+        });
+        const completion = buildExportCompletionFromSaveResult(saveResult);
+        if (completion.downloadId) {
+          setContentState((prev) => ({
+            ...prev,
+            lastExportDownloadId: completion.downloadId,
+          }));
+        }
+        contentState.finishExportJob?.(completion);
+      } catch (err) {
+        console.error("[SayLess] audio export failed", err);
+        contentState.finishExportJob?.({
+          status: "failed",
+          error: String(err?.message || err || "Audio export failed."),
+        });
+        return;
+      }
+    } else if (selectedSettings.format === "gif") {
+      await contentState.downloadGIF(selectedSettings.gif || {});
+    } else if (selectedSettings.format === "webm") {
+      await contentState.downloadWEBM();
+    } else {
+      await contentState.download();
+    }
+    try {
+      await downloadSelectedSidecars();
+    } catch (err) {
+      console.error("[SayLess] sidecar export failed", err);
+    }
+  };
+
+  const retrySelectedExport = () => {
+    const retrySettings = buildRetryExportSettings(
+      lastSelectedExportRef.current,
+      contentState.exportJob,
+    );
+    if (!retrySettings) return;
+    updateExportSettings(retrySettings);
+    handleSelectedExport(retrySettings);
   };
 
   const handleEdit = () => {
@@ -229,10 +309,13 @@ const RightPanel = () => {
       .replace(/[\u0000-\u001F\u007F]/g, " ")
       .replace(/\s+/g, " ")
       .trim() || "sayless-recording";
-    const url = window.URL.createObjectURL(blob);
-    chrome.downloads.download({ url, filename: `${safe}.${ext}` }, () => {
-      window.URL.revokeObjectURL(url);
-    });
+    const url = assertLocalBlobUrl(window.URL.createObjectURL(blob));
+    chrome.downloads.download(
+      { url: assertLocalBlobUrl(url), filename: `${safe}.${ext}` },
+      () => {
+        window.URL.revokeObjectURL(assertLocalBlobUrl(url));
+      },
+    );
   };
 
   const handleRawRecording = () => {
@@ -274,19 +357,22 @@ const RightPanel = () => {
           };
 
           try {
-            const url = window.URL.createObjectURL(blob);
+            const url = assertLocalBlobUrl(window.URL.createObjectURL(blob));
             const downloadId = await new Promise((resolve, reject) => {
               try {
-                chrome.downloads.download({ url, filename }, (id) => {
-                  if (chrome.runtime.lastError || !id) {
-                    reject(
-                      chrome.runtime.lastError ||
-                        new Error("download returned no id"),
-                    );
-                  } else {
-                    resolve(id);
-                  }
-                });
+                chrome.downloads.download(
+                  { url: assertLocalBlobUrl(url), filename },
+                  (id) => {
+                    if (chrome.runtime.lastError || !id) {
+                      reject(
+                        chrome.runtime.lastError ||
+                          new Error("download returned no id"),
+                      );
+                    } else {
+                      resolve(id);
+                    }
+                  },
+                );
               } catch (err) {
                 reject(err);
               }
@@ -310,7 +396,7 @@ const RightPanel = () => {
                 delta.state.current === "interrupted"
               ) {
                 chrome.downloads.onChanged.removeListener(interruptHandler);
-                window.URL.revokeObjectURL(url);
+                window.URL.revokeObjectURL(assertLocalBlobUrl(url));
               }
             };
             chrome.downloads.onChanged.addListener(interruptHandler);
@@ -366,11 +452,11 @@ const RightPanel = () => {
                 editLimit: cs.editLimit || null,
               },
             });
-            const url = window.URL.createObjectURL(blob);
+            const url = assertLocalBlobUrl(window.URL.createObjectURL(blob));
             chrome.downloads.download(
-              { url, filename },
+              { url: assertLocalBlobUrl(url), filename },
               () => {
-                window.URL.revokeObjectURL(url);
+                window.URL.revokeObjectURL(assertLocalBlobUrl(url));
               },
             );
           } catch (err) {
@@ -382,6 +468,34 @@ const RightPanel = () => {
     }
   };
 
+  const exportJob = contentState.exportJob;
+  const exportJobProgress = Math.round(
+    exportJob?.progress || contentState.processingProgress || 0,
+  );
+  const canSaveToFile = hasFileSystemSavePicker();
+  const exportJobTitle = buildExportJobTitle(exportJob);
+  const projectSummary = useMemo(
+    () =>
+      buildProjectSummary({
+        recordingId: contentState.localRecordingId,
+        saveStatus: edlCtx?.projectSaveStatus,
+        timeline: edlCtx?.timeline,
+        transcript: edlCtx?.transcript,
+        chapterMarkers: edlCtx?.chapterMarkers,
+        zoomKeyframes: edlCtx?.zoomKeyframes,
+        exportSettings,
+      }),
+    [
+      contentState.localRecordingId,
+      edlCtx?.projectSaveStatus,
+      edlCtx?.timeline,
+      edlCtx?.transcript,
+      edlCtx?.chapterMarkers,
+      edlCtx?.zoomKeyframes,
+      exportSettings,
+    ],
+  );
+
   return (
     <div className={styles.panel}>
       {contentState.mode === "audio" && <AudioUI />}
@@ -391,7 +505,7 @@ const RightPanel = () => {
           {!contentState.fallback && contentState.offline && (
             <div className={styles.alert}>
               <div className={styles.buttonLeft}>
-                <ReactSVG src={URL + "editor/icons/no-internet.svg"} />
+                <ReactSVG src={ASSET_URL + "editor/icons/no-internet.svg"} />
               </div>
               <div className={styles.buttonMiddle}>
                 <div className={styles.buttonTitle}>
@@ -409,7 +523,7 @@ const RightPanel = () => {
           {contentState.fallback && contentState.noffmpeg && contentState.editLimit === 0 && (
             <div className={styles.alert}>
               <div className={styles.buttonLeft}>
-                <ReactSVG src={URL + "editor/icons/alert.svg"} />
+                <ReactSVG src={ASSET_URL + "editor/icons/alert.svg"} />
               </div>
               <div className={styles.buttonMiddle}>
                 <div className={styles.buttonTitle}>
@@ -430,7 +544,7 @@ const RightPanel = () => {
           {contentState.fallback && contentState.noffmpeg && contentState.editLimit !== 0 && (
             <div className={styles.alert}>
               <div className={styles.buttonLeft}>
-                <ReactSVG src={URL + "editor/icons/alert.svg"} />
+                <ReactSVG src={ASSET_URL + "editor/icons/alert.svg"} />
               </div>
               <div className={styles.buttonMiddle}>
                 <div className={styles.buttonTitle}>
@@ -454,7 +568,7 @@ const RightPanel = () => {
             contentState.duration <= contentState.editLimit && (
               <div className={styles.alert}>
                 <div className={styles.buttonLeft}>
-                  <ReactSVG src={URL + "editor/icons/alert.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/alert.svg"} />
                 </div>
                 <div className={styles.buttonMiddle}>
                   <div className={styles.buttonTitle}>
@@ -481,7 +595,7 @@ const RightPanel = () => {
             !contentState.updateChrome && (
               <div className={styles.alert}>
                 <div className={styles.buttonLeft}>
-                  <ReactSVG src={URL + "editor/icons/alert.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/alert.svg"} />
                 </div>
                 <div className={styles.buttonMiddle}>
                   <div className={styles.buttonTitle}>
@@ -521,7 +635,7 @@ const RightPanel = () => {
                         null,
                         chrome.i18n.getMessage("overLimitModalLearnMore"),
                         () => {
-                          chrome.runtime.sendMessage({ type: "upgrade-info" });
+                          chrome.runtime.sendMessage({ type: "memory-limit-help" });
                         }
                       );
                     }
@@ -531,34 +645,68 @@ const RightPanel = () => {
                 </div>
               </div>
             )}
-          {(contentState.downloadingWEBM || contentState.downloading) && (
-            <div className={styles.alert}>
-              <div className={styles.buttonLeft}>
-                <ReactSVG src={URL + "editor/icons/alert.svg"} />
-              </div>
-              <div className={styles.buttonMiddle}>
-                <div className={styles.buttonTitle}>
-                  {chrome.i18n.getMessage("downloadProcessingTitle")}
+          {exportJob && (
+            <div className={styles.exportJobPanel}>
+              <div className={styles.exportJobMain}>
+                <div className={styles.exportJobTitle}>{exportJobTitle}</div>
+                <div className={styles.exportJobDescription}>
+                  {buildExportJobDescription(
+                    exportJob,
+                    contentState.processingProgress,
+                  )}
                 </div>
-                <div className={styles.buttonDescription}>
-                  {contentState.processingProgress > 0
-                    ? `${chrome.i18n.getMessage(
-                        "downloadProcessingDescription",
-                      )} (${contentState.processingProgress}%)`
-                    : chrome.i18n.getMessage("downloadProcessingDescription")}
-                </div>
+                {exportJob.status === "running" && (
+                  <div className={styles.exportJobTrack}>
+                    <div
+                      className={styles.exportJobProgress}
+                      style={{ width: `${exportJobProgress}%` }}
+                    />
+                  </div>
+                )}
               </div>
-              <div
-                className={styles.buttonRight}
-                onClick={() => contentState.cancelDownload?.()}
-              >
-                {chrome.i18n.getMessage("cancelLabel")}
+              <div className={styles.exportJobActions}>
+                {exportJob.status === "running" && exportJob.canCancel && (
+                  <button type="button" onClick={() => contentState.cancelDownload?.()}>
+                    {chrome.i18n.getMessage("cancelLabel")}
+                  </button>
+                )}
+                {canRevealExportJob(
+                  exportJob,
+                  contentState.lastExportDownloadId,
+                ) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        chrome.downloads.show(contentState.lastExportDownloadId);
+                      } catch (err) {
+                        console.error("[SayLess] show export failed", err);
+                      }
+                    }}
+                  >
+                    Show
+                  </button>
+                )}
+                {canRetryExportJob(exportJob) && (
+                  <button type="button" onClick={retrySelectedExport}>
+                    Retry
+                  </button>
+                )}
+                {exportJob.status !== "running" && (
+                  <button
+                    type="button"
+                    onClick={() => contentState.dismissExportJob?.()}
+                  >
+                    Dismiss
+                  </button>
+                )}
               </div>
             </div>
           )}
           {(!contentState.mp4ready || contentState.isFfmpegRunning) &&
             !contentState.downloadingWEBM &&
             !contentState.downloading &&
+            contentState.exportJob?.status !== "running" &&
             (contentState.duration <= contentState.editLimit ||
               contentState.override) &&
             !contentState.offline &&
@@ -566,7 +714,7 @@ const RightPanel = () => {
             !contentState.noffmpeg && (
               <div className={styles.alert}>
                 <div className={styles.buttonLeft}>
-                  <ReactSVG src={URL + "editor/icons/alert.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/alert.svg"} />
                 </div>
                 <div className={styles.buttonMiddle}>
                   <div className={styles.buttonTitle}>
@@ -582,12 +730,13 @@ const RightPanel = () => {
                 <div
                   className={styles.buttonRight}
                   onClick={() => {
-                    chrome.runtime.sendMessage({
-                      type: "pricing",
-                    });
+                    setContentState((prev) => ({
+                      ...prev,
+                      editErrorType: null,
+                    }));
                   }}
                 >
-                  {chrome.i18n.getMessage("learnMoreLabel")}
+                  {chrome.i18n.getMessage("permissionsModalDismiss")}
                 </div>
                 )}
               </div>
@@ -601,7 +750,7 @@ const RightPanel = () => {
             ) && (
             <div className={styles.alert}>
               <div className={styles.buttonLeft}>
-                <ReactSVG src={URL + "editor/icons/alert.svg"} />
+                <ReactSVG src={ASSET_URL + "editor/icons/alert.svg"} />
               </div>
               <div className={styles.buttonMiddle}>
                 <div className={styles.buttonTitle}>
@@ -624,7 +773,7 @@ const RightPanel = () => {
           {!contentState.fallback && contentState.editErrorType === "timeout" && (
             <div className={styles.alert}>
               <div className={styles.buttonLeft}>
-                <ReactSVG src={URL + "editor/icons/alert.svg"} />
+                <ReactSVG src={ASSET_URL + "editor/icons/alert.svg"} />
               </div>
               <div className={styles.buttonMiddle}>
                 <div className={styles.buttonTitle}>
@@ -647,7 +796,7 @@ const RightPanel = () => {
           {!contentState.fallback && contentState.editErrorType === "failed" && (
             <div className={styles.alert}>
               <div className={styles.buttonLeft}>
-                <ReactSVG src={URL + "editor/icons/alert.svg"} />
+                <ReactSVG src={ASSET_URL + "editor/icons/alert.svg"} />
               </div>
               <div className={styles.buttonMiddle}>
                 <div className={styles.buttonTitle}>
@@ -684,7 +833,7 @@ const RightPanel = () => {
                 }
               >
                 <div className={styles.buttonLeft}>
-                  <ReactSVG src={URL + "editor/icons/trim.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/trim.svg"} />
                 </div>
                 <div className={styles.buttonMiddle}>
                   <div className={styles.buttonTitle}>
@@ -704,7 +853,7 @@ const RightPanel = () => {
                   </div>
                 </div>
                 <div className={styles.buttonRight}>
-                  <ReactSVG src={URL + "editor/icons/right-arrow.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/right-arrow.svg"} />
                 </div>
               </div>
               <div
@@ -719,7 +868,7 @@ const RightPanel = () => {
                 }
               >
                 <div className={styles.buttonLeft}>
-                  <ReactSVG src={URL + "editor/icons/crop.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/crop.svg"} />
                 </div>
                 <div className={styles.buttonMiddle}>
                   <div className={styles.buttonTitle}>
@@ -739,7 +888,7 @@ const RightPanel = () => {
                   </div>
                 </div>
                 <div className={styles.buttonRight}>
-                  <ReactSVG src={URL + "editor/icons/right-arrow.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/right-arrow.svg"} />
                 </div>
               </div>
               <div
@@ -754,7 +903,7 @@ const RightPanel = () => {
                 }
               >
                 <div className={styles.buttonLeft}>
-                  <ReactSVG src={URL + "editor/icons/audio.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/audio.svg"} />
                 </div>
                 <div className={styles.buttonMiddle}>
                   <div className={styles.buttonTitle}>
@@ -774,7 +923,7 @@ const RightPanel = () => {
                   </div>
                 </div>
                 <div className={styles.buttonRight}>
-                  <ReactSVG src={URL + "editor/icons/right-arrow.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/right-arrow.svg"} />
                 </div>
               </div>
             </div>
@@ -783,45 +932,26 @@ const RightPanel = () => {
             <div className={styles.sectionTitle}>
               {chrome.i18n.getMessage("sandboxSaveTitle")}
             </div>
-            {contentState.driveEnabled && (
-              <div
-                className={styles.buttonLogout}
-                onClick={() => {
-                  signOutDrive();
-                }}
-              >
-                {chrome.i18n.getMessage("signOutDriveLabel")}
+            <div className={styles.projectPanel}>
+              <div>
+                <div className={styles.projectTitle}>
+                  {projectSummary.title}
+                </div>
+                <div className={styles.projectStatus}>
+                  {projectSummary.status}
+                </div>
               </div>
-            )}
-            <div className={styles.buttonWrap}>
-              <div
-                role="button"
-                className={styles.button}
-                onClick={saveToDrive}
-                disabled={contentState.saveDrive}
-              >
-                <div className={styles.buttonLeft}>
-                  <ReactSVG src={URL + "editor/icons/drive.svg"} />
-                </div>
-                <div className={styles.buttonMiddle}>
-                  <div className={styles.buttonTitle}>
-                    {contentState.saveDrive
-                      ? chrome.i18n.getMessage("savingDriveLabel")
-                      : contentState.driveEnabled
-                      ? chrome.i18n.getMessage("saveDriveButtonTitle")
-                      : chrome.i18n.getMessage("signInDriveLabel")}
+              <div className={styles.projectStats}>
+                {projectSummary.stats.map((stat) => (
+                  <div className={styles.projectStat} key={stat.label}>
+                    <span>{stat.value}</span>
+                    <small>{stat.label}</small>
                   </div>
-                  <div className={styles.buttonDescription}>
-                    {contentState.offline
-                      ? chrome.i18n.getMessage("noConnectionLabel")
-                      : contentState.updateChrome
-                      ? chrome.i18n.getMessage("notAvailableLabel")
-                      : chrome.i18n.getMessage("saveDriveButtonDescription")}
-                  </div>
-                </div>
-                <div className={styles.buttonRight}>
-                  <ReactSVG src={URL + "editor/icons/right-arrow.svg"} />
-                </div>
+                ))}
+              </div>
+              <div className={styles.projectMeta}>
+                <span>{projectSummary.exportLabel}</span>
+                <span>{projectSummary.sidecarLabel}</span>
               </div>
             </div>
           </div>
@@ -829,16 +959,233 @@ const RightPanel = () => {
             <div className={styles.sectionTitle}>
               {chrome.i18n.getMessage("sandboxExportTitle")}
             </div>
+            <div className={styles.exportPresetPanel}>
+              <label className={styles.exportField}>
+                <span>Format</span>
+                <select
+                  value={exportSettings.format || "mp4"}
+                  onChange={(event) =>
+                    updateExportSettings({ format: event.target.value })
+                  }
+                >
+                  {EXPORT_FORMAT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.exportField}>
+                <span>Quality</span>
+                <select
+                  value={exportSettings.qualityPreset || "original"}
+                  onChange={(event) =>
+                    updateExportSettings({ qualityPreset: event.target.value })
+                  }
+                >
+                  {EXPORT_QUALITY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.exportField}>
+                <span>Caption style</span>
+                <select
+                  value={exportSettings.captionStyle?.preset || "clean"}
+                  onChange={(event) =>
+                    updateExportSettings({
+                      captionStyle: { preset: event.target.value },
+                    })
+                  }
+                >
+                  {CAPTION_STYLE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {exportSettings.format === "audio" && (
+                <label className={styles.exportField}>
+                  <span>Audio format</span>
+                  <select
+                    value={exportSettings.audioFormat || "wav"}
+                    onChange={(event) =>
+                      updateExportSettings({ audioFormat: event.target.value })
+                    }
+                  >
+                    {AUDIO_FORMAT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {exportSettings.format === "gif" && (
+                <div className={styles.exportGrid}>
+                  <label className={styles.exportField}>
+                    <span>Start</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={exportSettings.gif?.startSeconds ?? 0}
+                      onChange={(event) =>
+                        updateGifSetting("startSeconds", event.target.value)
+                      }
+                    />
+                  </label>
+                  <label className={styles.exportField}>
+                    <span>Seconds</span>
+                    <input
+                      type="number"
+                      min="0.1"
+                      max="30"
+                      step="0.1"
+                      value={exportSettings.gif?.durationSeconds ?? 6}
+                      onChange={(event) =>
+                        updateGifSetting("durationSeconds", event.target.value)
+                      }
+                    />
+                  </label>
+                  <label className={styles.exportField}>
+                    <span>FPS</span>
+                    <input
+                      type="number"
+                      min="4"
+                      max="30"
+                      step="1"
+                      value={exportSettings.gif?.fps ?? 12}
+                      onChange={(event) =>
+                        updateGifSetting("fps", event.target.value)
+                      }
+                    />
+                  </label>
+                  <label className={styles.exportField}>
+                    <span>Width</span>
+                    <input
+                      type="number"
+                      min="320"
+                      max="1920"
+                      step="10"
+                      value={exportSettings.gif?.width ?? 960}
+                      onChange={(event) =>
+                        updateGifSetting("width", event.target.value)
+                      }
+                    />
+                  </label>
+                </div>
+              )}
+              <div className={styles.exportChecks}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={exportSettings.includeProjectSidecar !== false}
+                    onChange={(event) =>
+                      updateExportSettings({
+                        includeProjectSidecar: event.target.checked,
+                      })
+                    }
+                  />
+                  Project sidecar
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(exportSettings.includeTranscriptSidecar)}
+                    onChange={(event) =>
+                      updateExportSettings({
+                        includeTranscriptSidecar: event.target.checked,
+                      })
+                    }
+                  />
+                  Transcript sidecar
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(exportSettings.includeCaptionSidecar)}
+                    onChange={(event) =>
+                      updateExportSettings({
+                        includeCaptionSidecar: event.target.checked,
+                      })
+                    }
+                  />
+                  VTT captions
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(exportSettings.captionStyle?.burnIn)}
+                    onChange={(event) =>
+                      updateExportSettings({
+                        captionStyle: { burnIn: event.target.checked },
+                      })
+                    }
+                  />
+                  Burn into video
+                </label>
+                {canSaveToFile && (
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(contentState.preferFilePicker)}
+                      onChange={(event) =>
+                        setContentState((prev) => ({
+                          ...prev,
+                          preferFilePicker: event.target.checked,
+                        }))
+                      }
+                    />
+                    Save to file
+                  </label>
+                )}
+              </div>
+            </div>
             <div className={styles.buttonWrap}>
+              <div
+                role="button"
+                className={styles.button}
+                onClick={handleSelectedExport}
+                disabled={getSelectedExportDisabled()}
+              >
+                <div className={styles.buttonLeft}>
+                  <ReactSVG src={ASSET_URL + "editor/icons/download.svg"} />
+                </div>
+                <div className={styles.buttonMiddle}>
+                  <div className={styles.buttonTitle}>
+                    {contentState.downloading ||
+                    contentState.downloadingWEBM ||
+                    contentState.downloadingGIF
+                      ? chrome.i18n.getMessage("downloadingLabel")
+                      : `Export ${(exportSettings.format || "mp4").toUpperCase()}`}
+                  </div>
+                  <div className={styles.buttonDescription}>
+                    Saves the file and checked local sidecars.
+                  </div>
+                </div>
+                <div className={styles.buttonRight}>
+                  <ReactSVG src={ASSET_URL + "editor/icons/right-arrow.svg"} />
+                </div>
+              </div>
               {contentState.fallback && (
                 <div
                   role="button"
                   className={styles.button}
-                  onClick={() => contentState.downloadWEBM()}
+                  onClick={() => {
+                    lastSelectedExportRef.current = buildExportRetrySnapshot(
+                      exportSettings,
+                      { format: "webm", audioOnly: false },
+                    );
+                    contentState.downloadWEBM();
+                  }}
                   disabled={contentState.isFfmpegRunning}
                 >
                   <div className={styles.buttonLeft}>
-                    <ReactSVG src={URL + "editor/icons/download.svg"} />
+                    <ReactSVG src={ASSET_URL + "editor/icons/download.svg"} />
                   </div>
                   <div className={styles.buttonMiddle}>
                     <div className={styles.buttonTitle}>
@@ -851,7 +1198,7 @@ const RightPanel = () => {
                     </div>
                   </div>
                   <div className={styles.buttonRight}>
-                    <ReactSVG src={URL + "editor/icons/right-arrow.svg"} />
+                    <ReactSVG src={ASSET_URL + "editor/icons/right-arrow.svg"} />
                   </div>
                 </div>
               )}
@@ -878,12 +1225,16 @@ const RightPanel = () => {
                 className={styles.button}
                 onClick={() => {
                   if (!contentState.mp4ready) return;
+                  lastSelectedExportRef.current = buildExportRetrySnapshot(
+                    exportSettings,
+                    { format: "mp4", audioOnly: false },
+                  );
                   contentState.download();
                 }}
                 disabled={mp4Disabled}
               >
                 <div className={styles.buttonLeft}>
-                  <ReactSVG src={URL + "editor/icons/download.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/download.svg"} />
                 </div>
                 <div className={styles.buttonMiddle}>
                   <div className={styles.buttonTitle}>
@@ -904,7 +1255,7 @@ const RightPanel = () => {
                   </div>
                 </div>
                 <div className={styles.buttonRight}>
-                  <ReactSVG src={URL + "editor/icons/right-arrow.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/right-arrow.svg"} />
                 </div>
               </div>
                 );
@@ -913,11 +1264,17 @@ const RightPanel = () => {
                 <div
                   role="button"
                   className={styles.button}
-                  onClick={() => contentState.downloadWEBM()}
+                  onClick={() => {
+                    lastSelectedExportRef.current = buildExportRetrySnapshot(
+                      exportSettings,
+                      { format: "webm", audioOnly: false },
+                    );
+                    contentState.downloadWEBM();
+                  }}
                   disabled={contentState.isFfmpegRunning}
                 >
                   <div className={styles.buttonLeft}>
-                    <ReactSVG src={URL + "editor/icons/download.svg"} />
+                    <ReactSVG src={ASSET_URL + "editor/icons/download.svg"} />
                   </div>
                   <div className={styles.buttonMiddle}>
                     <div className={styles.buttonTitle}>
@@ -934,7 +1291,7 @@ const RightPanel = () => {
                     </div>
                   </div>
                   <div className={styles.buttonRight}>
-                    <ReactSVG src={URL + "editor/icons/right-arrow.svg"} />
+                    <ReactSVG src={ASSET_URL + "editor/icons/right-arrow.svg"} />
                   </div>
                 </div>
               )}
@@ -954,6 +1311,10 @@ const RightPanel = () => {
                   ) {
                     return;
                   }
+                  lastSelectedExportRef.current = buildExportRetrySnapshot(
+                    exportSettings,
+                    { format: "gif", audioOnly: false },
+                  );
                   contentState.downloadGIF();
                 }}
                 disabled={
@@ -964,7 +1325,7 @@ const RightPanel = () => {
                 }
               >
                 <div className={styles.buttonLeft}>
-                  <ReactSVG src={URL + "editor/icons/gif.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/gif.svg"} />
                 </div>
                 <div className={styles.buttonMiddle}>
                   <div className={styles.buttonTitle}>
@@ -986,7 +1347,7 @@ const RightPanel = () => {
                   </div>
                 </div>
                 <div className={styles.buttonRight}>
-                  <ReactSVG src={URL + "editor/icons/right-arrow.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/right-arrow.svg"} />
                 </div>
               </div>
             </div>
@@ -1004,7 +1365,7 @@ const RightPanel = () => {
                 }}
               >
                 <div className={styles.buttonLeft}>
-                  <ReactSVG src={URL + "editor/icons/download.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/download.svg"} />
                 </div>
                 <div className={styles.buttonMiddle}>
                   <div className={styles.buttonTitle}>
@@ -1015,7 +1376,7 @@ const RightPanel = () => {
                   </div>
                 </div>
                 <div className={styles.buttonRight}>
-                  <ReactSVG src={URL + "editor/icons/right-arrow.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/right-arrow.svg"} />
                 </div>
               </div>
               <div
@@ -1026,7 +1387,7 @@ const RightPanel = () => {
                 }}
               >
                 <div className={styles.buttonLeft}>
-                  <ReactSVG src={URL + "editor/icons/flag.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/flag.svg"} />
                 </div>
                 <div className={styles.buttonMiddle}>
                   <div className={styles.buttonTitle}>
@@ -1037,7 +1398,7 @@ const RightPanel = () => {
                   </div>
                 </div>
                 <div className={styles.buttonRight}>
-                  <ReactSVG src={URL + "editor/icons/right-arrow.svg"} />
+                  <ReactSVG src={ASSET_URL + "editor/icons/right-arrow.svg"} />
                 </div>
               </div>
             </div>

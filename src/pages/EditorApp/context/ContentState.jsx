@@ -24,8 +24,16 @@ import {
 import { diagForward } from "../../utils/diagForward";
 import { perfMark, perfSpan } from "../../utils/perfMarks";
 import { triggerSupportDownload } from "../../utils/triggerSupportDownload";
+import { saveBlobWithPicker } from "../../utils/localFileExport";
 import { chooseReader } from "../recorderStorage/chooseReader";
 import { runEditorOp } from "../editorOps";
+import {
+  beginExportJobState,
+  cancelExportJobState,
+  dismissExportJobState,
+  finishExportJobState,
+  updateExportJobProgressState,
+} from "./exportJobState";
 import {
   checkpointEditedLocalRecording,
   localRecordingIdFromBackendRef,
@@ -54,9 +62,16 @@ const ENABLE_EAGER_MP4_FINALIZE = true;
 // delivering the source file, so it's safe to leave on.
 const ENABLE_OFFSCREEN_WEBM = true;
 
+const assertLocalExportObjectUrl = (url) => {
+  if (typeof url !== "string" || !url.startsWith("blob:")) {
+    throw new Error("Expected local blob export URL.");
+  }
+  return url;
+};
+
 localforage.config({
   driver: localforage.INDEXEDDB,
-  name: "screenity",
+  name: "sayless",
   version: 1,
 });
 
@@ -68,7 +83,7 @@ const chunksStore = localforage.createInstance({
 export const ContentStateContext = createContext();
 
 const DEBUG_RECORDER =
-  typeof window !== "undefined" ? !!window.SCREENITY_DEBUG_RECORDER : false;
+  typeof window !== "undefined" ? !!window.SAYLESS_DEBUG_RECORDER : false;
 const DEBUG_POSTSTOP = DEBUG_RECORDER;
 
 const ContentState = (props) => {
@@ -191,7 +206,7 @@ const ContentState = (props) => {
 
   useEffect(() => {
     if (!DEBUG_RECORDER && !isRecordingDebugEnabled()) return;
-    window.__screenityExportRecordingDebug = async () => {
+    window.__saylessExportRecordingDebug = async () => {
       const { recordingDebugSessionId } = await chrome.storage.local.get([
         "recordingDebugSessionId",
       ]);
@@ -205,7 +220,7 @@ const ContentState = (props) => {
         sessionId: recordingDebugSessionId,
       });
     };
-    window.__screenityPingRecdbg = () =>
+    window.__saylessPingRecdbg = () =>
       chrome.runtime.sendMessage({ type: "recdbg-ping" });
   }, []);
 
@@ -250,10 +265,12 @@ const ContentState = (props) => {
     left: 0,
     fromCropper: false,
     base64: null,
-    saveDrive: false,
     downloading: false,
     downloadingWEBM: false,
     downloadingGIF: false,
+    exportJob: null,
+    lastExportDownloadId: null,
+    preferFilePicker: false,
     volume: 1,
     cropPreset: "none",
     replaceAudio: false,
@@ -263,7 +280,6 @@ const ContentState = (props) => {
     saved: false,
     offline: false,
     updateChrome: false,
-    driveEnabled: false,
     hasBeenEdited: false,
     dragInteracted: false,
     noffmpeg: false,
@@ -1064,14 +1080,6 @@ const ContentState = (props) => {
       }
     }
 
-    const { token } = await chrome.storage.local.get("token");
-
-    let driveEnabled = false;
-
-    if (token && token !== null) {
-      driveEnabled = true;
-    }
-
     const safeDuration = Number(recordingDuration) || 0;
     setContentState((prevState) => ({
       ...prevState,
@@ -1111,7 +1119,6 @@ const ContentState = (props) => {
                 setContentState((prevContentState) => ({
                   ...prevContentState,
                   base64: base64data,
-                  driveEnabled: driveEnabled,
                 }));
               };
               reader.readAsDataURL(fixedWebm);
@@ -1145,7 +1152,6 @@ const ContentState = (props) => {
             setContentState((prevContentState) => ({
               ...prevContentState,
               base64: base64data,
-              driveEnabled: driveEnabled,
             }));
           };
           reader.readAsDataURL(fixedWebm);
@@ -1177,7 +1183,6 @@ const ContentState = (props) => {
           setContentState((prevContentState) => ({
             ...prevContentState,
             base64: base64data,
-            driveEnabled: driveEnabled,
           }));
         };
         reader.readAsDataURL(blob);
@@ -1295,7 +1300,7 @@ const ContentState = (props) => {
         "lastRecordingBackendRef",
       ]);
       backendRefForThisLoad = lastRecordingBackendRef;
-      if (process.env.SCREENITY_DEV_MODE === "true") {
+      if (process.env.SAYLESS_DEV_MODE === "true") {
         console.log(
           "[recorder-opfs][sandbox] makeVideoTab backend",
           lastRecordingBackendRef || { backend: "idb" },
@@ -1383,7 +1388,7 @@ const ContentState = (props) => {
               outputBytes: blob.size,
               attempt,
             });
-            if (process.env.SCREENITY_DEV_MODE === "true") {
+            if (process.env.SAYLESS_DEV_MODE === "true") {
               console.log("[recorder-opfs][sandbox] opfs-direct-read-ok", {
                 bytes: blob.size,
               });
@@ -1442,7 +1447,7 @@ const ContentState = (props) => {
             bytes: blob.size,
             chunkCount,
           });
-          if (process.env.SCREENITY_DEV_MODE === "true") {
+          if (process.env.SAYLESS_DEV_MODE === "true") {
             console.log(
               "[recorder-opfs][sandbox] IDB direct read succeeded",
               { bytes: blob.size, chunkCount },
@@ -1672,13 +1677,6 @@ const ContentState = (props) => {
         makeVideoTab(sendResponse, message);
 
         return true;
-      } else if (message.type === "saved-to-drive") {
-        setContentState((prevContentState) => ({
-          ...prevContentState,
-          saveDrive: false,
-          driveEnabled: true,
-          saved: true,
-        }));
       } else if (message.type === "restore-recording") {
         setContentState((prevContentState) => ({
           ...prevContentState,
@@ -1852,9 +1850,7 @@ const ContentState = (props) => {
       } else if (message.type === "banner-support") {
         setContentState((prevContentState) => ({
           ...prevContentState,
-          // The review prompt and Pro banner are mutually exclusive; never
-          // enable the Pro banner while the review prompt is showing or the
-          // user is eligible for it (the slot is reserved for the review ask).
+          // Keep the support banner out of the review prompt slot.
           bannerSupport:
             prevContentState.reviewPrompt || prevContentState.reviewEligible
               ? prevContentState.bannerSupport
@@ -1881,7 +1877,7 @@ const ContentState = (props) => {
         ]);
         if (cancelled) return true;
         if (lastRecordingBackendRef?.backend === "opfs") {
-          if (process.env.SCREENITY_DEV_MODE === "true") {
+          if (process.env.SAYLESS_DEV_MODE === "true") {
             console.log(
               "[recorder-opfs][sandbox] self-trigger makeVideoTab for OPFS backend",
               isRetry ? "(retry)" : "",
@@ -1892,7 +1888,7 @@ const ContentState = (props) => {
         }
         return false;
       } catch (err) {
-        if (process.env.SCREENITY_DEV_MODE === "true") {
+        if (process.env.SAYLESS_DEV_MODE === "true") {
           console.warn(
             "[recorder-opfs][sandbox] self-trigger failed",
             err,
@@ -2252,7 +2248,7 @@ const ContentState = (props) => {
       const video = document.createElement("video");
       video.preload = "metadata";
       video.onloadedmetadata = async () => {
-        if (process.env.SCREENITY_DEV_MODE === "true") {
+        if (process.env.SAYLESS_DEV_MODE === "true") {
           console.log("[SayLess][cut-debug] updated-blob received", {
             blobSize: blob?.length ?? blob?.size,
             blobIsBlob: blob instanceof Blob,
@@ -2305,6 +2301,7 @@ const ContentState = (props) => {
         isFfmpegRunning: false,
         downloading: false,
       }));
+      finishExportJob({ status: "completed" });
     } else if (event.data.type === "download-gif") {
       const base64 = event.data.base64;
       const blob = base64ToUint8Array(base64);
@@ -2315,7 +2312,9 @@ const ContentState = (props) => {
         saved: true,
         isFfmpegRunning: false,
         downloadingGIF: false,
+        processingProgress: 0,
       }));
+      finishExportJob({ status: "completed" });
     } else if (event.data.type === "new-frame") {
       // crop entries leak blob URLs otherwise
       const prevFrame = contentStateRef.current?.frame;
@@ -2361,6 +2360,23 @@ const ContentState = (props) => {
       });
       clearEditOp();
 
+      const latest = contentStateRef.current;
+      const wasExporting =
+        latest?.downloading ||
+        latest?.downloadingWEBM ||
+        latest?.downloadingGIF ||
+        latest?.exportJob?.status === "running";
+      if (wasExporting) {
+        finishExportJob({
+          status: "failed",
+          error: String(
+            event.data.errorMessage ||
+              event.data.error ||
+              "Media export failed.",
+          ),
+        });
+      }
+
       // fall back to webm/rawBlob even if conversion fails
       setContentState((prev) => {
         const wasEditing = prev.isFfmpegRunning && (prev.cutting || prev.trimming || prev.muting || prev.cropping || prev.reencoding);
@@ -2369,6 +2385,9 @@ const ContentState = (props) => {
           noffmpeg: true,
           ffmpegLoaded: true,
           isFfmpegRunning: false,
+          downloading: false,
+          downloadingWEBM: false,
+          downloadingGIF: false,
           muting: false,
           cutting: false,
           trimming: false,
@@ -2430,6 +2449,7 @@ const ContentState = (props) => {
     } else if (event.data.type === "ffmpeg-progress") {
       const pct = Math.min(100, Math.max(0, Math.round(event.data.progress)));
 
+      updateExportJobProgress(pct);
       setContentState((prevContentState) => ({
         ...prevContentState,
         processingProgress: pct,
@@ -2446,7 +2466,9 @@ const ContentState = (props) => {
         saved: true,
         isFfmpegRunning: false,
         downloadingWEBM: false,
+        processingProgress: 0,
       }));
+      finishExportJob({ status: "completed" });
     }
   };
 
@@ -2703,7 +2725,7 @@ const ContentState = (props) => {
     const sourceBlob = contentState.blob;
     const opId = beginEditOp();
 
-    if (process.env.SCREENITY_DEV_MODE === "true") {
+    if (process.env.SAYLESS_DEV_MODE === "true") {
       console.log("[SayLess][cut-debug] handleTrim dispatch", {
         cut,
         opId,
@@ -2858,6 +2880,7 @@ const ContentState = (props) => {
   };
 
   const requestDownload = async (url, ext) => {
+    const exportUrl = assertLocalExportObjectUrl(url);
     // rapid double-click would otherwise create two downloads + double-revoke
     if (contentStateRef.current?.downloadInProgress) {
       console.warn("[SayLess] download already in progress, ignoring");
@@ -2879,16 +2902,33 @@ const ContentState = (props) => {
       if (revoked) return;
       revoked = true;
       try {
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(exportUrl);
       } catch {}
       try {
         setContentState((prev) => ({ ...prev, downloadInProgress: false }));
       } catch {}
     };
 
+    if (contentStateRef.current?.preferFilePicker) {
+      const resp = await fetch(assertLocalExportObjectUrl(exportUrl));
+      const blob = await resp.blob();
+      try {
+        const pickerResult = await saveBlobWithPicker(blob, filename);
+        if (pickerResult.saved || pickerResult.reason === "cancelled") {
+          revoke();
+          return null;
+        }
+      } catch (err) {
+        console.warn(
+          "[SayLess] Save picker failed, falling back to Chrome download.",
+          err,
+        );
+      }
+    }
+
     // Brave: route via background for download
     if ((navigator.brave && (await navigator.brave.isBrave())) || false) {
-      const resp = await fetch(url);
+      const resp = await fetch(assertLocalExportObjectUrl(exportUrl));
       const blob = await resp.blob();
       await new Promise((resolve) => {
         const reader = new FileReader();
@@ -2907,23 +2947,30 @@ const ContentState = (props) => {
     }
 
     const downloadId = await new Promise((resolve, reject) => {
-      chrome.downloads.download({ url, filename, saveAs: true }, (id) => {
-        const lastErr = chrome.runtime.lastError;
-        // user cancelled Save-As; don't show "Download failed"
-        const errMsg = String(lastErr?.message || "");
-        if (errMsg.includes("USER_CANCELED") || errMsg.includes("canceled")) {
-          revoke();
-          resolve(null);
-          return;
-        }
-        if (lastErr || !id) {
-          reject(lastErr || new Error("Download failed"));
-        } else {
-          resolve(id);
-        }
-      });
+      chrome.downloads.download(
+        { url: assertLocalExportObjectUrl(exportUrl), filename, saveAs: true },
+        (id) => {
+          const lastErr = chrome.runtime.lastError;
+          // user cancelled Save-As; don't show "Download failed"
+          const errMsg = String(lastErr?.message || "");
+          if (errMsg.includes("USER_CANCELED") || errMsg.includes("canceled")) {
+            revoke();
+            resolve(null);
+            return;
+          }
+          if (lastErr || !id) {
+            reject(lastErr || new Error("Download failed"));
+          } else {
+            resolve(id);
+          }
+        },
+      );
     });
-    if (downloadId == null) return;
+    if (downloadId == null) return null;
+    setContentState((prev) => ({
+      ...prev,
+      lastExportDownloadId: downloadId,
+    }));
 
     await new Promise((resolve) => {
       let settled = false;
@@ -2967,7 +3014,7 @@ const ContentState = (props) => {
           delta.error?.current !== "USER_CANCELED"
         ) {
           try {
-            const resp = await fetch(url);
+            const resp = await fetch(assertLocalExportObjectUrl(exportUrl));
             const blob = await resp.blob();
             // sendMessage caps at ~64MB; base64 inflates 4/3, so cap at 30MB
             const BASE64_FALLBACK_MAX_BYTES = 30 * 1024 * 1024;
@@ -3015,6 +3062,7 @@ const ContentState = (props) => {
 
       chrome.downloads.onChanged.addListener(handler);
     });
+    return downloadId;
   };
 
   // fMP4 -> standard MP4 container copy (QuickTime/editors need fastStart).
@@ -3063,7 +3111,7 @@ const ContentState = (props) => {
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
     const devLog =
-      process.env.SCREENITY_DEV_MODE === "true"
+      process.env.SAYLESS_DEV_MODE === "true"
         ? (label, data) =>
             console.log("[remux][sandbox]", label, data || "")
         : () => {};
@@ -3216,26 +3264,47 @@ const ContentState = (props) => {
 
   const standardMp4Ref = useRef(null);
   const downloadCancelledRef = useRef(false);
+  const exportAbortControllerRef = useRef(null);
+
+  const beginExportJob = ({ kind, label, canCancel = true } = {}) => {
+    const now = Date.now();
+    const job = { kind, label, canCancel };
+    setContentState((prev) => beginExportJobState(prev, job, now));
+    return `${kind || "export"}-${now}`;
+  };
+
+  const updateExportJobProgress = (progress) => {
+    setContentState((prev) => updateExportJobProgressState(prev, progress));
+  };
+
+  const finishExportJob = ({ status, error = null } = {}) => {
+    const now = Date.now();
+    setContentState((prev) =>
+      finishExportJobState(prev, { status, error }, now),
+    );
+  };
+
+  const dismissExportJob = () => {
+    setContentState(dismissExportJobState);
+  };
 
   // Cancel an in-progress download/conversion so the user isn't stuck waiting on
   // a slow WebM re-encode. Resets the UI immediately and best-effort aborts the
   // offscreen worker; the pending conversion's deliver step is skipped below.
   const cancelDownload = () => {
     downloadCancelledRef.current = true;
+    exportAbortControllerRef.current?.abort?.();
+    exportAbortControllerRef.current = null;
     chrome.runtime.sendMessage({ type: "cancel-remux" }).catch(() => {});
-    setContentState((prev) => ({
-      ...prev,
-      downloading: false,
-      downloadingWEBM: false,
-      isFfmpegRunning: false,
-      processingProgress: 0,
-    }));
+    const now = Date.now();
+    setContentState((prev) => cancelExportJobState(prev, now));
   };
 
   // Only surface finalize progress while a download is actually in flight, so
   // the background pre-warm doesn't flash a progress bar during editing.
   const sharedFinalizeProgress = (p) => {
     if (!contentStateRef.current?.downloading) return;
+    updateExportJobProgress(Math.round(p * 100));
     setContentState((prev) => ({
       ...prev,
       processingProgress: Math.round(p * 100),
@@ -3333,6 +3402,59 @@ const ContentState = (props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contentState.ready, contentState.blob]);
 
+  const isAbortError = (err) =>
+    err?.name === "AbortError" || /abort|cancel/i.test(String(err?.message || err));
+
+  const renderPendingTimelineForDownload = async (latest) => {
+    const sourceBlob = latest.blob || latest.webm;
+    if (typeof latest.getTimelineExportBlob !== "function") {
+      return { blob: sourceBlob, timelineExport: false };
+    }
+    const controller =
+      typeof AbortController !== "undefined" ? new AbortController() : null;
+    exportAbortControllerRef.current = controller;
+    let rendered = null;
+    try {
+      rendered = await latest.getTimelineExportBlob(
+        (progress) => {
+          const pct = Math.round(Math.min(1, Math.max(0, progress)) * 100);
+          updateExportJobProgress(pct);
+          setContentState((prev) => ({
+            ...prev,
+            processingProgress: pct,
+          }));
+          if (downloadCancelledRef.current) {
+            controller?.abort?.();
+          }
+        },
+        { signal: controller?.signal },
+      );
+    } catch (err) {
+      if (downloadCancelledRef.current || isAbortError(err)) {
+        return { blob: sourceBlob, timelineExport: false, cancelled: true };
+      }
+      throw err;
+    } finally {
+      if (exportAbortControllerRef.current === controller) {
+        exportAbortControllerRef.current = null;
+      }
+    }
+    if (downloadCancelledRef.current) {
+      return { blob: sourceBlob, timelineExport: false, cancelled: true };
+    }
+    return {
+      blob: rendered || sourceBlob,
+      timelineExport: Boolean(rendered),
+    };
+  };
+
+  const getExportDuration = (latest) => {
+    const timelineDuration = Number(latest.timelineExportDuration);
+    return Number.isFinite(timelineDuration) && timelineDuration > 0
+      ? timelineDuration
+      : latest.duration;
+  };
+
   const download = async () => {
     // ref: rapid clicks fire before state propagates
     const latest = contentStateRef.current || contentState;
@@ -3340,6 +3462,7 @@ const ContentState = (props) => {
     // downloading is the real lock
     if (latest.downloading) return;
     downloadCancelledRef.current = false;
+    beginExportJob({ kind: "mp4", label: "MP4 export" });
 
     setContentState((prev) => ({
       ...prev,
@@ -3348,7 +3471,30 @@ const ContentState = (props) => {
       processingProgress: 0,
     }));
 
-    const inputSize = contentState.blob?.size || 0;
+    let exportBlob = latest.blob;
+    let exportedFromTimeline = false;
+    try {
+      const prepared = await renderPendingTimelineForDownload(latest);
+      if (prepared.cancelled) return;
+      exportBlob = prepared.blob;
+      exportedFromTimeline = prepared.timelineExport;
+    } catch (err) {
+      console.error("[SayLess] timeline export failed before download", err);
+      setContentState((prev) => ({
+        ...prev,
+        downloading: false,
+        isFfmpegRunning: false,
+        processingProgress: 0,
+        editErrorType: "failed",
+      }));
+      finishExportJob({
+        status: "failed",
+        error: "Timeline render failed before MP4 export.",
+      });
+      return;
+    }
+
+    const inputSize = exportBlob?.size || 0;
     const remuxStartedAt = Date.now();
     let remuxedBlob = null;
     let remuxPath = null;
@@ -3357,7 +3503,9 @@ const ContentState = (props) => {
     // (await it); otherwise this runs the finalize now. Keyed on the blob, so
     // an edited recording re-finalizes before download.
     try {
-      const res = await ensureStandardMp4();
+      const res = exportedFromTimeline
+        ? await produceStandardMp4(exportBlob)
+        : await ensureStandardMp4();
       remuxedBlob = res.blob;
       remuxPath = res.path;
     } catch (err) {
@@ -3366,7 +3514,7 @@ const ContentState = (props) => {
 
     const remuxDurationMs = Date.now() - remuxStartedAt;
     const finalPath = remuxPath || "fmp4-fallback";
-    if (process.env.SCREENITY_DEV_MODE === "true") {
+    if (process.env.SAYLESS_DEV_MODE === "true") {
       console.log("[remux][sandbox] summary", {
         path: finalPath,
         durationMs: remuxDurationMs,
@@ -3381,17 +3529,27 @@ const ContentState = (props) => {
         durationMs: remuxDurationMs,
         inputBytes: inputSize,
         outputBytes: remuxedBlob?.size || 0,
+        timelineExport: exportedFromTimeline,
         at: Date.now(),
       },
     }));
 
-    if (downloadCancelledRef.current) return;
+    if (downloadCancelledRef.current) {
+      setContentState((prev) => ({
+        ...prev,
+        downloading: false,
+        isFfmpegRunning: false,
+        processingProgress: 0,
+      }));
+      return;
+    }
     try {
       if (remuxedBlob) {
         const url = URL.createObjectURL(remuxedBlob);
         await requestDownload(url, ".mp4");
         URL.revokeObjectURL(url);
         setContentState((prev) => ({ ...prev, saved: true }));
+        finishExportJob({ status: "completed" });
         diagForward("remux-delivered", {
           inputBytes: inputSize,
           outputBytes: remuxedBlob.size || 0,
@@ -3404,12 +3562,17 @@ const ContentState = (props) => {
       console.error("MP4 download failed:", err);
       // tier 3: serve fMP4 as-is so the user doesn't lose the recording
       try {
-        const url = URL.createObjectURL(contentState.blob);
+        const url = URL.createObjectURL(exportBlob);
         await requestDownload(url, ".mp4");
         URL.revokeObjectURL(url);
         setContentState((prev) => ({ ...prev, saved: true }));
+        finishExportJob({ status: "completed" });
       } catch (fallbackErr) {
         console.error("MP4 fallback download failed:", fallbackErr);
+        finishExportJob({
+          status: "failed",
+          error: String(fallbackErr?.message || fallbackErr || "MP4 export failed."),
+        });
       }
     } finally {
       setContentState((prev) => ({
@@ -3422,19 +3585,23 @@ const ContentState = (props) => {
   };
 
   const downloadWEBM = async () => {
-    if (contentState.downloadingWEBM) return;
+    const latest = contentStateRef.current || contentState;
+    if (latest.downloadingWEBM) return;
     downloadCancelledRef.current = false;
+    beginExportJob({ kind: "webm", label: "WebM export" });
 
-    const sourceBlob = contentState.blob || contentState.webm;
+    const sourceBlob = latest.blob || latest.webm;
+    const hasTimelineExport = typeof latest.getTimelineExportBlob === "function";
 
     if (!sourceBlob) {
+      finishExportJob({ status: "failed", error: "No recording blob available." });
       return;
     }
 
-    const hasFFmpeg = contentState.ffmpegLoaded && !contentState.noffmpeg;
+    const hasFFmpeg = latest.ffmpegLoaded && !latest.noffmpeg;
     const isAlreadyWebm = sourceBlob.type === "video/webm";
 
-    if (!hasFFmpeg || isAlreadyWebm) {
+    if (!hasTimelineExport && (!hasFFmpeg || isAlreadyWebm)) {
       const url = URL.createObjectURL(sourceBlob);
       await requestDownload(url, ".webm");
 
@@ -3444,11 +3611,12 @@ const ContentState = (props) => {
         isFfmpegRunning: false,
         saved: true,
       }));
+      finishExportJob({ status: "completed" });
       return;
     }
 
-    if (!contentState.hasBeenEdited && contentState.webm) {
-      const url = URL.createObjectURL(contentState.webm);
+    if (!hasTimelineExport && !latest.hasBeenEdited && latest.webm) {
+      const url = URL.createObjectURL(latest.webm);
       await requestDownload(url, ".webm");
 
       setContentState((prev) => ({
@@ -3457,6 +3625,7 @@ const ContentState = (props) => {
         isFfmpegRunning: false,
         saved: true,
       }));
+      finishExportJob({ status: "completed" });
       return;
     }
 
@@ -3490,6 +3659,47 @@ const ContentState = (props) => {
       processingProgress: 0,
     }));
 
+    let exportBlob = sourceBlob;
+    let exportedFromTimeline = false;
+    try {
+      const prepared = await renderPendingTimelineForDownload(latest);
+      if (prepared.cancelled) return;
+      exportBlob = prepared.blob;
+      exportedFromTimeline = prepared.timelineExport;
+    } catch (err) {
+      console.error("[SayLess] timeline export failed before WebM download", err);
+      setContentState((prev) => ({
+        ...prev,
+        downloadingWEBM: false,
+        isFfmpegRunning: false,
+        processingProgress: 0,
+        editErrorType: "failed",
+      }));
+      finishExportJob({
+        status: "failed",
+        error: "Timeline render failed before WebM export.",
+      });
+      return;
+    }
+
+    if (!hasFFmpeg && exportBlob.type === "video/mp4") {
+      try {
+        const url = URL.createObjectURL(exportBlob);
+        await requestDownload(url, ".mp4");
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("[SayLess] webm fallback download failed", err);
+      }
+      setContentState((prevState) => ({
+        ...prevState,
+        downloadingWEBM: false,
+        isFfmpegRunning: false,
+        saved: true,
+      }));
+      finishExportJob({ status: "completed" });
+      return;
+    }
+
     // Offscreen re-encode (OPFS-streamed, bounded memory) so large MP4s don't
     // OOM the in-editor BufferTarget path. On any failure (incl. a 60s no-
     // progress stall) we deliver the source so the user is never stuck.
@@ -3497,12 +3707,14 @@ const ContentState = (props) => {
       let webmBlob = null;
       try {
         webmBlob = await runRemuxWithStallGuard(
-          (pg) => remuxViaOffscreenOpfs(sourceBlob, pg, "webm"),
-          (p) =>
+          (pg) => remuxViaOffscreenOpfs(exportBlob, pg, "webm"),
+          (p) => {
+            updateExportJobProgress(Math.round(p * 100));
             setContentState((prev) => ({
               ...prev,
               processingProgress: Math.round(p * 100),
-            })),
+            }));
+          },
         );
       } catch (err) {
         console.warn(
@@ -3510,8 +3722,16 @@ const ContentState = (props) => {
           err,
         );
       }
-      if (downloadCancelledRef.current) return;
-      const blobToSave = webmBlob || sourceBlob;
+      if (downloadCancelledRef.current) {
+        setContentState((prevState) => ({
+          ...prevState,
+          downloadingWEBM: false,
+          isFfmpegRunning: false,
+          processingProgress: 0,
+        }));
+        return;
+      }
+      const blobToSave = webmBlob || exportBlob;
       const ext = blobToSave.type === "video/webm" ? ".webm" : ".mp4";
       try {
         const url = URL.createObjectURL(blobToSave);
@@ -3525,14 +3745,20 @@ const ContentState = (props) => {
         downloadingWEBM: false,
         isFfmpegRunning: false,
         saved: true,
+        lastDownloadInfo: {
+          ...(prevState.lastDownloadInfo || {}),
+          timelineExport: exportedFromTimeline,
+          at: Date.now(),
+        },
       }));
+      finishExportJob({ status: "completed" });
       return;
     }
 
     sendMessage({
       type: "to-webm",
-      blob: sourceBlob,
-      duration: contentState.duration,
+      blob: exportBlob,
+      duration: getExportDuration(latest),
     });
 
     // The transcode delivers the file via the "download-webm" message handler
@@ -3573,9 +3799,9 @@ const ContentState = (props) => {
     if (!completed) {
       // Stalled or failed: deliver the source as-is so the user isn't stuck.
       // It's already a finalized, playable file; use its real extension.
-      const ext = sourceBlob.type === "video/webm" ? ".webm" : ".mp4";
+      const ext = exportBlob.type === "video/webm" ? ".webm" : ".mp4";
       try {
-        const url = URL.createObjectURL(sourceBlob);
+        const url = URL.createObjectURL(exportBlob);
         await requestDownload(url, ext);
         URL.revokeObjectURL(url);
       } catch (err) {
@@ -3587,19 +3813,26 @@ const ContentState = (props) => {
         isFfmpegRunning: false,
         saved: true,
       }));
+      finishExportJob({ status: "completed" });
     }
     // On success the "download-webm" handler delivered the file and cleared the
     // downloading flags, so there is nothing more to do here.
   };
 
-  const downloadGIF = async () => {
+  const downloadGIF = async (options = {}) => {
     // ref: rapid clicks fire before state propagates
     const latest = contentStateRef.current || contentState;
     // don't gate on isFfmpegRunning (leaks from bg poll); downloadingGIF is the lock
     if (latest.downloadingGIF || latest.downloading) {
       return;
     }
-    if (latest.duration > 30) {
+    beginExportJob({ kind: "gif", label: "GIF export" });
+    const gifDuration = Number(options.durationSeconds);
+    const durationForLimit =
+      Number.isFinite(gifDuration) && gifDuration > 0
+        ? gifDuration
+        : getExportDuration(latest);
+    if (durationForLimit > 30) {
       try {
         chrome.runtime.sendMessage({
           type: "show-toast",
@@ -3607,6 +3840,10 @@ const ContentState = (props) => {
           timeout: 6000,
         });
       } catch {}
+      finishExportJob({
+        status: "failed",
+        error: "GIF export is limited to 30 seconds.",
+      });
       return;
     }
 
@@ -3614,11 +3851,34 @@ const ContentState = (props) => {
       ...prevState,
       downloadingGIF: true,
       isFfmpegRunning: true,
+      processingProgress: 0,
     }));
+
+    let exportBlob = latest.blob;
+    try {
+      const prepared = await renderPendingTimelineForDownload(latest);
+      if (prepared.cancelled) return;
+      exportBlob = prepared.blob;
+    } catch (err) {
+      console.error("[SayLess] timeline export failed before GIF download", err);
+      setContentState((prev) => ({
+        ...prev,
+        downloadingGIF: false,
+        isFfmpegRunning: false,
+        processingProgress: 0,
+        editErrorType: "failed",
+      }));
+      finishExportJob({
+        status: "failed",
+        error: "Timeline render failed before GIF export.",
+      });
+      return;
+    }
 
     sendMessage({
       type: "to-gif",
-      blob: latest.blob,
+      blob: exportBlob,
+      options,
     });
   };
 
@@ -3645,6 +3905,10 @@ const ContentState = (props) => {
   contentState.handleMute = handleMute;
   contentState.download = download;
   contentState.cancelDownload = cancelDownload;
+  contentState.beginExportJob = beginExportJob;
+  contentState.updateExportJobProgress = updateExportJobProgress;
+  contentState.finishExportJob = finishExportJob;
+  contentState.dismissExportJob = dismissExportJob;
   contentState.handleCrop = handleCrop;
   contentState.handleReencode = handleReencode;
   contentState.getFrame = getImage;
@@ -3661,7 +3925,7 @@ const ContentState = (props) => {
   return (
     <ContentStateContext.Provider value={[contentState, setContentState]}>
       {props.children}
-      {process.env.SCREENITY_DEV_MODE === "true" && (
+      {process.env.SAYLESS_DEV_MODE === "true" && (
         <DevHUD
           setContentState={setContentState}
           contentStateRef={contentStateRef}

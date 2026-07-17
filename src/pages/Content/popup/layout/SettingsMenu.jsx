@@ -18,17 +18,12 @@ import {
   shouldUseFastRecorder,
   getFastRecorderStickyState,
 } from "../../../../media/fastRecorderGate";
-import { resetOnboardingSeen } from "../onboarding/storage";
-import { runProPopupOnboardingIfNeeded } from "../onboarding/proOnboarding";
 
-const CLOUD_FEATURES_ENABLED =
-  process.env.SCREENITY_ENABLE_CLOUD_FEATURES === "true";
-const DEV_MODE = process.env.SCREENITY_DEV_MODE === "true";
+const DEV_MODE = process.env.SAYLESS_DEV_MODE === "true";
 
 const SettingsMenu = (props) => {
   const [contentState, setContentState] = useContext(contentStateContext);
   const [restore, setRestore] = useState(false);
-  const [cloudRestore, setCloudRestore] = useState(false);
   const [openQuality, setOpenQuality] = useState(false);
   const [openResize, setOpenResize] = useState(false);
   const [openFPS, setOpenFPS] = useState(false);
@@ -274,15 +269,6 @@ const SettingsMenu = (props) => {
             setRestore(response.restore);
           });
 
-        if (CLOUD_FEATURES_ENABLED && contentState.isSubscribed) {
-          chrome.runtime
-            .sendMessage({ type: "check-cloud-restore" })
-            .then((response) => {
-              setCloudRestore(response?.cloudRestore ?? false);
-            })
-            .catch(() => setCloudRestore(false));
-        }
-
         chrome.storage.local.get(["fastRecorderStatus"], (result) => {
           const status = result.fastRecorderStatus || null;
           setFastRecorderInfo((prev) => ({
@@ -310,7 +296,7 @@ const SettingsMenu = (props) => {
         )}
       >
         <DropdownMenu.Content className="DropdownMenuContent" sideOffset={5}>
-          {!contentState.isSubscribed && !contentState.isLoggedIn && (
+          {
             <DropdownMenu.Sub
               open={openResize}
               onOpenChange={(open) => {
@@ -462,8 +448,8 @@ const SettingsMenu = (props) => {
                 </DropdownMenu.SubContent>
               </DropdownMenu.Portal>
             </DropdownMenu.Sub>
-          )}
-          {!contentState.isSubscribed && !contentState.isLoggedIn && (
+          }
+          {
             <DropdownMenu.Sub
               open={openQuality}
               onOpenChange={(open) => {
@@ -586,8 +572,8 @@ const SettingsMenu = (props) => {
                 </DropdownMenu.SubContent>
               </DropdownMenu.Portal>
             </DropdownMenu.Sub>
-          )}
-          {!contentState.isSubscribed && !contentState.isLoggedIn && (
+          }
+          {
             <DropdownMenu.Sub
               open={openFPS}
               onOpenChange={(open) => {
@@ -683,7 +669,7 @@ const SettingsMenu = (props) => {
                 </DropdownMenu.SubContent>
               </DropdownMenu.Portal>
             </DropdownMenu.Sub>
-          )}
+          }
           <DropdownMenu.CheckboxItem
             className="DropdownMenuItem"
             onSelect={(e) => {
@@ -705,9 +691,7 @@ const SettingsMenu = (props) => {
               <img src={CheckWhiteIcon} />
             </DropdownMenu.ItemIndicator>
           </DropdownMenu.CheckboxItem>
-          {!contentState.isSubscribed &&
-            !contentState.isLoggedIn &&
-            fastRecorderInfo?.probe?.ok === true &&
+          {fastRecorderInfo?.probe?.ok === true &&
             fastRecorderInfo?.probe?.details?.selectedVideoConfig && (
               <DropdownMenu.CheckboxItem
                 className="DropdownMenuItem"
@@ -737,7 +721,7 @@ const SettingsMenu = (props) => {
                 </DropdownMenu.ItemIndicator>
               </DropdownMenu.CheckboxItem>
             )}
-          {!contentState.isSubscribed && !contentState.isLoggedIn && (
+          {
             <DropdownMenu.Item
               className="DropdownMenuItem"
               onSelect={(e) => {
@@ -748,7 +732,7 @@ const SettingsMenu = (props) => {
             >
               {chrome.i18n.getMessage("restoreRecording")}
             </DropdownMenu.Item>
-          )}
+          }
           <DropdownMenu.Item
             className="DropdownMenuItem"
             onSelect={(e) => {
@@ -758,116 +742,6 @@ const SettingsMenu = (props) => {
           >
             {chrome.i18n.getMessage("downloadForTroubleshootingOption")}
           </DropdownMenu.Item>
-
-          {contentState.isLoggedIn && !CLOUD_FEATURES_ENABLED && (
-            <DropdownMenu.Item
-              className="DropdownMenuItem"
-              onSelect={(e) => {
-                e.preventDefault();
-                chrome.runtime.sendMessage({ type: "open-account-settings" });
-              }}
-            >
-              {chrome.i18n.getMessage("accountSettingsOption")}
-            </DropdownMenu.Item>
-          )}
-          {contentState.isLoggedIn && !CLOUD_FEATURES_ENABLED && (
-            <DropdownMenu.Item
-              className="DropdownMenuItem"
-              onSelect={(e) => {
-                e.preventDefault();
-                chrome.runtime.sendMessage({
-                  type: "open-support",
-                  name: contentState.screenityUser?.name || "",
-                  email: contentState.screenityUser?.email || "",
-                });
-              }}
-            >
-              {chrome.i18n.getMessage("supportSettingsOption")}
-            </DropdownMenu.Item>
-          )}
-          {CLOUD_FEATURES_ENABLED && (
-            <>
-              {contentState.isLoggedIn && contentState.isSubscribed && (
-                <DropdownMenu.Item
-                  className="DropdownMenuItem"
-                  onSelect={async (e) => {
-                    e.preventDefault();
-                    await resetOnboardingSeen(["proPopupCore", "proCameraInfo"]);
-                    props.setOpen(false);
-                    runProPopupOnboardingIfNeeded({
-                      rootContext: props.shadowRef?.current?.shadowRoot || document,
-                      isPro: Boolean(
-                        contentState.isLoggedIn && contentState.isSubscribed
-                      ),
-                      isLoggedIn: Boolean(contentState.isLoggedIn),
-                      popupOpen: Boolean(
-                        contentState.showPopup && contentState.showExtension
-                      ),
-                      cameraEnabled: Boolean(contentState.cameraActive),
-                      pendingRecording: Boolean(contentState.pendingRecording),
-                      preparingRecording: Boolean(contentState.preparingRecording),
-                      recording: Boolean(contentState.recording),
-                      countdownActive: Boolean(contentState.countdownActive),
-                      isCountdownVisible: Boolean(contentState.isCountdownVisible),
-                      forceStart: true,
-                    });
-                  }}
-                >
-                  {chrome.i18n.getMessage("resetOnboardingOption") ||
-                    "Reset onboarding"}
-                </DropdownMenu.Item>
-              )}
-              {contentState.isLoggedIn && contentState.isSubscribed && (
-                <DropdownMenu.Item
-                  className="DropdownMenuItem"
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    chrome.runtime.sendMessage({
-                      type: "restore-cloud-recording",
-                    });
-                  }}
-                  disabled={!cloudRestore}
-                >
-                  {chrome.i18n.getMessage("recoverLastRecordingOption")}
-                </DropdownMenu.Item>
-              )}
-            </>
-          )}
-          {CLOUD_FEATURES_ENABLED && (
-            <DropdownMenu.Item
-              className="DropdownMenuItem"
-              onSelect={(e) => {
-                e.preventDefault();
-                if (contentState.isLoggedIn) {
-                  // Log out flow
-                  chrome.runtime.sendMessage({ type: "handle-logout" });
-                  setContentState((prev) => ({
-                    ...prev,
-                    isLoggedIn: false,
-                    wasLoggedIn: true,
-                    isSubscribed: false,
-                    screenityUser: null,
-                    proSubscription: null,
-                    bigTab: "record",
-                  }));
-                  contentState.openToast(
-                    chrome.i18n.getMessage("loggedOutToastTitle"),
-                    () => {},
-                    2000
-                  );
-                } else {
-                  // Log in flow (open login page)
-                  chrome.runtime.sendMessage({ type: "handle-login" });
-                }
-                props.setOpen(false); // Close the menu after action
-              }}
-            >
-              {contentState.isLoggedIn
-                ? chrome.i18n.getMessage("logoutButtonLabel") || "Log out"
-                : chrome.i18n.getMessage("loginButtonLabel") ||
-                  "Log in or sign up"}
-            </DropdownMenu.Item>
-          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

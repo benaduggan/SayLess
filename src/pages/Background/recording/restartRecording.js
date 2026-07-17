@@ -134,7 +134,7 @@ export const handleRestart = async (message = {}, sender = null) => {
     });
     await resetActiveTabRestart({ sourceTabId });
     // Second re-pin after the round-trip. If any handler reachable
-    // during the cloudrecorder dismissRecording → discardOffscreen
+    // during dismissRecording -> discardOffscreen
     // path cleared the multi keys, restore them so the upcoming
     // stop's preserveMultiProject check sees the correct count.
     if (multiSnapshot.multiMode) {

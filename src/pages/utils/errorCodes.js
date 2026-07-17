@@ -207,8 +207,8 @@ export const makeRecordingAttemptId = () => {
 
 /** Derive a short support code from an attempt ID. */
 export const makeSupportCode = (attemptId) => {
-  if (!attemptId) return "SCR-0000";
+  if (!attemptId) return "SLS-0000";
   const hash = attemptId.replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase();
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  return `SCR-${hash}-${date}`;
+  return `SLS-${hash}-${date}`;
 };

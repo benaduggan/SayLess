@@ -262,7 +262,7 @@ export async function runEditorOp(message, reply, { viewer = false } = {}) {
       }
 
       case "to-gif": {
-        const blob = await toGIF(null, message.blob);
+        const blob = await toGIF(null, message.blob, undefined, message.options);
         const base64 = await toBase64(blob);
         reply({ type: "download-gif", base64 });
         break;

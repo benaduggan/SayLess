@@ -1,4 +1,4 @@
-import { sendMessageTab, clearEditorTabReference } from "../tabManagement";
+import { sendMessageTab } from "../tabManagement";
 import { removeTab } from "../tabManagement/removeTab";
 import { sendMessageRecord } from "../recording/sendMessageRecord";
 import { isRecordingStartInFlight } from "../recording/startRecording";
@@ -17,7 +17,6 @@ export const onTabRemovedListener = () => {
         "recordingUiTabId",
         "activeTab",
         "recorderSession",
-        "editorTab",
         "sandboxTab",
       ]);
       const {
@@ -29,24 +28,15 @@ export const onTabRemovedListener = () => {
         recordingUiTabId,
         activeTab,
         recorderSession,
-        editorTab,
         sandboxTab,
       } = flags;
       // `recording` isn't true yet during start, so without this guard
       // the cleanup below tears down the recorder tab being prepared.
       const startInFlight = isRecordingStartInFlight(flags);
 
-      if (tabId === editorTab) {
-        await clearEditorTabReference("editor-tab-closed", { tabId });
-      }
-
-      // close orphaned recorder.html when editor/sandbox closes.
-      // stopRecording opens as sandboxTab (not editorTab), so check both.
-      const isEditorOrSandbox = tabId === editorTab || tabId === sandboxTab;
-      if (isEditorOrSandbox) {
-        if (tabId === sandboxTab) {
-          chrome.storage.local.set({ sandboxTab: null });
-        }
+      // close orphaned recorder.html when the local sandbox editor closes.
+      if (tabId === sandboxTab) {
+        chrome.storage.local.set({ sandboxTab: null });
         const isStillRecording =
           recording ||
           (recorderSession && recorderSession.status === "recording");
@@ -59,10 +49,7 @@ export const onTabRemovedListener = () => {
           try {
             const recTab = await chrome.tabs.get(recordingTab);
             const recUrl = recTab?.url || "";
-            if (
-              recUrl.includes("recorder.html") ||
-              recUrl.includes("cloudrecorder.html")
-            ) {
+            if (recUrl.includes("recorder.html")) {
               removeTab(recordingTab);
             }
           } catch {}
@@ -156,7 +143,7 @@ export const onTabRemovedListener = () => {
         chrome.action.setIcon({ path: "assets/icon-34.png" });
       }
 
-      // recorder.html/cloudrecorder.html closed mid-recording; nothing else writes recording=false here
+      // recorder.html closed mid-recording; nothing else writes recording=false here
       if (
         !restarting &&
         isActivelyRecording &&
@@ -167,7 +154,7 @@ export const onTabRemovedListener = () => {
         console.error("Recorder tab was closed during recording!");
         // Preserve multi-project state when scenes are already saved.
         // Without this, discarding scene N (N>1) wiped multiProjectId
-        // because the cloudrecorder tab close races BG's
+        // because recorder tab close races BG's
         // `recording:false` write and we'd see recorderSession.status
         // still "recording". The user would then click "Done" on their
         // scene 1 and hit "No project ID for multi recording".

@@ -20,10 +20,20 @@
     min-width: 0;
     justify-content: left;
   }
+  .video-item-select {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    margin: 0 $spacing-03 0 0;
+  }
+  .video-item-select:focus-visible {
+    box-shadow: $focus-border;
+    outline: none !important;
+  }
   .video-item-thumbnail {
-    min-width: 48px;
-    width: 48px;
-    height: 38px;
+    min-width: 64px;
+    width: 64px;
+    aspect-ratio: 16 / 9;
     background: grey;
     border-radius: 5px;
     margin-right: $spacing-04;
@@ -48,6 +58,18 @@
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
+  }
+  .video-item-info-meta,
+  .video-item-info-status {
+    margin-top: 2px;
+    color: $color-text-secondary;
+    font-size: 11px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+  .video-item-info-status.is-warning {
+    color: #9a5200;
   }
 }
 

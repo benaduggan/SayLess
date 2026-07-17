@@ -1,6 +1,5 @@
 // I need to make this work for a Chrome extension, so I can't import images, instead it needs to be a string with the path to the image
-const URL =
-  "chrome-extension://" + chrome.i18n.getMessage("@@extension_id") + "/assets";
+const URL = chrome.runtime.getURL("assets");
 
 const DropdownIcon = `${URL}/dropdown.svg`;
 const MicOnIcon = `${URL}/mic-on.svg`;
@@ -23,14 +22,8 @@ const MockupTabOn = `${URL}/mockup-tab-on.svg`;
 const MockupTabOff = `${URL}/mockup-tab-off.svg`;
 // const TempLogo = `${URL}/temp-logo.png`;
 const TempLogo = `${URL}/new-logo.svg`;
-const TempFigma = `${URL}/temp/figma.webp`;
-const TempTwitter = `${URL}/temp/twitter.webp`;
-const TempDesignSystem = `${URL}/temp/designsystem.webp`;
-const TempMarketing = `${URL}/temp/marketing.webp`;
-const TempSubstack = `${URL}/temp/substack.webp`;
 const CopyLinkIcon = `${URL}/copy-link.svg`;
 const MoreActionsIcon = `${URL}/more-actions.svg`;
-const ProfilePic = `${URL}/pfp.png`;
 const HandleControl = `${URL}/canvas/handle.png`;
 const RotateControl = `${URL}/canvas/rotate.png`;
 const MiddleHandleControl = `${URL}/canvas/middle-handle.png`;
@@ -65,14 +58,8 @@ export {
   MockupTabOn,
   MockupTabOff,
   TempLogo,
-  TempFigma,
-  TempTwitter,
-  TempDesignSystem,
-  TempMarketing,
-  TempSubstack,
   CopyLinkIcon,
   MoreActionsIcon,
-  ProfilePic,
   HandleControl,
   RotateControl,
   MiddleHandleControl,

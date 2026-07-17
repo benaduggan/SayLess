@@ -18,7 +18,7 @@ const Dropdown = (props) => {
   const [label, setLabel] = useState(chrome.i18n.getMessage("None"));
   const [open, setOpen] = useState(false);
   const cameraAnchorId =
-    props.type === "camera" ? "pro-onboarding-camera-toggle" : undefined;
+    props.type === "camera" ? "local-tour-camera-toggle" : undefined;
 
   const updateItems = () => {
     if (props.type === "camera") {

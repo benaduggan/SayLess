@@ -155,7 +155,7 @@ const Wrapper = () => {
   // toolbar would just freeze.
   const inRestartWait = Boolean(contentState.restartingRecording);
   // The real "starting" gap is the post-acquisition preparing window: stream
-  // acquired → cloud project created → countdown. preparingRecording is true
+  // acquired -> local recorder ready -> countdown. preparingRecording is true
   // throughout it, the popup is already closed, document is visible, and no
   // recorder tab exists — so show the loader here (bypassing the hide gate).
   // pendingRecording/inPreCountdownWait is only true for ~10ms before the
@@ -165,7 +165,7 @@ const Wrapper = () => {
     !contentState.countdownActive &&
     !contentState.isCountdownVisible &&
     !contentState.recording &&
-    contentState.useOffscreenCloud !== false;
+    contentState.useOffscreenRecorder !== false;
   const waitActive =
     inPreCountdownWait || inPostStopWait || inRestartWait || inPreparingWait;
   const [showLoader, setShowLoader] = useState(false);
@@ -209,7 +209,7 @@ const Wrapper = () => {
       wasHiddenThisWait = true;
     }
     // Preparing window (post-acquisition): no recorder tab steals focus, so
-    // skip the hide gate and let the loader show during the cloud-prep gap.
+    // skip the hide gate and let the loader show during the recorder-prep gap.
     if (inPreparingWait) {
       wasHiddenThisWait = true;
     }
@@ -320,11 +320,7 @@ const Wrapper = () => {
             visibility: "hidden",
           }}
           ref={regionCaptureRef}
-          src={
-            contentState.isSubscribed
-              ? chrome.runtime.getURL("cloudrecorder.html?injected=true")
-              : chrome.runtime.getURL("region.html")
-          }
+          src={chrome.runtime.getURL("region.html")}
           allow="camera *; microphone *; display-capture *"
         ></iframe>
       )}
@@ -449,26 +445,12 @@ const Wrapper = () => {
                 !contentState.isCountdownVisible && <RecordingLoader />}
               <Countdown />
               {contentState.recordingType != "camera" &&
-                !contentState.onboarding &&
-                !(
-                  contentState.isSubscribed === false &&
-                  contentState.isLoggedIn === true
-                ) &&
-                !(!contentState.isLoggedIn && contentState.wasLoggedIn) && (
-                  <Camera shadowRef={shadowRef} />
-                )}
+                !contentState.onboarding && <Camera shadowRef={shadowRef} />}
               {contentState.recordingType === "camera" && (
                 <CameraOnly shadowRef={shadowRef} />
               )}
               {!(contentState.hideToolbar && contentState.hideUI) &&
-                !contentState.onboarding &&
-                !(
-                  contentState.isSubscribed === false &&
-                  contentState.isLoggedIn === true
-                ) &&
-                !(!contentState.isLoggedIn && contentState.wasLoggedIn) && (
-                  <Toolbar />
-                )}
+                !contentState.onboarding && <Toolbar />}
               {contentState.showPopup && (
                 <PopupContainer shadowRef={shadowRef} />
               )}

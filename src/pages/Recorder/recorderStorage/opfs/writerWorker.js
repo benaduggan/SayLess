@@ -7,7 +7,7 @@
 const FILE_PREFIX = "recording-";
 
 const devLog =
-  process.env.SCREENITY_DEV_MODE === "true"
+  process.env.SAYLESS_DEV_MODE === "true"
     ? (label, data) =>
         console.log("[recorder-opfs][worker]", label, data || "")
     : () => {};

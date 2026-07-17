@@ -402,10 +402,10 @@ const ToolbarWrap = () => {
         onDrag={handleDrag}
         onDragStop={handleDrop}
         ref={DragRef}
-        id="pro-onboarding-recording-toolbar"
+        id="local-tour-recording-toolbar"
       >
         <Toolbar.Root
-          id="pro-onboarding-recording-toolbar-root"
+          id="local-tour-recording-toolbar-root"
           className={
             "ToolbarRoot" +
             " " +
@@ -476,7 +476,7 @@ const ToolbarWrap = () => {
           )}
           <div
             className={"ToolbarRecordingControls"}
-            id="pro-onboarding-recording-toolbar-controls"
+            id="local-tour-recording-toolbar-controls"
           >
             <ToolTrigger
               type="button"
@@ -615,7 +615,6 @@ const ToolbarWrap = () => {
             <MicToggle />
             {(!contentState.cameraActive ||
               contentState.defaultVideoInput === "none") &&
-              (!contentState.isSubscribed || !contentState.recording) &&
               contentState.recordingType != "camera-only" && (
                 <ToolTrigger
                   type="button"

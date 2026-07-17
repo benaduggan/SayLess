@@ -59,7 +59,7 @@ export class VideoCutter {
     ];
     let processedTime = 0;
 
-    const debugLog = process.env.SCREENITY_DEV_MODE === "true";
+    const debugLog = process.env.SAYLESS_DEV_MODE === "true";
     if (debugLog) {
       console.log("[cut-debug][cutter] start", {
         cutStart,

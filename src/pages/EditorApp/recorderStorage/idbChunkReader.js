@@ -3,7 +3,7 @@ import localforage from "localforage";
 
 localforage.config({
   driver: localforage.INDEXEDDB,
-  name: "screenity",
+  name: "sayless",
   version: 1,
 });
 

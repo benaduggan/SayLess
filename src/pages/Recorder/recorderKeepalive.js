@@ -1,12 +1,11 @@
 // Keep-alive bootstrap. Loads pre-bundle to dodge Chrome's background-tab
-// throttle on region recordings. Handles hang off window.__SCREENITY_KEEPALIVE.
+// throttle on region recordings. Handles hang off window.__SAYLESS_KEEPALIVE.
 (function () {
   try {
-    var KA = (window.__SCREENITY_KEEPALIVE =
-      window.__SCREENITY_KEEPALIVE || {});
+    var KA = (window.__SAYLESS_KEEPALIVE = window.__SAYLESS_KEEPALIVE || {});
     KA.startedAt = Date.now();
     try {
-      performance.mark("screenity-keepalive-start");
+      performance.mark("sayless-keepalive-start");
     } catch (e) {}
 
     // Silent ultrasonic sine; counts as "playing audio" to Chrome.
@@ -40,7 +39,7 @@
         KA.lockAbort = ac;
         navigator.locks
           .request(
-            "screenity-recorder-keepalive",
+            "sayless-recorder-keepalive",
             { mode: "exclusive", signal: ac.signal },
             function () {
               return new Promise(function () {});
@@ -131,7 +130,7 @@
 
     KA.completedAt = Date.now();
     try {
-      performance.mark("screenity-keepalive-end");
+      performance.mark("sayless-keepalive-end");
     } catch (e) {}
   } catch (e) {}
 })();

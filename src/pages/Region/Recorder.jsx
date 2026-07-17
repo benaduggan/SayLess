@@ -38,7 +38,7 @@ import localforage from "localforage";
 
 localforage.config({
   driver: localforage.INDEXEDDB,
-  name: "screenity",
+  name: "sayless",
   version: 1,
 });
 
@@ -47,7 +47,7 @@ const chunksStore = localforage.createInstance({
 });
 
 const DEBUG_RECORDER =
-  typeof window !== "undefined" ? !!window.SCREENITY_DEBUG_RECORDER : false;
+  typeof window !== "undefined" ? !!window.SAYLESS_DEBUG_RECORDER : false;
 const logPrefix = "[SayLess Region Recorder]";
 
 const { debug, debugWarn, debugError } = createDebugLogger(
@@ -104,7 +104,7 @@ const Recorder = () => {
   const recdbgSessionRef = useRef(null);
   // MR mid-stream stall watchdog. crbug/343157156: MediaRecorder can silently
   // stop firing ondataavailable mid-recording with no error/stop event.
-  // CloudRecorder has the same watchdog; mirror here for the Region MR path.
+  // Keep the region MediaRecorder path aligned with the main recorder watchdog.
   const mrLastChunkAt = useRef(0);
   const mrStallTimer = useRef(null);
   const mrStallNotified = useRef(false);
@@ -685,7 +685,7 @@ const Recorder = () => {
       }
     }
 
-    // BG-coordinated guards: matches what Recorder.jsx + CloudRecorder do.
+    // BG-coordinated guards: matches the main recorder path.
     //   • auto-discardable=false → Chrome won't reclaim the host tab
     //     (and the iframe with it) under memory pressure mid-record.
     //   • start-first-chunk-watchdog → 8s BG alarm fires recording-error
@@ -1078,7 +1078,7 @@ const Recorder = () => {
               lastRecordingBackendRef: backendRefAtOpen,
             });
           } catch {}
-          if (process.env.SCREENITY_DEV_MODE === "true") {
+          if (process.env.SAYLESS_DEV_MODE === "true") {
             console.log("[recorder-opfs][region] writer-open", {
               backend: selection.backend,
               path: "webcodecs",
@@ -1285,7 +1285,7 @@ const Recorder = () => {
                 } catch {}
                 // Abort the OPFS writer so MR's ondataavailable can't
                 // stream WebM into the WebCodecs file via chunkWriter.
-                // Mirrors the free-tier fix.
+                // Mirrors the local recorder chunk-writer cleanup.
                 if (chunkWriter.current) {
                   try {
                     await chunkWriter.current.abort();
@@ -2725,7 +2725,7 @@ const Recorder = () => {
 
   return (
     <div>
-      {process.env.SCREENITY_DEV_MODE === "true" && (
+      {process.env.SAYLESS_DEV_MODE === "true" && (
         <div
           style={{
             position: "fixed",

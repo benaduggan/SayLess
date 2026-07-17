@@ -11,9 +11,7 @@ import { diagEvent } from "../../utils/diagnosticLog";
 // hand. This enumerates recorder tabs by URL so none can hide behind a
 // lost handle.
 //
-// Scope: `recorder.html` only. The Pro `cloudrecorder.html` tab has its
-// own lifecycle (recorderSession tracking, self-close on TUS finalize,
-// multi-scene handoff) and must not be swept here.
+// Scope: `recorder.html` only.
 export const sweepRecorderTabs = async ({ exceptTabId = null } = {}) => {
   const removed = [];
   try {

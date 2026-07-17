@@ -26,7 +26,7 @@ export const handleDismiss = async () => {
       multiProjectId: null,
       multiLastSceneId: null,
     });
-    chrome.storage.local.remove(["recordingMeta"]);
+    chrome.storage.local.remove(["recordingMeta", "clickEvents"]);
   } catch (error) {
     console.error("Failed to handle dismiss:", error);
   }
@@ -63,10 +63,7 @@ export const cancelRecording = async () => {
       try {
         const tab = await chrome.tabs.get(recordingTab);
         const url = tab?.url || "";
-        if (
-          url.includes("recorder.html") ||
-          url.includes("cloudrecorder.html")
-        ) {
+        if (url.includes("recorder.html")) {
           try {
             await removeTab(recordingTab);
           } catch (removeErr) {
@@ -103,7 +100,7 @@ export const cancelRecording = async () => {
       multiProjectId: null,
       multiLastSceneId: null,
     });
-    chrome.storage.local.remove(["recordingMeta"]);
+    chrome.storage.local.remove(["recordingMeta", "clickEvents"]);
   } catch (error) {
     console.error("Failed to cancel recording:", error.message);
   }

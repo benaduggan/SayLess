@@ -86,7 +86,7 @@ export const discardRecording = async ({
   });
   chrome.storage.local.set({ pipForceClose: Date.now() });
   chrome.storage.local.set({ recordingUiTabId: null });
-  chrome.storage.local.remove(["recordingMeta"]);
+  chrome.storage.local.remove(["recordingMeta", "clickEvents"]);
 
   chrome.runtime.sendMessage({ type: "turn-off-pip" });
 };

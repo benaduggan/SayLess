@@ -2,18 +2,15 @@ import React, { useContext, useState, useEffect, useRef } from "react";
 
 // Styles
 import styles from "../../styles/player/_Title.module.scss";
-const URL = "/assets/";
+const URL = chrome.runtime.getURL("assets/");
 
 // Icon
 import { ReactSVG } from "react-svg";
-
-import ShareModal from "./ShareModal";
 
 // Context
 import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
 
 const Title = () => {
-  const [showShare, setShowShare] = useState(false);
   const [contentState, setContentState] = useContext(ContentStateContext); // Access the ContentState context
   const inputRef = useRef(null);
   // Show the video title, as a heading by default (multiline), on click show a text input to edit the title
@@ -76,9 +73,6 @@ const Title = () => {
 
   return (
     <div className={styles.TitleParent}>
-      {showShare && (
-        <ShareModal showShare={showShare} setShowShare={setShowShare} />
-      )}
       <div className={styles.TitleWrap}>
         {showTitle ? (
           <>
@@ -90,19 +84,6 @@ const Title = () => {
                 styles={{ display: "inline-block" }}
               />
             </h1>
-            {/* <div
-              className={styles.shareButton}
-              onClick={() => {
-                chrome.runtime.sendMessage({ type: "handle-login" });
-              }}
-            >
-              <ReactSVG
-                src={URL + "editor/icons/link.svg"}
-                className={styles.shareIcon}
-              />
-              {chrome.i18n.getMessage("shareUnlockButton") ||
-                "Sign in to share (pro)"}
-            </div> */}
           </>
         ) : (
           <input

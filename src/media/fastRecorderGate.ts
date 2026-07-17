@@ -49,7 +49,7 @@ const getFastRecDebug = () => {
       if (params.get("fastRecDebug") === "1") return true;
     }
   } catch {}
-  return (globalThis as any)?.SCREENITY_FAST_REC_DEBUG === true;
+  return (globalThis as any)?.SAYLESS_FAST_REC_DEBUG === true;
 };
 
 const debugLog = (...args: any[]) => {
@@ -247,7 +247,7 @@ const verifyEncoderProducesOutput = async (
     encoder.configure(config);
     const canvas = new OffscreenCanvas(width, height);
     // getContext('2d') returns the union OffscreenRenderingContext; cast
-    // narrows to the only variant we use so strict TS (build:bs) accepts
+    // Narrows to the only variant used by the recorder gate.
     // fillStyle/fillRect without complaining about ImageBitmapRenderingContext.
     const ctx = canvas.getContext("2d") as OffscreenCanvasRenderingContext2D | null;
     const frameDurationUs = Math.round(1_000_000 / 30);

@@ -48,7 +48,7 @@
  * and selected at runtime from config, so the engine is provider-agnostic.
  *
  * @typedef {Object} TranscriptionProvider
- * @property {string} id                         Stable key (e.g. "local-whisper", "remote-api").
+ * @property {string} id                         Stable key (e.g. "local-whisper").
  * @property {string} label                      Human label for settings UI.
  * @property {boolean} [requiresNetwork]         True if it phones out (gate under privacy mode).
  * @property {(opts?: object) => Promise<boolean>} isAvailable  Cheap check: model present / endpoint configured.

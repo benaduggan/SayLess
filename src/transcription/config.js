@@ -1,6 +1,6 @@
 // Config resolution for transcription. Precedence (low -> high):
 //   1. built-in defaults
-//   2. build-time env (webpack DefinePlugin: process.env.SCREENITY_TRANSCRIPTION_*)
+//   2. extension-bundled local model defaults
 //   3. user/runtime settings persisted in chrome.storage.local under "transcription"
 //
 // Nothing here imports a specific provider — callers pass the resolved config
@@ -12,43 +12,79 @@
  * @property {boolean} privacyMode        If true, network providers are refused (local-only).
  * @property {string} [defaultLanguage]   "auto" or BCP-47.
  * @property {Object<string, object>} providerOptions  Per-provider opts keyed by provider id
- *                                        (e.g. { "remote-api": { endpoint, apiKey } }).
+ *                                        (e.g. { "local-whisper": { localModelPath } }).
  */
+
+export const LOCAL_WHISPER_MODEL_ID = "onnx-community/whisper-base_timestamped";
+export const LOCAL_WHISPER_ASSET_ROOT = "assets/whisper/models/";
+export const TRANSCRIPTION_STORAGE_KEY = "transcription";
+
+export const TRANSCRIPTION_LANGUAGES = [
+  { value: "auto", label: "Auto detect" },
+  { value: "en", label: "English" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "it", label: "Italian" },
+  { value: "pt", label: "Portuguese" },
+  { value: "nl", label: "Dutch" },
+  { value: "pl", label: "Polish" },
+  { value: "ja", label: "Japanese" },
+  { value: "ko", label: "Korean" },
+  { value: "zh", label: "Chinese" },
+];
+
+const SUPPORTED_LANGUAGE_VALUES = new Set(
+  TRANSCRIPTION_LANGUAGES.map((language) => language.value),
+);
+
+const allowRemoteModelOverrides = () =>
+  typeof process !== "undefined" && process.env?.SAYLESS_DEV_MODE === "true";
+
+const isRemoteModelPath = (value) => /^https?:\/\//i.test(String(value || ""));
+const isBundledExtensionModelPath = (value) =>
+  /^chrome-extension:\/\/[^/]+\/assets\/whisper\/models\/?$/i.test(String(value || ""));
+
+function enforceReleaseOfflineDefaults(config) {
+  if (allowRemoteModelOverrides()) return config;
+
+  return {
+    ...config,
+    privacyMode: true,
+    providerOptions: {
+      ...(config.providerOptions || {}),
+      "local-whisper": {
+        ...(config.providerOptions?.["local-whisper"] || {}),
+        allowRemoteModels: false,
+      },
+    },
+  };
+}
+
+export const normalizeTranscriptionLanguage = (language) => {
+  const value = String(language || "auto").trim().toLowerCase();
+  return SUPPORTED_LANGUAGE_VALUES.has(value) ? value : "auto";
+};
 
 /** @type {TranscriptionConfig} */
 export const DEFAULT_CONFIG = {
   providerId: "local-whisper",
   privacyMode: true,
   defaultLanguage: "auto",
-  providerOptions: {},
+  providerOptions: {
+    "local-whisper": {
+      allowRemoteModels: false,
+      model: LOCAL_WHISPER_MODEL_ID,
+    },
+  },
 };
-
-function envConfig() {
-  /** @type {Partial<TranscriptionConfig>} */
-  const env = {};
-  // These are inlined by webpack DefinePlugin at build time; guard for undefined.
-  const pid =
-    typeof process !== "undefined" &&
-    process.env &&
-    process.env.SCREENITY_TRANSCRIPTION_PROVIDER;
-  if (pid) env.providerId = pid;
-
-  const endpoint =
-    typeof process !== "undefined" &&
-    process.env &&
-    process.env.SCREENITY_TRANSCRIPTION_ENDPOINT;
-  if (endpoint) {
-    env.providerOptions = { "remote-api": { endpoint } };
-  }
-  return env;
-}
 
 /**
  * Deep-ish merge limited to the known shape (providerOptions merged per-key).
  * @param {...Partial<TranscriptionConfig>} layers
  * @returns {TranscriptionConfig}
  */
-export function mergeConfig(...layers) {
+function mergeConfigLayers(...layers) {
   /** @type {any} */
   const out = { providerOptions: {} };
   for (const layer of layers) {
@@ -56,30 +92,67 @@ export function mergeConfig(...layers) {
     for (const [k, v] of Object.entries(layer)) {
       if (k === "providerOptions" && v) {
         for (const [pid, opts] of Object.entries(v)) {
-          out.providerOptions[pid] = { ...(out.providerOptions[pid] || {}), ...opts };
+          const current = out.providerOptions[pid] || {};
+          const next = { ...current, ...opts };
+          if (
+            pid === "local-whisper" &&
+            !allowRemoteModelOverrides() &&
+            isBundledExtensionModelPath(current.localModelPath) &&
+            isRemoteModelPath(next.localModelPath)
+          ) {
+            next.localModelPath = current.localModelPath;
+          }
+          out.providerOptions[pid] = next;
         }
       } else if (v !== undefined) {
-        out[k] = v;
+        out[k] = k === "defaultLanguage" ? normalizeTranscriptionLanguage(v) : v;
       }
     }
   }
   return out;
 }
 
+export function mergeConfig(...layers) {
+  return enforceReleaseOfflineDefaults(mergeConfigLayers(...layers));
+}
+
+export function getBundledLocalWhisperOptions(runtime = globalThis.chrome) {
+  const getURL = runtime?.runtime?.getURL;
+  if (typeof getURL !== "function") return {};
+  return {
+    providerOptions: {
+      "local-whisper": {
+        localModelPath: getURL(LOCAL_WHISPER_ASSET_ROOT),
+      },
+    },
+  };
+}
+
 /**
  * Resolve the effective config. Reads chrome.storage.local("transcription")
- * when available; falls back to defaults+env otherwise (e.g. in tests).
+ * when available; falls back to defaults otherwise (e.g. in tests).
  * @returns {Promise<TranscriptionConfig>}
  */
 export async function resolveConfig() {
   let stored = {};
   try {
     if (typeof chrome !== "undefined" && chrome.storage?.local) {
-      const got = await chrome.storage.local.get("transcription");
-      stored = got?.transcription || {};
+      const got = await chrome.storage.local.get(TRANSCRIPTION_STORAGE_KEY);
+      stored = got?.[TRANSCRIPTION_STORAGE_KEY] || {};
     }
   } catch {
     // ignore — fall back to defaults+env
   }
-  return mergeConfig(DEFAULT_CONFIG, envConfig(), stored);
+  return mergeConfig(DEFAULT_CONFIG, getBundledLocalWhisperOptions(), stored);
+}
+
+export async function saveTranscriptionSettings(patch = {}) {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) {
+    return mergeConfig(DEFAULT_CONFIG, patch);
+  }
+  const got = await chrome.storage.local.get(TRANSCRIPTION_STORAGE_KEY);
+  const stored = got?.[TRANSCRIPTION_STORAGE_KEY] || {};
+  const nextStored = mergeConfigLayers(stored, patch);
+  await chrome.storage.local.set({ [TRANSCRIPTION_STORAGE_KEY]: nextStored });
+  return mergeConfig(DEFAULT_CONFIG, getBundledLocalWhisperOptions(), nextStored);
 }

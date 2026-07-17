@@ -1,7 +1,5 @@
-import React, { useContext, useEffect, useState, useRef, useMemo } from "react";
+import React, { useContext, useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
-import Plyr from "plyr-react";
-import "../../styles/plyr.css";
 import { ContentStateContext } from "../../context/ContentState";
 
 import Title from "./Title";
@@ -10,8 +8,8 @@ const VideoPlayer = (props) => {
   const [contentState, setContentState] = useContext(ContentStateContext);
 
   const playerRef = useRef(null);
+  const videoRef = useRef(null);
   const [url, setUrl] = useState(null);
-  const [source, setSource] = useState(null);
   const [overlayHost, setOverlayHost] = useState(null);
   const contentStateRef = useRef(contentState);
   const bannerRef = useRef(null);
@@ -31,41 +29,12 @@ const VideoPlayer = (props) => {
 
   useEffect(() => {
     if (
-      playerRef.current &&
-      playerRef.current.plyr &&
+      videoRef.current &&
       contentState.updatePlayerTime
     ) {
-      playerRef.current.plyr.currentTime = contentState.time;
+      videoRef.current.currentTime = contentState.time;
     }
   }, [contentState.time]);
-
-  const options = useMemo(
-    () => ({
-      controls: [
-        "play",
-        "rewind",
-        "fast-forward",
-        "progress",
-        "current-time",
-        "duration",
-        "mute",
-        "captions",
-        "settings",
-        "pip",
-        "fullscreen",
-      ],
-      urls: null,
-      ratio: "16:9",
-      blankVideo:
-        "chrome-extension://" +
-        chrome.i18n.getMessage("@@extension_id") +
-        "/assets/blank.mp4",
-      keyboard: {
-        global: true,
-      },
-    }),
-    []
-  );
 
   useEffect(() => {
     if (contentState.webm || contentState.blob) {
@@ -82,27 +51,18 @@ const VideoPlayer = (props) => {
       const objectURL = URL.createObjectURL(vid);
       // Long recordings can take seconds to parse metadata.
       setContentState((prev) => ({ ...prev, playerLoading: true }));
-      setSource({
-        type: "video",
-        sources: [
-          {
-            src: objectURL,
-            type: contentState.blob ? "video/mp4" : "video/webm",
-          },
-        ],
-      });
       setUrl(objectURL);
 
       return () => {
         URL.revokeObjectURL(objectURL);
       };
     }
-  }, [contentState.webm, contentState.blob, playerRef]);
+  }, [contentState.webm, contentState.blob]);
 
-  // plyr-react ref shape varies; bind directly to <video>. 15s safety
-  // timeout in case events never fire.
+  // Long or corrupt local files can delay or skip media events. Keep a safety
+  // timeout so the editor does not remain covered by a loading overlay.
   useEffect(() => {
-    if (!source) return;
+    if (!url) return;
     let cleared = false;
     const clear = () => {
       if (cleared) return;
@@ -144,11 +104,9 @@ const VideoPlayer = (props) => {
       clear();
     };
     const tryAttach = () => {
-      videoEl =
-        document.querySelector("#plyr-player") ||
-        document.querySelector(".plyr video");
-      const plyrEl = document.querySelector(".plyr");
-      if (plyrEl) setOverlayHost(plyrEl);
+      videoEl = videoRef.current || document.querySelector("#plyr-player");
+      const playerEl = playerRef.current || document.querySelector(".plyr");
+      if (playerEl) setOverlayHost(playerEl);
       if (!videoEl) return false;
       videoEl.addEventListener("loadedmetadata", clear);
       videoEl.addEventListener("canplay", clear);
@@ -172,7 +130,7 @@ const VideoPlayer = (props) => {
       }
       setOverlayHost(null);
     };
-  }, [source]);
+  }, [url]);
 
   useEffect(() => {
     if (contentStateRef.current.mp4ready || contentStateRef.current.blob)
@@ -235,18 +193,26 @@ const VideoPlayer = (props) => {
     <div className="videoPlayer">
       <div className="playerWrap">
         {url && (
-          <Plyr
+          <div
             ref={playerRef}
-            id="plyr-player"
-            source={source}
-            options={options}
-          />
+            className="plyr plyr--video sayless-native-player-shell"
+          >
+            <video
+              ref={videoRef}
+              id="plyr-player"
+              className="sayless-native-player"
+              src={url}
+              controls
+              playsInline
+              preload="metadata"
+            />
+          </div>
         )}
         {(contentState.playerLoading || contentState.finalizingRecording) &&
           overlayHost &&
           createPortal(
             <div
-              className="screenity-player-loading"
+              className="sayless-player-loading"
               style={{
                 position: "absolute",
                 inset: 0,
@@ -267,7 +233,7 @@ const VideoPlayer = (props) => {
                   border: "3px solid rgba(255,255,255,0.2)",
                   borderTopColor: "#fff",
                   borderRadius: "50%",
-                  animation: "screenity-spin 0.9s linear infinite",
+                  animation: "sayless-spin 0.9s linear infinite",
                 }}
               />
               {contentState.finalizingRecording && (
@@ -294,7 +260,7 @@ const VideoPlayer = (props) => {
 							position: relative!important;
 						}
 					}
-					@keyframes screenity-spin {
+						@keyframes sayless-spin {
 						to { transform: rotate(360deg); }
 					}
 					`}

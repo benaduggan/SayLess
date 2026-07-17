@@ -1,44 +1,5 @@
 import { sendMessageTab } from "../tabManagement";
 import { diagEvent } from "../../utils/diagnosticLog";
-import { loginWithWebsite } from "../auth/loginWithWebsite";
-
-const CLOUD_FEATURES_ENABLED =
-  process.env.SCREENITY_ENABLE_CLOUD_FEATURES === "true";
-const APP_BASE = process.env.SCREENITY_APP_BASE;
-// debounce in-tab triggers so navigation chatter doesn't hammer /auth/refresh
-const APP_AUTH_REFRESH_DEBOUNCE_MS = 10_000;
-let lastAppAuthRefreshAt = 0;
-const tryAppAuthRefresh = async (url) => {
-  if (!CLOUD_FEATURES_ENABLED || !APP_BASE || !url) return;
-  if (!url.startsWith(APP_BASE)) return;
-  const now = Date.now();
-  if (now - lastAppAuthRefreshAt < APP_AUTH_REFRESH_DEBOUNCE_MS) return;
-  const {
-    isLoggedIn,
-    wasLoggedIn,
-    hasSubscribedBefore,
-    screenityUser,
-    stayLoggedOut,
-  } = await chrome.storage.local.get([
-    "isLoggedIn",
-    "wasLoggedIn",
-    "hasSubscribedBefore",
-    "screenityUser",
-    "stayLoggedOut",
-  ]);
-  if (isLoggedIn) return;
-  if (stayLoggedOut) return;
-  // Only refresh if there's prior evidence of an account, otherwise every
-  // logged-out visitor hits /auth/refresh and 401s. Mirrors the priorSignals
-  // gate in loginWithWebsite (force:true would bypass it).
-  const hasPriorSignals =
-    Boolean(wasLoggedIn) ||
-    Boolean(hasSubscribedBefore) ||
-    Boolean(screenityUser);
-  if (!hasPriorSignals) return;
-  lastAppAuthRefreshAt = now;
-  loginWithWebsite({ force: true }).catch(() => {});
-};
 
 export const handleTabUpdate = async (tabId, changeInfo, tab) => {
   try {
@@ -128,8 +89,6 @@ export const handleTabUpdate = async (tabId, changeInfo, tab) => {
       ) {
         sendMessageTab(tab.id, { type: "toggle-popup" });
       }
-      // if we look logged out, try a force refresh in case AUTH_SUCCESS was missed.
-      tryAppAuthRefresh(tab.url).catch(() => {});
     }
   } catch (error) {
     console.error("Error in handleTabUpdate:", error.message);

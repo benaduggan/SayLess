@@ -6,13 +6,13 @@ import { sweepRecorderTabs } from "../recording/sweepRecorderTabs.js";
 import { diagEvent } from "../../utils/diagnosticLog";
 import { lifecycle } from "../../utils/lifecycleLog";
 import { chunksStore } from "../recording/chunkHandler";
-import { emitRecordingTelemetry } from "../recording/emitRecordingTelemetry";
+import { emitRecordingEventMarker } from "../recording/emitRecordingEventMarker";
 import { markFastRecorderFailure } from "../../../media/fastRecorderGate";
 import {
-  CLOUD_LOCAL_PLAYBACK_KEY,
-  CLOUD_LOCAL_PLAYBACK_EVENT_KEY,
-  CLOUD_LOCAL_PLAYBACK_ALARM,
-} from "../recording/cloudLocalPlaybackConstants";
+  LOCAL_PLAYBACK_KEY,
+  LOCAL_PLAYBACK_EVENT_KEY,
+  LOCAL_PLAYBACK_ALARM,
+} from "../recording/localPlaybackConstants";
 import {
   FIRST_CHUNK_WATCHDOG_ALARM,
   RECORDER_KEEPALIVE_ALARM,
@@ -147,7 +147,7 @@ export const handleAlarm = async (alarm) => {
         ageMs: age,
         tabId: snap.recordingTab,
       });
-      void emitRecordingTelemetry("recording_stall_detected", {
+      void emitRecordingEventMarker("recording_stall_detected", {
         ageMs: age,
         tabId: snap.recordingTab,
       });
@@ -165,7 +165,7 @@ export const handleAlarm = async (alarm) => {
         ageMs: age,
         tabId: snap.recordingTab,
       });
-      void emitRecordingTelemetry("recording_stall_unrecoverable", {
+      void emitRecordingEventMarker("recording_stall_unrecoverable", {
         ageMs: age,
         tabId: snap.recordingTab,
       });
@@ -183,7 +183,7 @@ export const handleAlarm = async (alarm) => {
         return;
       }
 
-      void emitRecordingTelemetry("recording_outcome", {
+      void emitRecordingEventMarker("recording_outcome", {
         outcome: "unrecoverable",
         ageMs: age,
         tabId: snap.recordingTab,
@@ -304,21 +304,21 @@ export const handleAlarm = async (alarm) => {
     return;
   }
 
-  if (alarm.name === CLOUD_LOCAL_PLAYBACK_ALARM) {
+  if (alarm.name === LOCAL_PLAYBACK_ALARM) {
     const {
-      [CLOUD_LOCAL_PLAYBACK_KEY]: localPlaybackOffer,
+      [LOCAL_PLAYBACK_KEY]: localPlaybackOffer,
       recording,
       pendingRecording,
       restarting,
     } = await chrome.storage.local.get([
-      CLOUD_LOCAL_PLAYBACK_KEY,
+      LOCAL_PLAYBACK_KEY,
       "recording",
       "pendingRecording",
       "restarting",
     ]);
 
     if (!localPlaybackOffer?.offerId) {
-      await chrome.alarms.clear(CLOUD_LOCAL_PLAYBACK_ALARM);
+      await chrome.alarms.clear(LOCAL_PLAYBACK_ALARM);
       return;
     }
 
@@ -327,7 +327,7 @@ export const handleAlarm = async (alarm) => {
       // never clear chunks during an active recording
       const retryAt = Date.now() + 5 * 60 * 1000;
       await chrome.alarms
-        .create(CLOUD_LOCAL_PLAYBACK_ALARM, { when: retryAt })
+        .create(LOCAL_PLAYBACK_ALARM, { when: retryAt })
         .catch(() => {});
       return;
     }
@@ -335,7 +335,7 @@ export const handleAlarm = async (alarm) => {
     const expired = Number(localPlaybackOffer.expiresAt || 0) <= Date.now();
     if (!expired) {
       await chrome.alarms
-        .create(CLOUD_LOCAL_PLAYBACK_ALARM, {
+        .create(LOCAL_PLAYBACK_ALARM, {
           when: Number(localPlaybackOffer.expiresAt),
         })
         .catch(() => {});
@@ -348,9 +348,9 @@ export const handleAlarm = async (alarm) => {
         err,
       );
     });
-    await chrome.storage.local.remove([CLOUD_LOCAL_PLAYBACK_KEY]);
+    await chrome.storage.local.remove([LOCAL_PLAYBACK_KEY]);
     await chrome.storage.local.set({
-      [CLOUD_LOCAL_PLAYBACK_EVENT_KEY]: {
+      [LOCAL_PLAYBACK_EVENT_KEY]: {
         event: "offer-expired",
         at: Date.now(),
         offerId: localPlaybackOffer.offerId,
@@ -358,6 +358,6 @@ export const handleAlarm = async (alarm) => {
         sceneId: localPlaybackOffer.sceneId || null,
       },
     });
-    await chrome.alarms.clear(CLOUD_LOCAL_PLAYBACK_ALARM);
+    await chrome.alarms.clear(LOCAL_PLAYBACK_ALARM);
   }
 };

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 // editor renders directly in editor.html (no sandbox.html iframe); heavy mediabunny ops run in-process via editorOps
 import ContentState from "../EditorApp/context/ContentState";
+import { EdlProvider } from "../EditorApp/context/EdlContext";
 import EditorApp from "../EditorApp/EditorApp";
 import EditorPageBridge from "../EditorApp/EditorPageBridge";
 
@@ -13,8 +14,10 @@ if (container) {
   const root = createRoot(container);
   root.render(
     <ContentState>
-      <EditorApp />
-      <EditorPageBridge />
+      <EdlProvider>
+        <EditorApp />
+        <EditorPageBridge />
+      </EdlProvider>
     </ContentState>
   );
 }

@@ -12,7 +12,7 @@ import * as ToastEl from "@radix-ui/react-toast";
 
 import { shouldUseDisplayMediaForScreen } from "../utils/screenCaptureMode";
 
-// shared between CloudRecorder and Recorder; alwaysInteractive keeps the viewport clickable (CloudRecorder) vs pass-through-until-open (Recorder)
+// alwaysInteractive keeps the recorder warning viewport clickable when needed.
 const Warning = ({ alwaysInteractive = false }) => {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("Record computer audio");

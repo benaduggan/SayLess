@@ -10,8 +10,6 @@ const CropperWrap = lazy(() =>
   import("../../components/editor/CropperWrap"),
 );
 import HelpButton from "../../components/player/HelpButton";
-import ProBanner from "../../components/global/ProBanner";
-import ReviewBanner from "../../components/global/ReviewBanner";
 
 // Context
 import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
@@ -30,14 +28,6 @@ const Content = () => {
         )}
       </div>
       {contentState.mode === "crop" && <HelpButton />}
-      {contentState.reviewPrompt ? (
-        <ReviewBanner />
-      ) : (
-        // While eligible for the review prompt (waiting on the interaction
-        // gate), reserve the slot so the Pro banner doesn't flash.
-        !contentState.reviewEligible &&
-        contentState.bannerSupport && <ProBanner />
-      )}
     </div>
   );
 };

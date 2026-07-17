@@ -78,6 +78,8 @@ export function startClickTracking(
       payload: {
         x: clickX,
         y: clickY,
+        viewportWidth: isRegion ? regionWidth : window.innerWidth,
+        viewportHeight: isRegion ? regionHeight : window.innerHeight,
         relativeToRegion: isRegion,
         surface: cachedSurface,
         recordingWindowId: cachedRecordingWindowId,

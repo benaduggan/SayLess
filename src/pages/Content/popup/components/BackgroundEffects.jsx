@@ -8,10 +8,7 @@ const BackgroundEffects = () => {
   const [contentState, setContentState] = React.useContext(contentStateContext);
 
   // Background images
-  const URL =
-    "chrome-extension://" +
-    chrome.i18n.getMessage("@@extension_id") +
-    "/assets/";
+  const URL = chrome.runtime.getURL("assets/");
 
   const images = [
     URL + "backgrounds/back1.webp",

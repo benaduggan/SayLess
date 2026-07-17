@@ -2,8 +2,8 @@
 // Deleted ranges are skipped (seek past them); muted ranges drop volume. No
 // re-encode — this is what replaces the legacy "encode on every edit" loop.
 //
-// Player-agnostic: pass a thin adapter so this works with the existing Plyr
-// instance (VideoPlayer.jsx) or any <video>.
+// Player-agnostic: pass a thin adapter so this works with native <video> or
+// another local playback surface.
 //
 // @typedef {Object} PlayerAdapter
 // @property {() => number} getCurrentTime   source seconds

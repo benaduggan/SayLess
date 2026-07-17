@@ -1,5 +1,5 @@
 // MediaRecorder codec negotiation + track snapshots, shared by Recorder and Region.
-// CloudRecorder has its own inline mimeType handling.
+// Some recorder paths have their own inline mimeType handling.
 
 export const selectMimeType = (preferredCodec) => {
   const preferred = (preferredCodec || "").toLowerCase();

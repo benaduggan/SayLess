@@ -2,7 +2,7 @@ import React, { useContext } from "react";
 import styles from "../../styles/edit/_EditorNav.module.scss";
 import { ContentStateContext } from "../../context/ContentState";
 
-const URL = "/assets/";
+const URL = chrome.runtime.getURL("assets/");
 
 const EditorNav = () => {
   const [contentState, setContentState] = useContext(ContentStateContext);

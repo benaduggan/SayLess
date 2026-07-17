@@ -2479,7 +2479,7 @@ export class WebCodecsRecorder {
           const tsUs = i * frameDurationUs;
 
           // Track the peak observed queue depth as a leading indicator
-          //; useful for tuning the threshold from real telemetry.
+          //; useful for tuning the threshold from real recordings.
           // Closed-encoder pause race: treat as drained.
           let vQueueSize = 0;
           try {

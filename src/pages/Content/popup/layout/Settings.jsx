@@ -52,7 +52,7 @@ const Settings = () => {
           label={chrome.i18n.getMessage("hideToolbarLabel")}
           name="hideUI"
           value="hideUI"
-          anchorId="pro-onboarding-toolbar-toggle"
+          anchorId="local-tour-toolbar-toggle"
         />
         <Switch
           label={chrome.i18n.getMessage("countdownLabel")}
@@ -70,20 +70,19 @@ const Settings = () => {
           name="askMicrophone"
           value="askMicrophone"
         />
-        {contentState.recordingType != "camera" &&
-          !contentState.isSubscribed && (
-            <Switch
-              label={
-                chrome.i18n.getMessage("zoomToPointPopup") +
-                " (" +
-                shortcut +
-                ")"
-              }
-              name="zoomEnabled"
-              value="zoomEnabled"
-              experimental={true}
-            />
-          )}
+        {contentState.recordingType != "camera" && (
+          <Switch
+            label={
+              chrome.i18n.getMessage("zoomToPointPopup") +
+              " (" +
+              shortcut +
+              ")"
+            }
+            name="zoomEnabled"
+            value="zoomEnabled"
+            experimental={true}
+          />
+        )}
       </Collapsible.Content>
     </Collapsible.Root>
   );

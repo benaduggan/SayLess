@@ -1,5 +1,5 @@
 /**
- * Builds a URL-safe support-context object for Tally form prefills.
+ * Builds a compact support-context object for local diagnostic exports.
  * No URLs, tokens, page content, or blobs, only sanitized technical metadata.
  */
 
@@ -58,8 +58,7 @@ export const buildSupportContext = async (opts = {}) => {
   const platformMap = { mac: "macOS", win: "Windows", linux: "Linux", cros: "ChromeOS" };
   ctx.platform = platformMap[ctx.os] || "Other";
 
-  ctx.cloud =
-    process.env.SCREENITY_ENABLE_CLOUD_FEATURES === "true" ? "1" : "0";
+  ctx.localOnly = "1";
 
   if (opts.source) {
     ctx.src = opts.source;
@@ -73,7 +72,6 @@ export const buildSupportContext = async (opts = {}) => {
         "recordingType",
         "fastRecorderInUse",
         "fastRecorderDisabledReason",
-        "isSubscribed",
         "diagnosticLog",
         "recordingAttemptId",
         "lastRecordingBackendRef",
@@ -95,8 +93,7 @@ export const buildSupportContext = async (opts = {}) => {
         ctx.fast = store.fastRecorderInUse ? "1" : "0";
       if (store.fastRecorderDisabledReason)
         ctx.fastOff = String(store.fastRecorderDisabledReason).slice(0, 60);
-      ctx.sub = store.isSubscribed ? "1" : "0";
-      ctx.cloud = store.isSubscribed ? "1" : "0";
+      ctx.localOnly = "1";
       if (store.lastRecordingError) {
         ctx.lastErr = sanitizeError(
           store.lastRecordingError.why || store.lastRecordingError.error,
@@ -203,7 +200,7 @@ export const buildSupportContext = async (opts = {}) => {
             // means the SW restarted 4 times).
             .map((ev) => `${ev.e}@${ev.t}${ev.n > 1 ? `x${ev.n}` : ""}`)
             .join(",");
-          // Cap so a runaway log doesn't blow past Tally URL limits.
+          // Cap so a runaway log does not bloat the local diagnostic payload.
           if (compact && compact.length <= 3000) {
             ctx.diagEvents = compact;
           } else if (compact) {
@@ -238,7 +235,7 @@ export const buildSupportContext = async (opts = {}) => {
   if (ctx.attemptId) {
     const hash = ctx.attemptId.replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase();
     const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    ctx.supportCode = `SCR-${hash}-${date}`;
+    ctx.supportCode = `SLS-${hash}-${date}`;
   }
 
   if (opts.user) {

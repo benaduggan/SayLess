@@ -10,7 +10,7 @@ import { initLifecycleObserver } from "./lifecycleObserver";
 import {
   listSessionDirs,
   destroySessionDir,
-} from "../CloudRecorder/recorderStorage/opfsKvStore";
+} from "../Recorder/recorderStorage/opfsKvStore";
 import { handleGetStreamingData } from "./recording/recordingHelpers";
 
 // Don't tear down an in-flight start on SW restart: a fresh start is
@@ -155,39 +155,6 @@ const clearStaleLocks = async () => {
       );
     }
 
-    // drain deferred logout-token-clear if its inline listener died with the SW
-    try {
-      const {
-        logoutPendingTokenClear,
-        recording,
-        pendingRecording,
-        stayLoggedOut,
-      } = await chrome.storage.local.get([
-        "logoutPendingTokenClear",
-        "recording",
-        "pendingRecording",
-        "stayLoggedOut",
-      ]);
-      if (
-        logoutPendingTokenClear &&
-        !recording &&
-        !pendingRecording
-      ) {
-        if (stayLoggedOut === true) {
-          await chrome.storage.local.remove([
-            "screenityToken",
-            "logoutPendingTokenClear",
-          ]);
-          console.info(
-            "[SayLess][BG] Drained deferred logout token-clear on startup",
-          );
-        } else {
-          // re-login during SW death; just clear the marker
-          await chrome.storage.local.remove(["logoutPendingTokenClear"]);
-        }
-      }
-    } catch {}
-
     // setIcon persists across SW restarts; reconcile so a stuck red icon clears
     try {
       const { recording: finalRecording } = await chrome.storage.local.get([
@@ -226,8 +193,7 @@ const recoverInFlightRecording = async () => {
     } catch {
       return;
     }
-    // Exact pathname match so "recorder.html" doesn't also match
-    // "cloudrecorder.html" via substring inclusion.
+    // Exact pathname match for the bundled recorder page.
     let recoveryTabUrl = null;
     try {
       recoveryTabUrl = tab?.url ? new URL(tab.url) : null;
@@ -236,8 +202,7 @@ const recoverInFlightRecording = async () => {
     const recoveryPath = recoveryTabUrl?.pathname;
     const isRecoverableRecorder =
       recoveryTabUrl?.origin === extOrigin &&
-      (recoveryPath === "/recorder.html" ||
-        recoveryPath === "/cloudrecorder.html");
+      recoveryPath === "/recorder.html";
     if (!isRecoverableRecorder) return;
     diagEvent("sw-restart-recovery-redeliver-streaming-data", {
       recordingTab,
@@ -274,8 +239,7 @@ const recoverInFlightRecording = async () => {
   }
 };
 
-// reaps cloud-chunks/ session dirs not referenced by any
-// cloudRecorderSession:* snapshot or the latest recorderSession.
+// Reaps OPFS session dirs not referenced by the latest recorderSession.
 // without this, an SW kill mid-recording leaks chunks forever.
 const cleanupOrphanOpfsSessions = async () => {
   try {
@@ -295,25 +259,12 @@ const cleanupOrphanOpfsSessions = async () => {
     if (all.recorderSession?.opfsSessionId) {
       liveIds.add(all.recorderSession.opfsSessionId);
     }
-    for (const key of Object.keys(all)) {
-      if (!key.startsWith("cloudRecorderSession:")) continue;
-      const session = all[key];
-      if (session?.id) liveIds.add(session.id);
-      if (session?.opfsSessionId) liveIds.add(session.opfsSessionId);
-    }
-    // Upload journals can also reference a sessionId whose chunks may still
-    // be needed for resume, keep their dirs around.
-    for (const [key, value] of Object.entries(all)) {
-      if (!key.startsWith("uploadJournal-")) continue;
-      if (value?.sessionId) liveIds.add(value.sessionId);
-    }
-
     const orphans = dirs.filter((id) => !liveIds.has(id));
     if (!orphans.length) return;
 
     await Promise.allSettled(orphans.map((id) => destroySessionDir(id)));
     console.info(
-      "[SayLess][BG] Reaped orphan OPFS cloud-chunks sessions:",
+      "[SayLess][BG] Reaped orphan OPFS recorder sessions:",
       orphans.length,
     );
   } catch (err) {

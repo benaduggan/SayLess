@@ -12,7 +12,7 @@
  */
 
 const devLog =
-  process.env.SCREENITY_DEV_MODE === "true"
+  process.env.SAYLESS_DEV_MODE === "true"
     ? (label, data) => console.log("[remux][offscreen]", label, data || "")
     : () => {};
 
@@ -33,7 +33,7 @@ const ensureWorker = () => {
     const entry = pending.get(msg.requestId);
     if (msg.type === "progress") {
       // Forward progress to the sandbox. Swallow errors; progress is
-      // best-effort telemetry.
+      // best-effort UI state.
       chrome.runtime
         .sendMessage({
           type: "remux-progress",

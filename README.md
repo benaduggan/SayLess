@@ -15,20 +15,22 @@ SayLess is a fork of [Screenity](https://github.com/alyssaxuu/screenity) by [Aly
 - Recover recordings after service worker restarts, tab closure, encoder stalls, or incomplete finalization.
 - Annotate pages while recording with pen, highlighter, shapes, arrows, text, image insert, eraser, undo/redo, blur, cursor effects, countdown, and camera overlay controls.
 - Apply local MediaPipe camera blur and background replacement.
-- Browse local recordings from the extension's Videos tab and reopen them in the editor.
+- Browse, import, rename, duplicate, export, delete, and reopen local recordings from the extension's Videos tab.
 - Edit recordings in-browser: trim, cut, mute, crop, add/replace audio, adjust volume, and export MP4, WebM, or GIF.
 - Generate transcripts with the local Whisper provider, then delete or mute selected words through the EDL/timeline editor.
+- Export and import `.sayless-project.json` sidecars for transcript/timeline project backup.
+- Export standalone transcript JSON and WebVTT caption sidecars.
 - Autosave edited local recordings back into the local library.
 - Export support diagnostics as a local ZIP for debugging.
 
 ## Local-First Notes
 
-The intended product direction is offline and local-only. The current codebase is partway through that migration:
+The intended product direction is offline, local-only, and not freemium. Everything developed for SayLess is free in the extension; features are not hidden behind paid plans, account levels, member-only modes, starter/team/business/enterprise plan names, subscriptions, trials, paywalls, or entitlement checks.
 
 - Recording, annotation, local library, editing, EDL/timeline logic, and transcription inference all run in the browser.
-- First-run transcription may still download a Whisper model through `@huggingface/transformers` unless a local model path is configured. After the model is cached, inference is local.
-- Inherited Screenity cloud, auth, Pro, Google Drive OAuth, external-connectable, and telemetry-related code still exists in places. Most cloud video listing is disabled in the current local library path, but the code has not been fully removed yet.
-- The roadmap prioritizes removing those inherited network surfaces before adding new hosted features.
+- Release defaults do not download transcription models. The local Whisper provider resolves the bundled Whisper model from `assets/whisper/models/` in the extension package, with remote model downloads only available to explicit development harnesses.
+- The release manifest has no OAuth section, no external website handshake, no hosted cloud recorder page, and no Google Drive export permission.
+- Remaining roadmap work is focused on broader real-recording manual QA for offline transcription quality, export cancellation/retry/reveal behavior, silence suggestions, and zoom rendering.
 
 ## Development
 
@@ -51,14 +53,25 @@ Useful commands:
 ```sh
 npm run build:dev
 npm run build:release
+npm run verify:release
+npm run qa:release:auto
+npm run qa:release:status
+npm run qa:release:manual:template
+npm run qa:release:manual:profile
+npm run qa:release:manual
+npm run package:release
 npm run test:unit
 npm run test:e2e:local-recordings
 ```
+
+`npm run package`, `npm run package:release`, and Chrome Web Store publish scripts use the release evidence gate; release-specific manual QA evidence is required before packaging or publishing. `npm run qa:release:status` reports the next blocked action and, once ready, prints the release handoff. It validates automated QA command inventory, run timing, git/worktree provenance, current build, bundled Whisper assets, versions, manifest surface, and the machine-scanned `docs/STORE_LISTING.md` publication draft before manual QA can be the next action. If the manual evidence file is still a template, status tells the releaser to use `npm run qa:release:manual:profile` for a clean Chrome profile command, complete the checklist, and fill `release-artifacts/manual-qa-evidence.json` before running `npm run qa:release:manual`. `npm run package:release` writes `release-artifacts/package-release.json` with the generated `extension.zip` path, size, SHA-256, and hashes of the automated and manual evidence files used for packaging. Failed or interrupted package attempts overwrite that evidence with a non-passing status and the failed step, so old passing package evidence cannot be reused accidentally. `npm run build:cws` writes `release-artifacts/cws-package.json` tying the canonical `build-cws.zip` path back to the verified `extension.zip`, package evidence, and the automated/manual QA evidence summaries used for the package; CWS upload/publish scripts run `npm run qa:release:status -- --require-ready` before store actions so automated, manual, release-package, and CWS package evidence all have to verify together. Release handoff should attach `release-artifacts/release-qa-automated.json`, `release-artifacts/manual-qa-evidence.json`, `release-artifacts/package-release.json`, `release-artifacts/cws-package.json`, `docs/STORE_LISTING.md`, `extension.zip`, and `build-cws.zip`.
 
 ## Documentation
 
 - [Capabilities inventory](docs/CAPABILITIES.md)
 - [Fork plan and roadmap](docs/FORK_PLAN.md)
+- [Release QA checklist](docs/RELEASE_QA.md)
+- [Chrome Web Store listing draft](docs/STORE_LISTING.md)
 
 ## Acknowledgements
 

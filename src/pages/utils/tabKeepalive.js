@@ -15,7 +15,7 @@
 // All four are idempotent and best-effort. Callers receive a handle to
 // pass back to `stopTabKeepalive`. Recorder.jsx uses a separate IIFE
 // (recorderKeepalive.js) for its own historical reasons; this helper
-// covers the CloudRecorder + Region iframe paths.
+// covers recorder iframe paths.
 
 const startLoopbackPriorityBoost = (state) => {
   if (typeof RTCPeerConnection !== "function") return;
@@ -107,7 +107,7 @@ const startLock = (state) => {
     state.lockAbort = ac;
     navigator.locks
       .request(
-        "screenity-recorder-keepalive",
+        "sayless-recorder-keepalive",
         { mode: "exclusive", signal: ac.signal },
         () => new Promise(() => {}),
       )

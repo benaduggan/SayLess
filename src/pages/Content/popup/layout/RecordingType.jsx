@@ -6,24 +6,20 @@ import RegionDimensions from "../components/RegionDimensions";
 import Settings from "./Settings";
 import { contentStateContext } from "../../context/ContentState";
 import { CameraOffBlue, MicOffBlue } from "../../images/popup/images";
-import TooltipWrap from "../components/TooltipWrap";
 
 import BackgroundEffects from "../components/BackgroundEffects";
 
-import { AlertIcon, TimeIcon, NoInternet } from "../../toolbar/components/SVG";
-
-const CLOUD_FEATURES_ENABLED =
-  process.env.SCREENITY_ENABLE_CLOUD_FEATURES === "true";
+import { AlertIcon, TimeIcon } from "../../toolbar/components/SVG";
 
 const RecordingType = (props) => {
   const [contentState, setContentState] = useContext(contentStateContext);
   const [cropActive, setCropActive] = useState(false);
   const [time, setTime] = useState(0);
   const [URL] = useState(
-    "https://help.screenity.io/getting-started/77KizPC8MHVGfpKpqdux9D/what-are-the-technical-requirements-for-using-screenity/6kdB6qru6naVD8ZLFvX3m9"
+    chrome.runtime.getURL("setup.html")
   );
   const [URL2] = useState(
-    "https://help.screenity.io/troubleshooting/9Jy5RGjNrBB42hqUdREQ7W/how-to-grant-screenity-permission-to-record-your-camera-and-microphone/x6U69TnrbMjy5CQ96Er2E9"
+    chrome.runtime.getURL("permissions.html")
   );
 
   const buttonRef = useRef(null);
@@ -46,7 +42,7 @@ const RecordingType = (props) => {
         () => {},
         null,
         chrome.i18n.getMessage("learnMoreDot"),
-        "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy",
+        chrome.runtime.getURL("permissions.html"),
         true,
         false
       );
@@ -140,22 +136,6 @@ const RecordingType = (props) => {
           </div>
         </div>
       )}
-      {/*contentState.offline && (
-        <div className="popup-warning">
-          <div className="popup-warning-left">
-            <NoInternet />
-          </div>
-          <div className="popup-warning-middle">
-            <div className="popup-warning-title">You are currently offline</div>
-            <div className="popup-warning-description">
-              Some features are unavailable
-            </div>
-          </div>
-          <div className="popup-warning-right">
-            <a href="#">Try again</a>
-          </div>
-        </div>
-			)*/}
       {!cropActive &&
         contentState.recordingType === "region" &&
         !contentState.offline && (
@@ -175,7 +155,7 @@ const RecordingType = (props) => {
             </div>
             <div className="popup-warning-right">
               <a
-                href="https://support.google.com/chrome/answer/95414?hl=en-GB&co=GENIE.Platform%3DDesktop"
+                href={URL}
                 target="_blank"
               >
                 {chrome.i18n.getMessage("customAreaRecordingDisabledAction")}
@@ -204,20 +184,15 @@ const RecordingType = (props) => {
               name="flip-camera"
               value="cameraFlipped"
             />
-            {(!contentState.isLoggedIn || contentState.instantMode) && (
-              <div style={{ pointerEvents: "auto" }}>
-                <Switch
-                  label={chrome.i18n.getMessage("backgroundEffectsLabel")}
-                  name="background-effects-active"
-                  value="backgroundEffectsActive"
-                />
-              </div>
-            )}
+            <div style={{ pointerEvents: "auto" }}>
+              <Switch
+                label={chrome.i18n.getMessage("backgroundEffectsLabel")}
+                name="background-effects-active"
+                value="backgroundEffectsActive"
+              />
+            </div>
 
-            {contentState.backgroundEffectsActive &&
-              (!contentState.isLoggedIn || contentState.instantMode) && (
-                <BackgroundEffects />
-              )}
+            {contentState.backgroundEffectsActive && <BackgroundEffects />}
           </div>
         )}
 
@@ -233,8 +208,7 @@ const RecordingType = (props) => {
       {contentState.microphonePermission && (
         <Dropdown type="mic" shadowRef={props.shadowRef} />
       )}
-      {((!contentState.isLoggedIn &&
-        contentState.microphonePermission &&
+      {((contentState.microphonePermission &&
         contentState.defaultAudioInput != "none" &&
         contentState.micActive) ||
         (contentState.microphonePermission && contentState.pushToTalk)) && (
@@ -272,73 +246,6 @@ const RecordingType = (props) => {
           {contentState.customRegion && <RegionDimensions />}
         </div>
       )}
-      {contentState.isLoggedIn &&
-        !contentState.recordingToScene &&
-        // Instant mode bakes the whole recording into one non-editable
-        // video, incompatible with multi-scene composition. Hide the
-        // toggle while multi is on.
-        !contentState.multiMode &&
-        CLOUD_FEATURES_ENABLED && (
-          <>
-            <div className="popup-content-divider"></div>
-            <TooltipWrap
-              id="pro-onboarding-instant-mode-field"
-              content={
-                chrome.i18n.getMessage("instantRecordingModeTooltip") ||
-                "Instant download, but camera and layout won’t be editable later."
-              }
-              side="bottom"
-              sideOffset={2}
-            >
-              <div style={{ pointerEvents: "auto" }}>
-                <Switch
-                  label={
-                    chrome.i18n.getMessage("instantRecordingModeLabel") ||
-                    "Instant recording mode"
-                  }
-                  name="instantMode"
-                  value="instantMode"
-                  anchorId="pro-onboarding-instant-mode-toggle"
-                  rowAnchorId="pro-onboarding-instant-mode-toggle-row"
-                  onChange={async (checked) => {
-                    if (checked) {
-                      contentState.openModal(
-                        chrome.i18n.getMessage("instantRecordingModeTitle") ||
-                          "Instant recording mode",
-                        chrome.i18n.getMessage(
-                          "instantRecordingModeDescription"
-                        ) ||
-                          "This records everything into one video for instant download and sharing. You won’t be able to change the camera layout afterward, but other edits are still possible.",
-                        chrome.i18n.getMessage("instantRecordingModeAction") ||
-                          "Got it",
-                        chrome.i18n.getMessage("permissionsModalDismiss") ||
-                          "Dismiss",
-                        () => {},
-                        () => {},
-                        null,
-                        "",
-                        "",
-                        true,
-                        false
-                      );
-                    } else {
-                      // Turn off background effects in chrome.storage
-                      chrome.storage.local.set({
-                        backgroundEffectsActive: false,
-                      });
-
-                      // Update in memory
-                      setContentState((prev) => ({
-                        ...prev,
-                        backgroundEffectsActive: false,
-                      }));
-                    }
-                  }}
-                />
-              </div>
-            </TooltipWrap>
-          </>
-        )}
       <button
         role="button"
         className="main-button recording-button"

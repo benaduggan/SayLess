@@ -12,17 +12,11 @@ const Camera = (props) => {
       className="camera-page"
       style={{
         visibility:
-          (contentState.isSubscribed &&
-            (!contentState.instantMode || contentState.multiMode)) ||
-          !contentState.recording ||
-          contentState.onboarding
+          !contentState.recording || contentState.onboarding
             ? "hidden"
             : "visible",
         pointerEvents:
-          (contentState.isSubscribed &&
-            (!contentState.instantMode || contentState.multiMode)) ||
-          !contentState.recording ||
-          contentState.onboarding
+          !contentState.recording || contentState.onboarding
             ? "none"
             : "auto",
       }}

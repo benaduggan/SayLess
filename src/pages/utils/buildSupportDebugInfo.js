@@ -49,7 +49,6 @@ export const buildSupportDebugInfo = async (opts = {}) => {
       "recordingType",
       "fastRecorderInUse",
       "fastRecorderDisabledReason",
-      "isSubscribed",
       "lastRecordingError",
       "lastStreamCheckFail",
       "lastAutoDiscardableError",
@@ -73,7 +72,6 @@ export const buildSupportDebugInfo = async (opts = {}) => {
   const recType = store.recordingType || "unknown";
   const fastRec = store.fastRecorderInUse ? "active" : "off";
   const fastOff = store.fastRecorderDisabledReason || null;
-  const sub = store.isSubscribed ? "pro" : "free";
 
   let lastOutcome = null;
   let editorHandoffIncomplete = false;
@@ -104,7 +102,6 @@ export const buildSupportDebugInfo = async (opts = {}) => {
   lines.push(`OS:        ${os}`);
   lines.push(`Mode:      ${recType}`);
   lines.push(`Fast MP4:  ${fastRec}${fastOff ? ` (${fastOff})` : ""}`);
-  lines.push(`Plan:      ${sub}`);
   if (lastOutcome) lines.push(`Session:   ${lastOutcome}`);
   if (editorHandoffIncomplete) lines.push(`EditorLoad: incomplete (editor opened but never became ready)`);
   if (store.lastStreamCheckFail) {

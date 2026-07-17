@@ -19,25 +19,18 @@ import {
   saveLocalRecordingEntry,
 } from "../../localRecordings/localRecordingLibrary";
 
-// Mirrors CloudRecorder.appendUploadTelemetryEvent so BG-side projectId mutations
-// land in the same `cloudUploadTelemetryEvents` storage key surfaced by
-// buildDiagnosticZip → upload-telemetry.json. Diagnostic-only; best-effort.
-import { appendUploadTelemetryEventSerialized } from "../utils/serializedTelemetryStore";
+import { appendLocalRecordingEvent } from "../utils/localRecordingEventStore";
 
-const appendBgUploadTelemetryEvent = async (payload) => {
-  await appendUploadTelemetryEventSerialized({
+const appendBgLocalRecordingEvent = async (payload) => {
+  await appendLocalRecordingEvent({
     ts: Date.now(),
-    uploaderType: "bg_recording",
+    recorderType: "bg_recording",
     ...payload,
   });
 };
 
-export const checkCapturePermissions = async ({ isLoggedIn, isSubscribed }) => {
+export const checkCapturePermissions = async () => {
   const permissions = ["desktopCapture", "alarms", "offscreen"];
-
-  if (isLoggedIn && isSubscribed) {
-    permissions.push("clipboardWrite");
-  }
 
   // MUST be the first await; preceding awaits consume the user-gesture context
   // and Chrome rejects request() with "must be called during a user gesture"
@@ -216,7 +209,7 @@ export const handleRecordingError = async (request) => {
   });
 
   if (!preserveMultiProject && projectIdBeforeClear) {
-    void appendBgUploadTelemetryEvent({
+    void appendBgLocalRecordingEvent({
       event: "project_state_change",
       source: "bg-recording-error",
       from: projectIdBeforeClear,
@@ -394,7 +387,7 @@ export const videoReady = async () => {
   // close as soon as video-ready fires. Keeping it alive holds Chrome's
   // tab-capture binding, which makes the next getMediaStreamId reject
   // with "Cannot capture a tab with an active stream" until Chrome
-  // restarts. Cloudrecorder runs its own close on finalize, so skip it.
+  // restarts.
   if (lastRecordingBackendRef?.backend === "opfs" && recordingTab) {
     try {
       const tab = await chrome.tabs.get(recordingTab).catch(() => null);

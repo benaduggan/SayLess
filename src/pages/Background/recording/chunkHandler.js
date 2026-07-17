@@ -3,7 +3,7 @@ import { sendMessageTab } from "../tabManagement";
 
 localforage.config({
   driver: localforage.INDEXEDDB,
-  name: "screenity",
+  name: "sayless",
   version: 1,
 });
 

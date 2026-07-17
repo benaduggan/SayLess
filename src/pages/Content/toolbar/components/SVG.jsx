@@ -1,8 +1,7 @@
 import React from "react";
 import { ReactSVG } from "react-svg";
 
-const URL =
-  "chrome-extension://" + chrome.i18n.getMessage("@@extension_id") + "/assets/";
+const URL = chrome.runtime.getURL("assets/");
 
 const GrabIcon = (props) => {
   return (

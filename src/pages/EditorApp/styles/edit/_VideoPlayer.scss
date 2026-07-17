@@ -35,6 +35,19 @@
   border-radius: 15px !important;
   width: 90% !important;
 }
+.sayless-native-player-shell {
+  background: #000;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+.sayless-native-player {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
 /* Customize progress bar color */
 .plyr__progress--played {
   background-color: #ff5733 !important; /* Your custom color */

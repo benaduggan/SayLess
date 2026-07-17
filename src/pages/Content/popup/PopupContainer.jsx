@@ -13,7 +13,6 @@ import {
   VideoTabActive,
   VideoTabInactive,
   TempLogo,
-  ProfilePic,
 } from "../images/popup/images";
 
 import { Rnd } from "react-rnd";
@@ -28,16 +27,16 @@ import RecordingTab from "./layout/RecordingTab";
 import VideosTab from "./layout/VideosTab";
 
 import SettingsMenu from "./layout/SettingsMenu";
-import InactiveSubscription from "./layout/InactiveSubscription";
-import LoggedOut from "./layout/LoggedOut";
-import Welcome from "./layout/Welcome";
-import {
-  runProPopupOnboardingIfNeeded,
-  runProCameraOnboardingIfNeeded,
-} from "./onboarding/proOnboarding";
 
 import { contentStateContext } from "../context/ContentState";
-import { supportContextQuery } from "../../utils/buildSupportContext";
+
+const assertLocalExtensionUrl = (url) => {
+  const baseUrl = chrome.runtime.getURL("");
+  if (typeof url !== "string" || !url.startsWith(baseUrl)) {
+    throw new Error("Expected local extension URL.");
+  }
+  return url;
+};
 
 const PopupContainer = (props) => {
   const [contentState, setContentState] = useContext(contentStateContext);
@@ -45,80 +44,34 @@ const PopupContainer = (props) => {
   const [tab, setTab] = useState("record");
   const [badge, setBadge] = useState(TempLogo);
   const DragRef = useRef(null);
+  const positionRef = useRef({
+    x: contentState.popupPosition.offsetX,
+    y: contentState.popupPosition.offsetY,
+  });
   const PopupRef = useRef(null);
   const [elastic, setElastic] = React.useState("");
   const [shake, setShake] = React.useState("");
   const [dragging, setDragging] = React.useState("");
-  const [onboarding, setOnboarding] = useState(false);
-  const [showProSplash, setShowProSplash] = useState(false);
   const [open, setOpen] = useState(false);
   const recordTabRef = useRef(null);
   const videoTabRef = useRef(null);
   const pillRef = useRef(null);
-  const [URL, setURL] = useState("https://help.screenity.io/");
-  const isCloudBuild = process.env.SCREENITY_ENABLE_CLOUD_FEATURES === "true";
-  const wasCameraActiveRef = useRef(null);
+  const helpURL = chrome.runtime.getURL("setup.html");
+  const openLocalHelpPage = () => {
+    window.open(assertLocalExtensionUrl(helpURL), "_blank");
+  };
 
-  useEffect(() => {
-    chrome.storage.local.get(["onboarding", "showProSplash"], (result) => {
-      const nextOnboarding = Boolean(result.onboarding);
-      const nextShowProSplash = Boolean(result.showProSplash);
-      setOnboarding(nextOnboarding);
-      setShowProSplash(nextShowProSplash);
-      setContentState((prevContentState) => ({
-        ...prevContentState,
-        onboarding: nextOnboarding,
-        showProSplash: nextShowProSplash,
-      }));
-    });
-  }, [setContentState]);
-
-  useEffect(() => {
-    if (contentState.isLoggedIn) {
-      setOnboarding(false);
-      setShowProSplash(false);
-      return;
+  const updateDragPosition = (position) => {
+    positionRef.current = position;
+    if (typeof DragRef.current?.updatePosition === "function") {
+      DragRef.current.updatePosition(position);
     }
-    setOnboarding(Boolean(contentState.onboarding));
-    setShowProSplash(Boolean(contentState.showProSplash));
-  }, [
-    contentState.isLoggedIn,
-    contentState.onboarding,
-    contentState.showProSplash,
-  ]);
-
-  useEffect(() => {
-    const buildURL = async () => {
-      let baseURL = "https://help.screenity.io/";
-
-      if (contentState?.isLoggedIn && contentState?.screenityUser) {
-        const { name, email } = contentState.screenityUser;
-        const qs = await supportContextQuery({
-          includeRecordingState: true,
-          source: "popup",
-          user: { name, email },
-        });
-        baseURL = `https://tally.so/r/310MNg?extension=true&${qs}`;
-      }
-
-      setURL(baseURL);
-    };
-    buildURL();
-  }, [contentState]);
+  };
 
   const onValueChange = (tab) => {
     setTab(tab);
 
-    if (contentState.isLoggedIn && contentState.isSubscribed === false) {
-      setBadge(
-        "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><text x='0' y='24' font-size='28'>⚠️</text></svg>"
-      );
-    } else if (tab === "record" && !contentState.isLoggedIn) {
-      setBadge(TempLogo);
-    } else {
-      const avatar = contentState?.screenityUser?.avatar;
-      setBadge(avatar || ProfilePic);
-    }
+    setBadge(TempLogo);
 
     setContentState((prevContentState) => ({
       ...prevContentState,
@@ -130,50 +83,8 @@ const PopupContainer = (props) => {
   }, []);
 
   useEffect(() => {
-    if (contentState.isLoggedIn && contentState.isSubscribed === false) {
-      setBadge(
-        "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><text x='0' y='24' font-size='28'>⚠️</text></svg>"
-      );
-    } else if (tab === "record" && !contentState.isLoggedIn) {
-      setBadge(TempLogo);
-    } else {
-      const avatar = contentState?.screenityUser?.avatar;
-      setBadge(avatar || ProfilePic);
-    }
-  }, [
-    contentState.isLoggedIn,
-    contentState.isSubscribed,
-    contentState.wasLoggedIn,
-    tab,
-  ]);
-
-  const previewWelcome = (() => {
-    try {
-      return (
-        new URLSearchParams(window.location.search).get("previewWelcome") ===
-        "1"
-      );
-    } catch {
-      return false;
-    }
-  })();
-
-  const showWelcomeSplash = Boolean(
-    (isCloudBuild &&
-      // Strict === false (not just falsy) so the splash stays hidden while the
-      // auth check is still in flight. Otherwise a reinstalled user who gets
-      // silently re-logged-in via their website cookie would briefly flash the
-      // paid welcome screen before isLoggedIn resolves to true.
-      contentState.isLoggedIn === false &&
-      !contentState.wasLoggedIn &&
-      (
-        onboarding ||
-        showProSplash ||
-        contentState.onboarding ||
-        contentState.showProSplash
-      )) ||
-      (isCloudBuild && previewWelcome),
-  );
+    setBadge(TempLogo);
+  }, [tab]);
 
   useLayoutEffect(() => {
     if (!recordTabRef.current || !videoTabRef.current || !pillRef.current)
@@ -192,8 +103,8 @@ const PopupContainer = (props) => {
 
   useLayoutEffect(() => {
     function setPopupPosition(e) {
-      let xpos = DragRef.current.getDraggablePosition().x;
-      let ypos = DragRef.current.getDraggablePosition().y;
+      let xpos = positionRef.current.x;
+      let ypos = positionRef.current.y;
 
       const rect = PopupRef.current.getBoundingClientRect();
       const width = rect.width;
@@ -213,7 +124,7 @@ const PopupContainer = (props) => {
         }
       }
 
-      DragRef.current.updatePosition({ x: xpos, y: ypos });
+      updateDragPosition({ x: xpos, y: ypos });
     }
     window.addEventListener("resize", setPopupPosition);
     setPopupPosition();
@@ -225,6 +136,7 @@ const PopupContainer = (props) => {
   };
 
   const handleDrag = (e, d) => {
+    positionRef.current = { x: d.x, y: d.y };
     // Drag fires ~60Hz; cache rect to avoid 120 reflows/sec.
     const rect = PopupRef.current.getBoundingClientRect();
     const width = rect.width;
@@ -243,6 +155,7 @@ const PopupContainer = (props) => {
   };
 
   const handleDrop = (e, d) => {
+    positionRef.current = { x: d.x, y: d.y };
     let anim = "ToolbarElastic";
     if (e === null) {
       anim = "";
@@ -271,7 +184,7 @@ const PopupContainer = (props) => {
       setElastic(anim);
       ypos = window.innerHeight - height - 40;
     }
-    DragRef.current.updatePosition({ x: xpos, y: ypos });
+    updateDragPosition({ x: xpos, y: ypos });
 
     setTimeout(() => {
       setElastic("");
@@ -344,7 +257,7 @@ const PopupContainer = (props) => {
       x = window.innerWidth - contentState.popupPosition.offsetX;
     }
 
-    DragRef.current.updatePosition({ x: x, y: y });
+    updateDragPosition({ x: x, y: y });
 
     handleDrop(null, { x: x, y: y });
   }, []);
@@ -364,78 +277,8 @@ const PopupContainer = (props) => {
       }
     });
   }, [
-    contentState.isLoggedIn,
     contentState.bigTab,
-    contentState.wasLoggedIn,
     pillRef.current,
-  ]);
-
-  useEffect(() => {
-    const isPro = Boolean(contentState.isLoggedIn && contentState.isSubscribed);
-    if (!isCloudBuild || !isPro) return;
-    runProPopupOnboardingIfNeeded({
-      rootContext: props.shadowRef?.current?.shadowRoot || document,
-      isPro,
-      isLoggedIn: Boolean(contentState.isLoggedIn),
-      popupOpen: Boolean(contentState.showPopup && contentState.showExtension),
-      cameraEnabled: Boolean(contentState.cameraActive),
-      pendingRecording: Boolean(contentState.pendingRecording),
-      preparingRecording: Boolean(contentState.preparingRecording),
-      recording: Boolean(contentState.recording),
-      countdownActive: Boolean(contentState.countdownActive),
-      isCountdownVisible: Boolean(contentState.isCountdownVisible),
-    });
-  }, [
-    isCloudBuild,
-    contentState.isLoggedIn,
-    contentState.isSubscribed,
-    contentState.showPopup,
-    contentState.showExtension,
-    contentState.recordingToScene,
-    contentState.cameraActive,
-    contentState.pendingRecording,
-    contentState.preparingRecording,
-    contentState.recording,
-    contentState.countdownActive,
-    contentState.isCountdownVisible,
-    props.shadowRef,
-  ]);
-
-  useEffect(() => {
-    const isPro = Boolean(contentState.isLoggedIn && contentState.isSubscribed);
-    const cameraEnabled = Boolean(contentState.cameraActive);
-    if (wasCameraActiveRef.current === null) {
-      wasCameraActiveRef.current = cameraEnabled;
-      return;
-    }
-    const becameEnabled = cameraEnabled && !wasCameraActiveRef.current;
-    wasCameraActiveRef.current = cameraEnabled;
-    if (!becameEnabled || !isCloudBuild || !isPro) return;
-    runProCameraOnboardingIfNeeded({
-      rootContext: props.shadowRef?.current?.shadowRoot || document,
-      isPro,
-      isLoggedIn: Boolean(contentState.isLoggedIn),
-      popupOpen: Boolean(contentState.showPopup && contentState.showExtension),
-      cameraEnabled,
-      pendingRecording: Boolean(contentState.pendingRecording),
-      preparingRecording: Boolean(contentState.preparingRecording),
-      recording: Boolean(contentState.recording),
-      countdownActive: Boolean(contentState.countdownActive),
-      isCountdownVisible: Boolean(contentState.isCountdownVisible),
-    });
-  }, [
-    isCloudBuild,
-    contentState.cameraActive,
-    contentState.isLoggedIn,
-    contentState.isSubscribed,
-    contentState.showPopup,
-    contentState.showExtension,
-    contentState.pendingRecording,
-    contentState.preparingRecording,
-    contentState.recording,
-    contentState.countdownActive,
-    contentState.isCountdownVisible,
-    props.shadowRef,
   ]);
 
   return (
@@ -468,7 +311,7 @@ const PopupContainer = (props) => {
       >
         <div
           className="popup-container"
-          id="pro-onboarding-popup-container"
+          id="local-tour-popup-container"
           ref={PopupRef}
         >
           <div
@@ -486,9 +329,7 @@ const PopupContainer = (props) => {
             />
             <div
               style={{ marginBottom: "-4px", cursor: "pointer" }}
-              onClick={() => {
-                window.open(URL, "_blank");
-              }}
+              onClick={openLocalHelpPage}
             >
               <HelpIconPopup />
             </div>
@@ -505,131 +346,24 @@ const PopupContainer = (props) => {
             </div>
           </div>
           <div className="popup-cutout drag-area">
-            {contentState.isLoggedIn && contentState.isSubscribed === false ? (
-              <div
-                style={{
-                  fontSize: "34px",
-                }}
-              >
-                ⚠️
-              </div>
-            ) : (
-              <img
-                src={badge}
-                crossOrigin="anonymous"
-                style={{
-                  width:
-                    tab === "record" && !contentState.isLoggedIn
-                      ? "90%"
-                      : "100%",
-                  height:
-                    tab === "record" && !contentState.isLoggedIn
-                      ? "90%"
-                      : "100%",
-                  filter:
-                    tab === "record" && !contentState.isLoggedIn
-                      ? "drop-shadow(rgba(86, 123, 218, 0.35) 0px 4px 11px) drop-shadow(rgba(53, 87, 98, 0.2) 0px 4px 10px)"
-                      : "none",
-                  userSelect: "none",
-                  pointerEvents: "none",
-                }}
-                draggable={false}
-                referrerPolicy="no-referrer"
-              />
-            )}
+            <img
+              src={badge}
+              crossOrigin="anonymous"
+              style={{
+                width: "90%",
+                height: "90%",
+                filter:
+                  "drop-shadow(rgba(86, 123, 218, 0.35) 0px 4px 11px) drop-shadow(rgba(53, 87, 98, 0.2) 0px 4px 10px)",
+                userSelect: "none",
+                pointerEvents: "none",
+              }}
+              draggable={false}
+              referrerPolicy="no-referrer"
+            />
           </div>
           <div className="popup-nav"></div>
           <div className="popup-content">
-            {showWelcomeSplash ? (
-              <Welcome
-                setOnboarding={() => {
-                  setOnboarding(false);
-                  setShowProSplash(false);
-                  chrome.storage.local.set({
-                    onboarding: false,
-                    showProSplash: false,
-                    firstTimePro: false,
-                  });
-                  setContentState((prev) => ({
-                    ...prev,
-                    onboarding: false,
-                    showProSplash: false,
-                  }));
-                }}
-                isBack={showProSplash}
-                clearBack={() => {
-                  setShowProSplash(false);
-                  setContentState((prev) => ({
-                    ...prev,
-                    showProSplash: false,
-                  }));
-                  chrome.storage.local.set({ showProSplash: false });
-                }}
-                setContentState={setContentState}
-              />
-            ) : isCloudBuild &&
-            contentState.isSubscribed === false &&
-            contentState.isLoggedIn === true ? (
-              <InactiveSubscription
-                subscription={contentState.proSubscription}
-                hasSubscribedBefore={contentState.hasSubscribedBefore}
-                onManageClick={() => {
-                  const type = contentState.hasSubscribedBefore
-                    ? "handle-reactivate"
-                    : "handle-upgrade";
-                  chrome.runtime.sendMessage({ type });
-                }}
-                onDowngradeClick={async () => {
-                  chrome.runtime.sendMessage({ type: "handle-logout" });
-                  setContentState((prev) => ({
-                    ...prev,
-                    isLoggedIn: false,
-                    isSubscribed: false,
-                    screenityUser: null,
-                    proSubscription: null,
-                    wasLoggedIn: false,
-                    bigTab: "record",
-                  }));
-                  contentState.openToast(
-                    chrome.i18n.getMessage("loggedOutToastTitle"),
-                    () => {},
-                    2000
-                  );
-                }}
-              />
-            ) : isCloudBuild &&
-              !contentState.isLoggedIn &&
-              contentState.wasLoggedIn ? (
-              <LoggedOut
-                onManageClick={() => {
-                  chrome.runtime.sendMessage({ type: "handle-login" });
-                }}
-                onDowngradeClick={() => {
-                  chrome.storage.local.set({
-                    wasLoggedIn: false,
-                    stayLoggedOut: true,
-                  });
-                  setContentState((prev) => ({
-                    ...prev,
-                    isLoggedIn: false,
-                    wasLoggedIn: false,
-                    bigTab: "record",
-                  }));
-                  setTab("record");
-
-                  requestAnimationFrame(() => {
-                    if (recordTabRef.current && pillRef.current) {
-                      const tabRef = recordTabRef.current;
-                      pillRef.current.style.left = `${tabRef.offsetLeft}px`;
-                      pillRef.current.style.width = `${
-                        tabRef.getBoundingClientRect().width
-                      }px`;
-                    }
-                  });
-                }}
-              />
-            ) : (
-              <Tabs.Root
+            <Tabs.Root
                 className="TabsRoot tl"
                 value={tab}
                 onValueChange={onValueChange}
@@ -637,7 +371,7 @@ const PopupContainer = (props) => {
                 <Tabs.List
                   className="TabsList tl"
                   data-value={tab}
-                  aria-label="Manage your account"
+                  aria-label="Choose popup section"
                   tabIndex={0}
                 >
                   <div className="pill-anim" ref={pillRef}></div>
@@ -658,14 +392,14 @@ const PopupContainer = (props) => {
                   </Tabs.Trigger>
                   <Tabs.Trigger
                     className="TabsTrigger tl"
-                    value="dashboard"
+                    value="videos"
                     ref={videoTabRef}
                     tabIndex={0}
                   >
                     <div className="TabsTriggerIcon">
                       <img
                         src={
-                          tab === "dashboard"
+                          tab === "videos"
                             ? VideoTabActive
                             : VideoTabInactive
                         }
@@ -677,18 +411,15 @@ const PopupContainer = (props) => {
                 <Tabs.Content className="TabsContent tl" value="record">
                   <RecordingTab shadowRef={props.shadowRef} />
                 </Tabs.Content>
-                <Tabs.Content className="TabsContent tl" value="dashboard">
+                <Tabs.Content className="TabsContent tl" value="videos">
                   <VideosTab shadowRef={props.shadowRef} />
                 </Tabs.Content>
               </Tabs.Root>
-            )}
           </div>
           {contentState.settingsOpen && (
             <div
               className="HelpSection"
-              onClick={() => {
-                window.open(URL, "_blank");
-              }}
+              onClick={openLocalHelpPage}
             >
               <span className="HelpIcon">
                 <HelpIconPopup />

@@ -7,9 +7,9 @@
   }
 }
 
-@include font('Satoshi-Light', 'chrome-extension://__MSG_@@extension_id__/assets/fonts/Satoshi-Light');
-@include font('Satoshi-Medium', 'chrome-extension://__MSG_@@extension_id__/assets/fonts/Satoshi-Medium');
-@include font('Satoshi-Bold', 'chrome-extension://__MSG_@@extension_id__/assets/fonts/Satoshi-Bold');
+@include font('Satoshi-Light', '/assets/fonts/Satoshi-Light');
+@include font('Satoshi-Medium', '/assets/fonts/Satoshi-Medium');
+@include font('Satoshi-Bold', '/assets/fonts/Satoshi-Bold');
 
 /* Colors */
 $color-background: #FFF;

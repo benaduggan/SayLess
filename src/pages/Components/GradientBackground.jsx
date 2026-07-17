@@ -4,15 +4,15 @@ const GradientBackground = ({ subtle = false }) => {
   const waveMask =
     "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><path d='M 0 0 L 100 0 L 100 84 C 92 77 68 77 50 84 C 32 91 8 91 0 84 Z' fill='black'/></svg>\")";
   return (
-    <div
+      <div
       className={
-        "screenity-wave-bg" + (subtle ? " screenity-wave-bg--subtle" : "")
+        "sayless-wave-bg" + (subtle ? " sayless-wave-bg--subtle" : "")
       }
       aria-hidden="true"
     >
       <style>
         {`
-          .screenity-wave-bg {
+          .sayless-wave-bg {
             position: absolute;
             top: 0;
             left: 0;
@@ -23,7 +23,7 @@ const GradientBackground = ({ subtle = false }) => {
             z-index: -1;
             background-color: #FAFBFE;
           }
-          .screenity-wave-bg::before {
+          .sayless-wave-bg::before {
             content: "";
             position: absolute;
             top: 0;
@@ -42,7 +42,7 @@ const GradientBackground = ({ subtle = false }) => {
             -webkit-mask-repeat: no-repeat;
             mask-repeat: no-repeat;
           }
-          .screenity-wave-bg--subtle::before {
+          .sayless-wave-bg--subtle::before {
             opacity: 0.28;
           }
         `}

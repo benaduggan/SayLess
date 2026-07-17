@@ -11,6 +11,8 @@ import styles from "../../styles/edit/_Dropdown.module.scss";
 // Context
 import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
 
+const assetUrl = (path) => chrome.runtime.getURL(`assets/${path}`);
+
 const Dropdown = (props) => {
   const [contentState, setContentState] = useContext(ContentStateContext); // Access the ContentState context
 
@@ -143,7 +145,7 @@ const Dropdown = (props) => {
           <Select.Value placeholder="Select a source">{label}</Select.Value>
         </div>
         <Select.Icon className={styles.SelectIconDrop}>
-          <img src="/assets/icons/dropdown.svg" />
+          <img src={assetUrl("editor/icons/dropdown.svg")} />
         </Select.Icon>
       </Select.Trigger>
       <Select.Portal className={styles.Portal}>
@@ -183,7 +185,7 @@ const SelectItem = React.forwardRef(
       <Select.Item className={styles.SelectItem} {...props} ref={forwardedRef}>
         <Select.ItemText>{children}</Select.ItemText>
         <Select.ItemIndicator className={styles.SelectItemIndicator}>
-          <img src="/assets/icons/check-white.svg" />
+          <img src={assetUrl("editor/icons/check-white.svg")} />
         </Select.ItemIndicator>
       </Select.Item>
     );

@@ -168,7 +168,7 @@ const ResizableBox = () => {
 
   // Hide handles + dashed outline as soon as the countdown starts (or pending
   // recording is set), not when contentState.recording flips. The latter races
-  // the cloudrecorder's first frame capture, leaking handles into the first
+  // the recorder's first frame capture, leaking handles into the first
   // ~33ms of the recording.
   const hideRegionUI =
     contentState.recording ||

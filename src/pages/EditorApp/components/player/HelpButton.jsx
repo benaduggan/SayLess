@@ -3,6 +3,8 @@ import styles from "../../styles/player/_HelpButton.module.scss";
 import { ReactSVG } from "react-svg";
 import { ContentStateContext } from "../../context/ContentState";
 
+const assetUrl = (path) => chrome.runtime.getURL(`assets/${path}`);
+
 const HelpButton = () => {
   const [contentState] = useContext(ContentStateContext);
   const [windowWidth, setWindowWidth] = useState(
@@ -28,7 +30,7 @@ const HelpButton = () => {
       }}
     >
       <ReactSVG
-        src="/assets/editor/icons/help.svg"
+        src={assetUrl("editor/icons/help.svg")}
         width="18px"
         height="18px"
       />

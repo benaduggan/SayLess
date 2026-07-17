@@ -8,26 +8,15 @@ const TerserPlugin = require("terser-webpack-plugin");
 
 const isDev = env.NODE_ENV === "development";
 
-// SCREENITY_BS_BUILD=1: slim build for BrowserStack inline-CRX size limit.
-// drops post-recording UI + WASM. recording + camera paths preserved.
-const isBsBuild = process.env.SCREENITY_BS_BUILD === "1";
-const BS_DROPPED_ENTRIES = new Set([
-  "cloudrecorder",
-  "download",
-  "waveform",
-  "setup",
-  "playground",
-]);
+const ASSET_PATH = process.env.ASSET_PATH || "";
 
-const ASSET_PATH = process.env.ASSET_PATH || "/";
-
-if (process.env.SCREENITY_SKIP_ENV) {
+if (process.env.SAYLESS_SKIP_ENV) {
   // open-source release build, no dotenv
-} else if (isDev || process.env.SCREENITY_USE_LOCAL_ENV === "1") {
-  // SCREENITY_USE_LOCAL_ENV=1 lets you do a NODE_ENV=production
+} else if (isDev || process.env.SAYLESS_USE_LOCAL_ENV === "1") {
+  // SAYLESS_USE_LOCAL_ENV=1 lets you do a NODE_ENV=production
   // (minified, fast) build that still points at localhost; useful
-  // for testing login/auth flows against a local dev server while
-  // keeping the small prod-style bundle.
+  // for testing local development flows while keeping the small prod-style
+  // bundle.
   require("dotenv").config({ path: ".env.local" });
 } else {
   require("dotenv").config({ path: ".env.production" });
@@ -44,13 +33,6 @@ const entryPoints = {
     "pages",
     "Recorder",
     "recorderKeepalive.js"
-  ),
-  cloudrecorder: path.join(
-    __dirname,
-    "src",
-    "pages",
-    "CloudRecorder",
-    "index.jsx"
   ),
   offscreenrecorder: path.join(
     __dirname,
@@ -92,15 +74,6 @@ const entryPoints = {
   ),
 };
 
-if (isBsBuild) {
-  for (const k of Object.keys(entryPoints)) {
-    if (BS_DROPPED_ENTRIES.has(k)) delete entryPoints[k];
-  }
-  console.log(
-    `[webpack] SCREENITY_BS_BUILD: dropped entries [${[...BS_DROPPED_ENTRIES].join(",")}]`,
-  );
-}
-
 const htmlPlugins = Object.keys(entryPoints)
   .map((entryName) => {
     // Skip background script and worker bundles; they have no HTML page.
@@ -116,7 +89,6 @@ const htmlPlugins = Object.keys(entryPoints)
 
     // Map entry names to folder names (for multi-word entries)
     const folderNameMap = {
-      cloudrecorder: "CloudRecorder",
       offscreenrecorder: "OffscreenRecorder",
       remuxoffscreen: "RemuxOffscreen",
     };
@@ -137,8 +109,7 @@ const htmlPlugins = Object.keys(entryPoints)
     // signals are live before heavy parse; otherwise hidden-tab throttling
     // drops encoders to ~5fps for the first 15s. Manual sort because auto
     // sort flips order based on the chunk graph.
-    const needsKeepalive =
-      entryName === "recorder" || entryName === "cloudrecorder";
+    const needsKeepalive = entryName === "recorder";
     const chunks = needsKeepalive
       ? ["recorderkeepalive", entryName]
       : [entryName];
@@ -205,7 +176,10 @@ const config = {
         test: /\.(css|scss)$/,
         use: [
           { loader: "style-loader" },
-          { loader: "css-loader" },
+          {
+            loader: "css-loader",
+            options: { url: false },
+          },
           {
             loader: "sass-loader",
             options: { sourceMap: true },
@@ -237,6 +211,16 @@ const config = {
           : [{ loader: "source-map-loader" }, { loader: "babel-loader" }],
         exclude: /node_modules/,
       },
+      {
+        // onnxruntime-web contains static `new URL("*.wasm", import.meta.url)`
+        // fallbacks. The local Whisper provider always sets wasmPaths to the
+        // copied build/ort/ runtime, so letting webpack emit those fallback
+        // assets just duplicates the 21 MB ORT binary in release builds.
+        test: /node_modules[\\/]onnxruntime-web[\\/]dist[\\/].*\.(mjs|js)$/,
+        parser: {
+          url: false,
+        },
+      },
     ],
   },
   resolve: {
@@ -251,26 +235,14 @@ const config = {
   plugins: [
     new webpack.ProgressPlugin(),
     new webpack.DefinePlugin({
-      "process.env.SCREENITY_APP_BASE": JSON.stringify(
-        process.env.SCREENITY_APP_BASE
-      ),
-      "process.env.SCREENITY_WEBSITE_BASE": JSON.stringify(
-        process.env.SCREENITY_WEBSITE_BASE
-      ),
-      "process.env.SCREENITY_API_BASE_URL": JSON.stringify(
-        process.env.SCREENITY_API_BASE_URL
-      ),
-      "process.env.SCREENITY_ENABLE_CLOUD_FEATURES": JSON.stringify(
-        process.env.SCREENITY_ENABLE_CLOUD_FEATURES
-      ),
       "process.env.MAX_RECORDING_DURATION": JSON.stringify(
         process.env.MAX_RECORDING_DURATION || 3600 // Default to 1 hour
       ),
       "process.env.RECORDING_WARNING_THRESHOLD": JSON.stringify(
         process.env.RECORDING_WARNING_THRESHOLD || 60 // Default to 1 minute
       ),
-      "process.env.SCREENITY_DEV_MODE": JSON.stringify(
-        process.env.SCREENITY_DEV_MODE || ""
+      "process.env.SAYLESS_DEV_MODE": JSON.stringify(
+        isDev && process.env.SAYLESS_DEV_MODE === "true" ? "true" : ""
       ),
     }),
 
@@ -288,21 +260,6 @@ const config = {
               ...JSON.parse(content.toString()),
             };
 
-            // Strip dev-only origins from prod builds. The
-            // SCREENITY_USE_LOCAL_ENV escape hatch keeps them in for
-            // build:local (prod-optimized bundle on localhost APIs).
-            if (
-              !isDev &&
-              process.env.SCREENITY_USE_LOCAL_ENV !== "1" &&
-              manifest.externally_connectable?.matches
-            ) {
-              manifest.externally_connectable.matches =
-                manifest.externally_connectable.matches.filter(
-                  (m) =>
-                    !m.includes("localhost") && !m.includes("127.0.0.1"),
-                );
-            }
-
             return Buffer.from(JSON.stringify(manifest));
           },
         },
@@ -315,12 +272,6 @@ const config = {
           from: "src/assets/",
           to: path.join(__dirname, "build/assets"),
           force: true,
-          filter: isBsBuild
-            ? (resourcePath) =>
-                !/vision_wasm.*\.wasm$/.test(resourcePath) &&
-                !/\/videos\//.test(resourcePath) &&
-                !/pin\.gif$/.test(resourcePath)
-            : undefined,
         },
         {
           from: "src/_locales/",

@@ -25,12 +25,16 @@ const Toast = () => {
     contentStateRef.current = contentState;
   }, [contentState]);
 
-  const openToast = useCallback((title, action, durationMs = 2000) => {
+  const openToast = useCallback((title, actionOrDuration, durationMs = 2000) => {
     if (contentStateRef.current.hideUI) return;
+    const action =
+      typeof actionOrDuration === "function" ? actionOrDuration : () => {};
+    const resolvedDuration =
+      typeof actionOrDuration === "number" ? actionOrDuration : durationMs;
     setTitle(title);
     setOpen(true);
     setTrigger(() => action);
-    setToastDuration(durationMs);
+    setToastDuration(resolvedDuration);
   });
 
   useEffect(() => {

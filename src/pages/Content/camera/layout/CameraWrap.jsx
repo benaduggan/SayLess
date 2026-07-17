@@ -131,8 +131,6 @@ const CameraWrap = (props) => {
             : (!contentState.pipEnded &&
                 contentState.surface === "monitor" &&
                 (contentState.pendingRecording || contentState.recording)) ||
-              (contentState.isSubscribed &&
-                (!contentState.instantMode || contentState.multiMode)) ||
               contentState.onboarding
             ? "hidden"
             : "visible",
@@ -142,8 +140,6 @@ const CameraWrap = (props) => {
             : (!contentState.pipEnded &&
                 contentState.surface === "monitor" &&
                 (contentState.pendingRecording || contentState.recording)) ||
-              (contentState.isSubscribed &&
-                (!contentState.instantMode || contentState.multiMode)) ||
               contentState.onboarding
             ? "none"
             : "auto",

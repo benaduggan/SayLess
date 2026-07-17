@@ -24,6 +24,10 @@ const TimelineStrip = () => {
     selectedClipId,
     setSelectedClipId,
     deleteClip,
+    canUndoTimeline,
+    canRedoTimeline,
+    undoTimeline,
+    redoTimeline,
     moveClip,
     toggleMuteClip,
     splitAtSourceTime,
@@ -79,6 +83,12 @@ const TimelineStrip = () => {
   return (
     <div style={wrap}>
       <div style={toolbar}>
+        <button style={btn} onClick={undoTimeline} disabled={!canUndoTimeline} title="Undo timeline edit">
+          Undo
+        </button>
+        <button style={btn} onClick={redoTimeline} disabled={!canRedoTimeline} title="Redo timeline edit">
+          Redo
+        </button>
         <button style={btn} onClick={() => splitAtSourceTime(contentState.time || 0)} title="Split the clip at the playhead">
           ✂ Split at playhead
         </button>

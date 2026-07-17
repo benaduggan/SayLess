@@ -33,37 +33,37 @@
     {
       "resources": [
         "content.styles.css",
-        "blank.mp4",
-        "assets/*",
+        "assets/*.svg",
+        "assets/*.png",
+        "assets/*.webp",
+        "assets/backgrounds/*",
+        "assets/camera-icons/*",
+        "assets/canvas/*",
+        "assets/cursors/*",
+        "assets/editor/icons/no-internet.svg",
+        "assets/fonts/*",
+        "assets/helper/*",
+        "assets/img/*",
+        "assets/sounds/*",
+        "assets/tool-icons/*",
         "setup.html",
-        "worker.js",
-        "vendor/*",
-        "cloudrecorder.html",
         "recorder.html",
         "offscreenrecorder.html",
-        "wrapper.html",
         "camera.html",
         "permissions.html",
         "region.html",
         "waveform.html",
         "playground.html",
         "editor.html",
-        "download.html",
-        "*"
+        "download.html"
       ],
       "matches": [
         "<all_urls>"
       ]
     }
   ],
-  "oauth2": {
-    "client_id": "560517327251-m7n1k3kddknu7s9s4ejvrs1bj91gutd7.apps.googleusercontent.com",
-    "scopes": [
-      "https://www.googleapis.com/auth/drive.file"
-    ]
-  },
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; media-src 'self' data: blob: *; img-src 'self' https: data: blob:"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' data: blob:; media-src 'self' data: blob:; img-src 'self' data: blob:"
   },
   "commands": {
     "start-recording": {
@@ -101,7 +101,6 @@
     }
   },
   "permissions": [
-    "identity",
     "activeTab",
     "storage",
     "unlimitedStorage",
@@ -114,16 +113,9 @@
   "storage": {
     "managed_schema": "schema.json"
   },
-  "externally_connectable": {
-    "matches": [
-      "https://app.screenity.io/*",
-      "http://localhost:3000/*"
-    ]
-  },
   "optional_permissions": [
     "offscreen",
     "desktopCapture",
-    "alarms",
-    "clipboardWrite"
+    "alarms"
   ]
 }

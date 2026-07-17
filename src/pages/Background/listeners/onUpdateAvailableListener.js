@@ -1,4 +1,4 @@
-// hold extension auto-updates while recording or uploading. otherwise
+// Hold extension auto-updates while recording. Otherwise
 // chrome applies the update at the next SW idle, the recorder tab's
 // runtime context goes invalid mid-session, every chrome.* call throws
 // "Extension context invalidated", and the recording is lost.
@@ -11,26 +11,6 @@ const RECHECK_INTERVAL_MS = 60_000;
 let pendingUpdateDetails = null;
 let recheckTimer = null;
 let storageListener = null;
-
-const hasPendingUploadJournal = async () => {
-  try {
-    const all = await new Promise((resolve) => {
-      try {
-        chrome.storage.local.get(null, (s) => resolve(s || {}));
-      } catch {
-        resolve({});
-      }
-    });
-    for (const [key, value] of Object.entries(all)) {
-      if (!key.startsWith("uploadJournal-")) continue;
-      if (!value || typeof value !== "object") continue;
-      if (value.trackType === "audio") continue;
-      if (value.status === "completed") continue;
-      return true;
-    }
-  } catch {}
-  return false;
-};
 
 const tryApplyUpdate = async () => {
   if (!pendingUpdateDetails) return;
@@ -52,9 +32,6 @@ const tryApplyUpdate = async () => {
     Boolean(snap?.restarting) ||
     Boolean(snap?.resumeInProgress);
   if (recordingBusy) return;
-  // Also defer if any non-completed upload journal exists, applying
-  // the update would tear down the offscreen doc that resumes them.
-  if (await hasPendingUploadJournal()) return;
   diagEvent("extension-update-applied-deferred", {
     version: pendingUpdateDetails?.version || null,
   });

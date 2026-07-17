@@ -9,7 +9,6 @@ const config = require("../webpack.config");
 const env = require("./env");
 const path = require("path");
 const { debounce } = require("lodash");
-const SSEStream = require("ssestream").default;
 
 const customOptions = require("../custom.config");
 
@@ -84,10 +83,17 @@ const server = new WebpackDevServer(
       middlewares.push({
         path: "/__server_sent_events__",
         middleware: (req, res) => {
-          const sseStream = new SSEStream(req);
-          sseStream.pipe(res);
+          res.writeHead(200, {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache, no-transform",
+            Connection: "keep-alive",
+          });
+          res.write(`data: ${JSON.stringify("Dev server connected")}\n\n`);
 
-          sseStream.write("Dev server connected");
+          const writeMessage = ({ event, data }) => {
+            res.write(`event: ${event}\n`);
+            res.write(`data: ${JSON.stringify(data ?? {})}\n\n`);
+          };
 
           let closed = false;
 
@@ -125,23 +131,17 @@ const server = new WebpackDevServer(
 
             // Send appropriate events through SSE
             if (shouldBackgroundReload) {
-              sseStream.writeMessage(
-                {
-                  event: "background-updated",
-                  data: {},
-                },
-                "utf-8"
-              );
+              writeMessage({
+                event: "background-updated",
+                data: {},
+              });
             }
 
             if (shouldContentScriptsReload) {
-              sseStream.writeMessage(
-                {
-                  event: "content-scripts-updated",
-                  data: {},
-                },
-                "utf-8"
-              );
+              writeMessage({
+                event: "content-scripts-updated",
+                data: {},
+              });
             }
           }, 1000);
 
@@ -155,7 +155,7 @@ const server = new WebpackDevServer(
           // Clean up when connection closes
           res.on("close", () => {
             closed = true;
-            sseStream.unpipe(res);
+            res.end();
           });
         },
       });

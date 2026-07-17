@@ -31,11 +31,10 @@ const ALWAYS_FLUSH = [
   "alarm-fired",
   "recorded-tab-closed",
   "recorded-tab-navigated",
-  "drive-upload-start",
-  "drive-upload-ok",
-  "drive-upload-fail",
-  "drive-save-fail",
-  "drive-auth-fail",
+  "local-export-start",
+  "local-export-ok",
+  "local-export-fail",
+  "local-save-fail",
   "editor-load-ready",
   // OPFS load + video element handoff: critical for diagnosing
   // editor-stuck-at-90% reports. If any of these is the last event
@@ -192,7 +191,7 @@ export const getErrorSnapshot = async () => {
     "fastRecorderDisabledAt",
     "memoryError",
     "recordingAttemptId",
-    // WebCodecs failure/retry telemetry; the rich payload that turns
+    // WebCodecs failure/retry diagnostics; the rich payload that turns
     // "my recording failed" into a precise diagnosis (zero-frame vs
     // configure-failed vs flush-timeout vs HW-encoder-quota).
     "lastWebCodecsFailureCode",
@@ -206,7 +205,7 @@ export const getErrorSnapshot = async () => {
     "lastRecorderStopAt",
     "lastTrackEndEvent",
     "lastTrackEndedEvent",
-    "lastSubscriptionLoss",
+    "lastLocalRecorderSourceLoss",
   ];
   try {
     return await chrome.storage.local.get(keys);
@@ -240,16 +239,15 @@ export const getStorageFlags = async () => {
     "lastRestartFlow",
     "restartFlowHistory",
     "lastFirstChunkWatchdog",
-    // Cloud recorder lifecycle (Pro flow). Surfaces the recorder session
-    // state machine + the message-flow flags needed to debug double-prompt
-    // / silent-close scenarios.
+    // Local recorder lifecycle state machine and message-flow flags used to
+    // debug double-prompt / silent-close scenarios.
     "recorderSession",
     "recorderPipelineState",
     "lastStartRecordingTabMessage",
     "lastRecordingBackendRef",
     "screenTrackLog",
-    "cloudRestartPhase",
-    "cloudRestartHistory",
+    "localRestartPhase",
+    "localRestartHistory",
     "tabPreferred",
     "tabStreamIdCache",
     "region",
@@ -261,9 +259,6 @@ export const getStorageFlags = async () => {
     "sceneId",
     "sceneIdStatus",
     "projectId",
-    "isLoggedIn",
-    "isSubscribed",
-    "proSubscription",
   ];
   try {
     return await chrome.storage.local.get(keys);

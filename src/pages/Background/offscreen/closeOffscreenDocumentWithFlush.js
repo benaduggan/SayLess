@@ -15,13 +15,9 @@ export const closeOffscreenDocumentWithFlush = async ({
 
   if (!offDoc) return { ok: true, existed: false };
 
-  // The long timeout only matters for an in-flight TUS upload (cloud). A free
-  // doc has no uploader, so waiting 25s for an ack it may never send just blocks
-  // the next picker. Cloud docs carry ?cloud=1 in their URL; free ones don't.
-  const isCloudDoc =
-    typeof offDoc.documentUrl === "string" &&
-    offDoc.documentUrl.includes("cloud=1");
-  const effectiveTimeoutMs = isCloudDoc ? timeoutMs : Math.min(timeoutMs, 3000);
+  // Local recorder docs acknowledge shutdown after flushing recorder state.
+  // Keep the wait bounded so a missing ack cannot block the next picker.
+  const effectiveTimeoutMs = Math.min(Math.max(timeoutMs, 2000), 5000);
 
   const ackPromise = new Promise((resolve) => {
     const timer = setTimeout(() => {

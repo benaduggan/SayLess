@@ -16,7 +16,6 @@ import DevHUD from "../DevHUD";
 
 import { setupHandlers } from "./messaging/handlers";
 
-import { checkAuthStatus } from "./utils/checkAuthStatus";
 import {
   initStartFlowTrace,
   traceStep,
@@ -50,14 +49,12 @@ const ENABLE_TAB_SCOPED_UI = true;
 
 const ContentState = (props) => {
   const [timer, setTimerInternal] = React.useState(0);
-  const CLOUD_FEATURES_ENABLED =
-    process.env.SCREENITY_ENABLE_CLOUD_FEATURES === "true";
   setTimer = setTimerInternal;
   const [URL] = useState(
-    "https://help.screenity.io/getting-started/77KizPC8MHVGfpKpqdux9D/why-does-screenity-ask-for-permissions/9AAE8zJ6iiUtCAtjn4SUT1",
+    chrome.runtime.getURL("setup.html"),
   );
   const [URL2] = useState(
-    "https://help.screenity.io/troubleshooting/9Jy5RGjNrBB42hqUdREQ7W/how-to-grant-screenity-permission-to-record-your-camera-and-microphone/x6U69TnrbMjy5CQ96Er2E9",
+    chrome.runtime.getURL("permissions.html"),
   );
   const startBeepRef = useRef(null);
   const stopBeepRef = useRef(null);
@@ -80,7 +77,6 @@ const ContentState = (props) => {
   const timerReadSeqRef = useRef(0);
   const lastBeepStartTimeRef = useRef(null);
   const recordingBeepTabIdRef = useRef(null);
-  const verifyDebounceRef = useRef(null);
 
   const isTargetTab = useCallback(() => {
     const tabId = tabIdRef.current;
@@ -137,41 +133,6 @@ const ContentState = (props) => {
     },
     [isTargetTab],
   );
-
-  const verifyUser = useCallback(async () => {
-    if (!CLOUD_FEATURES_ENABLED) return;
-    // Don't force a cookie-based re-login from the popup: a fresh install with
-    // no prior signals stays logged out (shows the welcome immediately) until
-    // the user explicitly clicks "Log in". Returning users still auto-verify
-    // via hasPriorSignals in loginWithWebsite.
-    const result = await checkAuthStatus({ force: false });
-
-    setContentState((prev) => ({
-      ...prev,
-      isLoggedIn: result.authenticated,
-      screenityUser: result.user,
-      isSubscribed: result.subscribed,
-      hasSubscribedBefore: result.hasSubscribedBefore,
-      proSubscription: result.proSubscription,
-      ...(result.authenticated ? { wasLoggedIn: false } : {}),
-    }));
-
-    if (result.authenticated) {
-      // Client-side zoom is unavailable for authenticated users.
-      setContentState((prev) => ({
-        ...prev,
-        zoomEnabled: false,
-      }));
-
-      chrome.storage.local.set({
-        zoomEnabled: false,
-        wasLoggedIn: false,
-      });
-    }
-  }, [CLOUD_FEATURES_ENABLED]);
-  useEffect(() => {
-    verifyUser();
-  }, [verifyUser]);
 
   useEffect(() => {
     chrome.runtime.sendMessage({ type: "get-tab-id" }, (response) => {
@@ -523,13 +484,6 @@ const ContentState = (props) => {
   const checkChromeCapturePermissions = useCallback(async () => {
     const permissions = ["desktopCapture", "alarms", "offscreen"];
 
-    if (
-      contentStateRef.current?.isLoggedIn &&
-      contentStateRef.current?.isSubscribed
-    ) {
-      permissions.push("clipboardWrite");
-    }
-
     const containsPromise = new Promise((resolve) => {
       chrome.permissions.contains({ permissions }, (result) => {
         resolve(result);
@@ -562,10 +516,9 @@ const ContentState = (props) => {
   // activation propagates through sendMessage. Awaiting the returned Promise
   // is fine; awaiting anything before invoking is not.
   const checkChromeCapturePermissionsSW = useCallback(() => {
-    const { isLoggedIn, isSubscribed } = contentStateRef.current || {};
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
-        { type: "check-capture-permissions", isLoggedIn, isSubscribed },
+        { type: "check-capture-permissions" },
         (response) => {
           resolve(Boolean(response && response.status === "ok"));
         },
@@ -584,8 +537,8 @@ const ContentState = (props) => {
       return;
     }
 
-    // Kick off synchronously: later awaits (initStartFlowTrace, Pro storage
-    // quota) would consume the click's user-gesture before it reaches
+    // Kick off synchronously: later awaits (trace init, quota checks) would
+    // consume the click's user-gesture before it reaches
     // chrome.permissions.request in the SW.
     const isExtensionPage = window.location.href.includes("chrome-extension://");
     const permissionPromise = isExtensionPage
@@ -595,11 +548,6 @@ const ContentState = (props) => {
     const attemptId = `ra-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     await initStartFlowTrace(attemptId, {
       recordingType: contentStateRef.current.recordingType,
-      isPro: Boolean(
-        contentStateRef.current.isLoggedIn &&
-        contentStateRef.current.isSubscribed &&
-        CLOUD_FEATURES_ENABLED,
-      ),
       countdown: Boolean(contentStateRef.current.countdown),
     });
     traceStep("startStreaming");
@@ -623,79 +571,6 @@ const ContentState = (props) => {
     }));
 
     let permission = false;
-
-    if (
-      contentStateRef.current?.isLoggedIn &&
-      contentStateRef.current?.isSubscribed &&
-      CLOUD_FEATURES_ENABLED
-    ) {
-      const storageResponse = await chrome.runtime.sendMessage({
-        type: "check-storage-quota",
-      });
-
-      const { success, canUpload, error } = storageResponse;
-
-      if (success && canUpload === false) {
-        contentStateRef.current.openModal(
-          chrome.i18n.getMessage("storageLimitReachedTitle"),
-          chrome.i18n.getMessage("storageLimitReachedDescription"),
-          chrome.i18n.getMessage("manageStorageButtonLabel"),
-          chrome.i18n.getMessage("closeModalLabel"),
-          () => {
-            window.open(process.env.SCREENITY_APP_BASE, "_blank");
-          },
-          () => {},
-        );
-      } else if (!success) {
-        const isSubError = error === "Subscription inactive";
-        const isAuthError = error === "Not authenticated";
-
-        if (isSubError) {
-          contentStateRef.current.setContentState((prev) => ({
-            ...prev,
-            isSubscribed: false,
-          }));
-        } else if (isAuthError) {
-          contentStateRef.current.setContentState((prev) => ({
-            ...prev,
-            isSubscribed: false,
-            isLoggedIn: false,
-            screenityUser: null,
-            proSubscription: null,
-          }));
-        }
-
-        const message = isAuthError
-          ? chrome.i18n.getMessage("storageCheckFailAuthDescription")
-          : chrome.i18n.getMessage("storageCheckFailDescription");
-
-        contentStateRef.current.openModal(
-          chrome.i18n.getMessage("storageCheckFailTitle"),
-          message,
-          chrome.i18n.getMessage("retryButtonLabel"),
-          chrome.i18n.getMessage("closeModalLabel"),
-          async () => {
-            window.location.reload();
-          },
-          () => {},
-        );
-      }
-
-      if (!success || (success && canUpload === false)) {
-        setStartFlowOutcome("error", {
-          error: canUpload === false ? "storage-limit" : (error || "quota-check-failed"),
-        });
-        // Explicit storage write; see note on the removed
-        // contentState→storage useEffect.
-        chrome.storage.local.set({ pendingRecording: false });
-        setContentState((prev) => ({
-          ...prev,
-          pendingRecording: false,
-          preparingRecording: false,
-        }));
-        return;
-      }
-    }
 
     if (isExtensionPage) {
       permission = await checkChromeCapturePermissions();
@@ -731,16 +606,11 @@ const ContentState = (props) => {
 
     const data = await chrome.runtime.sendMessage({ type: "available-memory" });
 
-    if (
-      data.quota < 524288000 &&
-      !contentStateRef.current.isLoggedIn &&
-      !contentStateRef.current.isSubscribed
-    ) {
+    if (data.quota < 524288000) {
       if (typeof contentStateRef.current.openModal === "function") {
         let clear = null;
         let clearAction = () => {};
-        const helpURL =
-          "https://help.screenity.io/troubleshooting/9Jy5RGjNrBB42hqUdREQ7W/what-does-%E2%80%9Cmemory-limit-reached%E2%80%9D-mean-when-recording/8WkwHbt3puuXunYqQnyPcb";
+        const helpURL = chrome.runtime.getURL("download.html");
 
         const response = await chrome.runtime.sendMessage({
           type: "check-restore",
@@ -858,7 +728,7 @@ const ContentState = (props) => {
       );
     } else {
       perfMark("Content desktop-capture.sent");
-      // Sync recordingType to storage so the cloudrecorder tab reads
+      // Sync recordingType to storage so the recorder tab reads
       // the current pick, not a stale value from a prior session.
       // Mismatch causes the CR dispatch to land in the null-tabID
       // branch and crash with REC_START_CANCEL.
@@ -1031,7 +901,7 @@ const ContentState = (props) => {
             () => {},
             null,
             chrome.i18n.getMessage("learnMoreDot"),
-            "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy",
+            chrome.runtime.getURL("permissions.html"),
             true,
             false,
           );
@@ -1200,7 +1070,7 @@ const ContentState = (props) => {
     offscreenRecording: false,
     // kill-switch for the offscreen recorder host (default ON); only false
     // falls back to the legacy pinned recorder tab
-    useOffscreenCloud: true,
+    useOffscreenRecorder: true,
     isAddingImage: false,
     pipEnded: false,
     tabCaptureFrame: false,
@@ -1232,12 +1102,9 @@ const ContentState = (props) => {
     isCountdownVisible: false,
     multiSceneCount: 0,
     preparingRecording: false,
-    wasLoggedIn: false,
     hasSeenInstantModeModal: false,
     instantMode: false,
     onboarding: false,
-    showProSplash: false,
-    hasSubscribedBefore: false,
     startRecordingAfterCountdown: () => {
       if (!contentStateRef.current.countdownCancelled) {
         contentStateRef.current.startRecording();
@@ -1796,19 +1663,6 @@ const ContentState = (props) => {
         recordingBeepTabIdRef.current =
           changes.recordingBeepTabId.newValue ?? null;
       }
-      if (
-        changes.screenityToken ||
-        changes.screenityUser ||
-        changes.isSubscribed ||
-        changes.proSubscription ||
-        changes.lastAuthCheck ||
-        changes.isLoggedIn
-      ) {
-        // Coalesce: loginWithWebsite writes isLoggedIn + isSubscribed +
-        // lastAuthCheck in quick succession.
-        clearTimeout(verifyDebounceRef.current);
-        verifyDebounceRef.current = setTimeout(verifyUser, 2000);
-      }
       if (changes.recordingNow) {
         shouldUpdateTimer = true;
       }
@@ -1848,13 +1702,11 @@ const ContentState = (props) => {
       // via reopen-popup-multi.
       const sandboxTabAppeared =
         changes.sandboxTab && changes.sandboxTab.newValue != null;
-      // Cloud single-scene has no sandboxTab (its app opens in a new tab),
-      // so the finalize toolbar would otherwise linger until the 30s
-      // watchdog. pendingEditorOpen is written when the upload finishes and
-      // the app opens, so treat it as the same handoff-done signal.
-      const cloudEditorOpening =
+      // Some finalize paths use pendingEditorOpen instead of sandboxTab, so
+      // treat it as the same handoff-done signal.
+      const localEditorOpening =
         changes.pendingEditorOpen && changes.pendingEditorOpen.newValue != null;
-      if (sandboxTabAppeared || cloudEditorOpening) {
+      if (sandboxTabAppeared || localEditorOpening) {
         const wasMulti = contentStateRef.current?.multiMode === true;
         setContentState((prev) =>
           prev.finalizingRecording || prev.recording
@@ -2020,7 +1872,7 @@ const ContentState = (props) => {
 
     chrome.storage.onChanged.addListener(onChanged);
     return () => chrome.storage.onChanged.removeListener(onChanged);
-  }, [isTargetTab, updateTimerFromStorage, verifyUser]);
+  }, [isTargetTab, updateTimerFromStorage]);
 
   useEffect(() => {
     if (!contentState.customRegion) {
@@ -2108,7 +1960,7 @@ const ContentState = (props) => {
 
     const elements = parentDiv.querySelectorAll("*");
     elements.forEach((element) => {
-      element.classList.add("screenity-scrollbar");
+      element.classList.add("sayless-scrollbar");
     });
 
     const observer = new MutationObserver((mutationsList) => {
@@ -2119,13 +1971,13 @@ const ContentState = (props) => {
 
           addedNodes.forEach((node) => {
             if (node.nodeType === Node.ELEMENT_NODE) {
-              node.classList.add("screenity-scrollbar");
+              node.classList.add("sayless-scrollbar");
             }
           });
 
           removedNodes.forEach((node) => {
             if (node.nodeType === Node.ELEMENT_NODE) {
-              node.classList.remove("screenity-scrollbar");
+              node.classList.remove("sayless-scrollbar");
             }
           });
         }
@@ -2151,7 +2003,7 @@ const ContentState = (props) => {
 
     const elements = shadowRoot.querySelectorAll("*");
     elements.forEach((element) => {
-      element.classList.add("screenity-scrollbar");
+      element.classList.add("sayless-scrollbar");
     });
 
     const observer = new MutationObserver((mutationsList) => {
@@ -2162,13 +2014,13 @@ const ContentState = (props) => {
 
           addedNodes.forEach((node) => {
             if (node.nodeType === Node.ELEMENT_NODE) {
-              node.classList.add("screenity-scrollbar");
+              node.classList.add("sayless-scrollbar");
             }
           });
 
           removedNodes.forEach((node) => {
             if (node.nodeType === Node.ELEMENT_NODE) {
-              node.classList.remove("screenity-scrollbar");
+              node.classList.remove("sayless-scrollbar");
             }
           });
         }
@@ -2212,7 +2064,7 @@ const ContentState = (props) => {
     <contentStateContext.Provider value={providerValue}>
       {props.children}
       <Shortcuts shortcuts={contentState.shortcuts} />
-      {process.env.SCREENITY_DEV_MODE === "true" && (
+      {process.env.SAYLESS_DEV_MODE === "true" && (
         <DevHUD contentStateRef={contentStateRef} setContentState={setContentState} />
       )}
     </contentStateContext.Provider>

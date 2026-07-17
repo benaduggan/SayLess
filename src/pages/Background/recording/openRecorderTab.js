@@ -2,8 +2,7 @@ import { getCurrentTab } from "../tabManagement";
 import { removeTab } from "../tabManagement/removeTab";
 import { sendMessageRecord } from "./sendMessageRecord.js";
 import { closeOffscreenDocumentWithFlush } from "../offscreen/closeOffscreenDocumentWithFlush";
-import { createCloudRecorderOffscreen } from "../offscreen/createCloudRecorderOffscreen.js";
-import { loginWithWebsite } from "../auth/loginWithWebsite.js";
+import { createRecorderOffscreen } from "../offscreen/createRecorderOffscreen.js";
 import { traceStep } from "../../utils/startFlowTrace.js";
 import { handleGetStreamingData } from "./recordingHelpers.js";
 import { perfMark, perfSpan } from "../../utils/perfMarks";
@@ -22,13 +21,7 @@ const openRecorderTab = async (
   });
   let switchTab = true;
 
-  const endLogin = perfSpan("BG.openRecorderTab loginWithWebsite");
-  const { authenticated, subscribed, cached, transient, error: authError } = await loginWithWebsite({ force: true });
-  endLogin({ authenticated, subscribed, cached: Boolean(cached) });
-  const isCloudRecorder = authenticated && subscribed;
-  const recorderUrl = isCloudRecorder
-      ? chrome.runtime.getURL("cloudrecorder.html")
-      : chrome.runtime.getURL("recorder.html");
+  const recorderUrl = chrome.runtime.getURL("recorder.html");
   if (!isRegion) {
     if (camera) {
       switchTab = false;
@@ -39,52 +32,39 @@ const openRecorderTab = async (
     );
   }
 
-  // cloud recordings need the tab active briefly so keepalive can start
-  if (isCloudRecorder && !switchTab) {
-    switchTab = true;
-  }
-
   // Region recordings point recordingTab at the user's tab; never close that.
-  // For cloudrecorder.html, also skip removal while the previous session is
-  // still uploading: killing it mid-TUS-upload corrupts scene data. It
-  // closes itself via window.close() when finalize lands.
-  const {
-    recordingTab: prevRecTab,
-    recorderSession: prevSession,
-  } = await chrome.storage.local.get(["recordingTab", "recorderSession"]);
+  const { recordingTab: prevRecTab } = await chrome.storage.local.get([
+    "recordingTab",
+  ]);
   if (prevRecTab != null) {
     try {
       const prevTab = await chrome.tabs.get(prevRecTab);
       const prevUrl = prevTab?.url || "";
-      const isCloudRecorderTab = prevUrl.includes("cloudrecorder.html");
-      const isFreeRecorderTab =
-        prevUrl.includes("recorder.html") && !isCloudRecorderTab;
-      const prevSessionStatus = prevSession?.status || null;
-      const stillFinalizing =
-        prevSessionStatus === "recording" ||
-        prevSessionStatus === "stopping" ||
-        prevSessionStatus === "finishing";
-      if (isFreeRecorderTab) {
-        await removeTab(prevRecTab);
-      } else if (isCloudRecorderTab && !stillFinalizing) {
+      if (prevUrl.includes("recorder.html")) {
         await removeTab(prevRecTab);
       }
     } catch {}
     chrome.storage.local.set({ recordingTab: null });
   }
 
-  // offscreen host escapes background-tab freeze/discard. useOffscreenCloud is a
-  // kill-switch (default ON; false forces the old tab host). recordingType isn't
+  // offscreen host escapes background-tab freeze/discard. useOffscreenRecorder
+  // is a kill-switch (default ON; false forces the old tab host). recordingType isn't
   // on the desktop-capture message, content UI writes it to storage first.
-  const { useOffscreenCloud, recordingType: storedRecordingType, customRegion: storedCustomRegion } =
-    await chrome.storage.local.get(["useOffscreenCloud", "recordingType", "customRegion"]);
+  const {
+    useOffscreenRecorder,
+    recordingType: storedRecordingType,
+    customRegion: storedCustomRegion,
+  } = await chrome.storage.local.get([
+    "useOffscreenRecorder",
+    "recordingType",
+    "customRegion",
+  ]);
   const recordingType = request?.recordingType ?? storedRecordingType ?? null;
   const customRegion = request?.customRegion ?? storedCustomRegion ?? false;
   // all modes run offscreen except customRegion: its track.cropTo(CropTarget)
   // needs an iframe inside the recorded tab and can't run in an offscreen doc.
-  const willUseOffscreen = useOffscreenCloud !== false && !customRegion;
+  const willUseOffscreen = useOffscreenRecorder !== false && !customRegion;
   perfMark("BG.openRecorderTab offscreen-decision", {
-    isCloudRecorder,
     isRegion,
     camera,
     recordingType,
@@ -93,7 +73,7 @@ const openRecorderTab = async (
   if (willUseOffscreen) {
     perfMark("BG.openRecorderTab offscreen-route", { camera });
     try {
-      await createCloudRecorderOffscreen({ cloud: isCloudRecorder });
+      await createRecorderOffscreen();
     } catch (err) {
       console.error(
         "[SayLess][BG] openRecorderTab: offscreen create failed",
@@ -265,7 +245,7 @@ const openRecorderTab = async (
       chrome.tabs.onUpdated.removeListener(_);
       perfMark("BG.openRecorderTab tab-status-complete", { tabId });
       traceStep("recorderTabCreated");
-      // tabPreferred lets CloudRecorder use it synchronously without racing storage
+      // tabPreferred lets the recorder use it synchronously without racing storage
       const isPlayground = activeTab.url.includes(
         chrome.runtime.getURL("playground.html")
       );
@@ -352,7 +332,7 @@ export const startRecorderSession = async (request, tabId = null) => {
   }
 
   const endCloseOffscreen = perfSpan("BG.startRecorderSession closeOffscreenDocument");
-  // finalize any in-flight offscreen upload before teardown; a back-to-back
+  // finalize any in-flight offscreen remux before teardown; a back-to-back
   // start otherwise bare-closes the prior TUS finalize and loses it
   await closeOffscreenDocumentWithFlush({ reason: "new-recording-start" });
   endCloseOffscreen();

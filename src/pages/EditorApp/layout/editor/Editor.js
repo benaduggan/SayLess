@@ -3,7 +3,6 @@ import EditorNav from "./EditorNav";
 import VideoPlayer from "../../components/editor/VideoPlayer";
 import TrimUI from "./TrimUI";
 import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
-import { EdlProvider } from "../../context/EdlContext";
 import TranscriptPanel from "../../components/editor/TranscriptPanel";
 
 const Editor = ({ ffmpeg }) => {
@@ -27,12 +26,18 @@ const Editor = ({ ffmpeg }) => {
   }, []);
 
   return (
-    <EdlProvider>
+    <div className="saylessEditor">
       <EditorNav />
-      <VideoPlayer onSeek={handleSeek} />
-      <TrimUI blob={contentState.blob} onSeek={handleSeek} />
-      <TranscriptPanel />
-    </EdlProvider>
+      <main className="saylessEditor__workspace">
+        <section className="saylessEditor__mediaColumn">
+          <VideoPlayer onSeek={handleSeek} />
+          <TrimUI blob={contentState.blob} onSeek={handleSeek} />
+        </section>
+        <aside className="saylessEditor__transcriptPanel">
+          <TranscriptPanel variant="inline" />
+        </aside>
+      </main>
+    </div>
   );
 };
 

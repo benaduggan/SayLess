@@ -1,46 +1,42 @@
-import React, { useContext, useEffect, useState, useRef, useMemo } from "react";
-import { default as Plyr } from "plyr-react";
-import "plyr-react/plyr.css";
+import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
 import { EdlContext } from "../../context/EdlContext";
 import { attachTimelinePreview } from "../../../../edl/timelinePreview";
+import {
+  computeZoomViewportTransform,
+  zoomTransformToCss,
+} from "../../../../edl/zoomViewport";
 
 const VideoPlayer = (props) => {
   const [contentState, setContentState] = useContext(ContentStateContext); // Access the ContentState context
   const edlCtx = useContext(EdlContext); // null outside EdlProvider
   const tlRef = useRef(null);
-  const playerRef = useRef(null);
+  const videoRef = useRef(null);
   const [url, setUrl] = useState(null);
-  const [source, setSource] = useState(null);
-  const [isSet, setIsSet] = useState(false);
   // Probed from the blob's intrinsic dimensions; a fixed "16:9" would
   // pillarbox recordings of square-ish tabs.
   const [videoRatio, setVideoRatio] = useState("16:9");
+  const activeZoom = useMemo(() => {
+    const time = Number(contentState.time) || 0;
+    return (edlCtx?.zoomKeyframes || []).find(
+      (keyframe) =>
+        time >= Number(keyframe.time) &&
+        time < Number(keyframe.time) + Number(keyframe.durationSeconds || 0),
+    );
+  }, [contentState.time, edlCtx?.zoomKeyframes]);
+  const activeZoomStyle = useMemo(() => {
+    if (!activeZoom) return undefined;
+    return zoomTransformToCss(computeZoomViewportTransform(activeZoom, 100, 100));
+  }, [activeZoom]);
 
   useEffect(() => {
     if (
-      playerRef.current &&
-      playerRef.current.plyr &&
+      videoRef.current &&
       contentState.updatePlayerTime
     ) {
-      playerRef.current.plyr.currentTime = contentState.time;
+      videoRef.current.currentTime = contentState.time;
     }
   }, [contentState.time]);
-
-  const options = useMemo(
-    () => ({
-      controls: ["play", "mute", "captions", "settings", "pip", "fullscreen"],
-      ratio: videoRatio,
-      blankVideo:
-        "chrome-extension://" +
-        chrome.i18n.getMessage("@@extension_id") +
-        "/assets/blank.mp4",
-      keyboard: {
-        global: true,
-      },
-    }),
-    [videoRatio]
-  );
 
   useEffect(() => {
     if (!contentState.blob) return;
@@ -69,130 +65,78 @@ const VideoPlayer = (props) => {
   useEffect(() => {
     if (contentState.blob) {
       const objectURL = URL.createObjectURL(contentState.blob);
-      setSource({
-        type: "video",
-        sources: [
-          {
-            src: objectURL,
-            type: "video/mp4",
-          },
-        ],
-      });
       setUrl(objectURL);
-
-      // if (playerRef.current && playerRef.current.plyr) {
-      //   // Check when the video is playing, update the time in real time
-      //   playerRef.current.plyr.on("timeupdate", () => {
-      //     setContentState((prevContentState) => ({
-      //       ...prevContentState,
-      //       time: playerRef.current.plyr.currentTime,
-      //       updatePlayerTime: false,
-      //     }));
-      //   });
-      // }
 
       return () => {
         URL.revokeObjectURL(objectURL);
-
-        // if (playerRef.current && playerRef.current.plyr) {
-        //   playerRef.current.plyr.off("timeupdate");
-        // }
       };
     }
-  }, [contentState.blob, playerRef]);
+  }, [contentState.blob]);
 
   useEffect(() => {
-    if (playerRef.current && playerRef.current.plyr) {
-      // Check when the video is playing, update the time in real time
-      playerRef.current.plyr.on("timeupdate", () => {
-        setContentState((prevContentState) => ({
-          ...prevContentState,
-          time: playerRef.current.plyr.currentTime,
-          updatePlayerTime: false,
-        }));
-      });
-    }
-
-    return () => {
-      if (playerRef.current && playerRef.current.plyr) {
-        playerRef.current.plyr.off("timeupdate");
-      }
+    const video = videoRef.current;
+    if (!video) return;
+    const onTimeUpdate = () => {
+      setContentState((prevContentState) => ({
+        ...prevContentState,
+        time: video.currentTime,
+        updatePlayerTime: false,
+      }));
     };
-  }, [playerRef]);
+    video.addEventListener("timeupdate", onTimeUpdate);
+    return () => {
+      video.removeEventListener("timeupdate", onTimeUpdate);
+    };
+  }, [url]);
 
   // Keep the latest timeline available to the preview controller's per-tick reader.
   useEffect(() => {
     tlRef.current = edlCtx?.timeline || null;
   }, [edlCtx?.timeline]);
 
-  // Non-destructive preview: when the timeline has edits, drive the Plyr instance
-  // to play clips in output order (skip/reorder) and mute muted clips — no encode.
+  // Non-destructive preview: when the timeline has edits, drive the video
+  // element to play clips in output order (skip/reorder) and mute muted clips.
   useEffect(() => {
     if (!url || !edlCtx?.hasEdits) return;
-    const plyr = playerRef.current?.plyr;
-    if (!plyr) return;
+    const video = videoRef.current;
+    if (!video) return;
     const adapter = {
-      getCurrentTime: () => plyr.currentTime || 0,
+      getCurrentTime: () => video.currentTime || 0,
       seek: (t) => {
-        plyr.currentTime = t;
+        video.currentTime = t;
       },
       setMuted: (m) => {
-        plyr.muted = m;
+        video.muted = m;
       },
-      pause: () => plyr.pause(),
+      pause: () => video.pause(),
       onTimeUpdate: (cb) => {
-        plyr.on("timeupdate", cb);
-        return () => plyr.off("timeupdate", cb);
+        video.addEventListener("timeupdate", cb);
+        return () => video.removeEventListener("timeupdate", cb);
       },
     };
     const handle = attachTimelinePreview(adapter, () => tlRef.current);
     return () => handle.stop();
   }, [url, edlCtx?.hasEdits]);
 
-  const handleClick = () => {
-    if (isSet) return;
-    if (playerRef.current && playerRef.current.plyr) {
-      setIsSet(true);
-      playerRef.current.plyr.on("timeupdate", () => {
-        setContentState((prevContentState) => ({
-          ...prevContentState,
-          time: playerRef.current.plyr.currentTime,
-          updatePlayerTime: false,
-        }));
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (isSet) return;
-    const handleKeyPress = (event) => {
-      if (playerRef.current && playerRef.current.plyr) {
-        setIsSet(true);
-        playerRef.current.plyr.on("timeupdate", () => {
-          setContentState((prevContentState) => ({
-            ...prevContentState,
-            time: playerRef.current.plyr.currentTime,
-            updatePlayerTime: false,
-          }));
-        });
-      }
-    };
-    window.addEventListener("keydown", handleKeyPress);
-    return () => {
-      window.removeEventListener("keydown", handleKeyPress);
-    };
-  }, [isSet]);
-
   return (
     <div className="videoPlayer">
-      <div className="playerWrap" onClick={handleClick}>
+      <div className="playerWrap">
         {url && (
-          <Plyr
-            ref={playerRef}
-            id="plyr-player"
-            source={source}
-            options={options}
-          />
+          <div
+            className="plyr plyr--video sayless-native-player-shell"
+            style={{ aspectRatio: videoRatio.replace(":", " / ") }}
+          >
+            <video
+              ref={videoRef}
+              id="plyr-player"
+              className="sayless-native-player"
+              src={url}
+              controls
+              playsInline
+              preload="metadata"
+              style={activeZoomStyle}
+            />
+          </div>
         )}
       </div>
       <style>
@@ -200,6 +144,12 @@ const VideoPlayer = (props) => {
 					.plyr {
 						height: 90%!important;
 					}
+          .sayless-native-player-shell {
+            overflow: hidden;
+          }
+          .sayless-native-player {
+            transition: transform 160ms ease;
+          }
 					@media (max-width: 900px) {
 						.videoPlayer {
 							height: 100%!important;

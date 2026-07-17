@@ -2,7 +2,7 @@
 // cap, 250ms debounced flush) so user diag zips have the full
 // stop→editor timing. Labels are hardcoded; payloads are caller ints/
 // strings. Console "[perf]" lines stay dev-only.
-const DEV = process.env.SCREENITY_DEV_MODE === "true";
+const DEV = process.env.SAYLESS_DEV_MODE === "true";
 const ENABLED = true;
 
 const noop = () => {};
@@ -22,7 +22,6 @@ const buildDevImpl = () => {
       const path = (window.location && window.location.pathname) || "";
       if (path.endsWith("/region.html")) return "Region";
       if (path.endsWith("/recorder.html")) return "Recorder";
-      if (path.endsWith("/cloudrecorder.html")) return "CloudRecorder";
       if (path.endsWith("/editor.html")) return "Editor";
       if (path.endsWith("/offscreenrecorder.html")) return "OffscreenRecorder";
       if (path.endsWith("/remuxoffscreen.html")) return "RemuxOffscreen";

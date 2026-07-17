@@ -1,7 +1,7 @@
 /*
  * Creates or reuses the remux offscreen document. Chrome only permits one
  * offscreen document per extension; if a different offscreen (audio beeps,
- * cloud-upload resume) is currently open, we close it first.
+ * recording/remux task) is currently open, we close it first.
  *
  * The remux offscreen uses the WORKERS reason so it can spawn a dedicated
  * worker that calls createSyncAccessHandle() on OPFS, which is only
@@ -40,7 +40,7 @@ export const ensureRemuxOffscreen = async () => {
       }
       continue;
     }
-    // A different offscreen (audio beep / upload resume): close it and proceed.
+    // A different offscreen (audio beep / recorder task): close it and proceed.
     try {
       await chrome.offscreen.closeDocument();
     } catch (err) {

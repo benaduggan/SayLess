@@ -1,6 +1,12 @@
 import GIF from "gif.js";
 
-async function toGIF(ffmpeg, videoBlob, onProgress = () => {}) {
+const clampNumber = (value, fallback, min, max) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
+};
+
+async function toGIF(ffmpeg, videoBlob, onProgress = () => {}, options = {}) {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
     const canvas = document.createElement("canvas");
@@ -9,11 +15,18 @@ async function toGIF(ffmpeg, videoBlob, onProgress = () => {}) {
     video.addEventListener("loadedmetadata", async () => {
       try {
         const duration = video.duration;
-        const width = 540;
+        const fps = Math.round(clampNumber(options.fps, 12, 4, 30));
+        const startSeconds = clampNumber(options.startSeconds, 0, 0, duration);
+        const clipDuration = clampNumber(
+          options.durationSeconds,
+          duration - startSeconds,
+          0.1,
+          Math.max(0.1, duration - startSeconds),
+        );
+        const width = Math.round(clampNumber(options.width, 540, 320, 1920));
         const height = Math.round(
           (video.videoHeight / video.videoWidth) * width
         );
-        const fps = 12;
         const quality = 5;
 
         canvas.width = width;
@@ -24,11 +37,11 @@ async function toGIF(ffmpeg, videoBlob, onProgress = () => {}) {
           quality,
           width,
           height,
-          workerScript: "/assets/vendor/gif.js/gif.worker.js",
+          workerScript: chrome.runtime.getURL("assets/vendor/gif.js/gif.worker.js"),
         });
 
         const frameInterval = 1 / fps;
-        const totalFrames = Math.floor(duration * fps);
+        const totalFrames = Math.max(1, Math.floor(clipDuration * fps));
         let frameCount = 0;
 
         const captureFrame = (time) =>
@@ -49,7 +62,10 @@ async function toGIF(ffmpeg, videoBlob, onProgress = () => {}) {
           });
 
         for (let i = 0; i < totalFrames; i++) {
-          const time = Math.min(i * frameInterval, duration - 0.001);
+          const time = Math.min(
+            startSeconds + i * frameInterval,
+            duration - 0.001,
+          );
           await captureFrame(time);
         }
 

@@ -45,7 +45,7 @@ import {
 
 localforage.config({
   driver: localforage.INDEXEDDB,
-  name: "screenity",
+  name: "sayless",
   version: 1,
 });
 
@@ -55,12 +55,12 @@ const chunksStore = localforage.createInstance({
 
 document.body.style.willChange = "contents";
 
-// Toggle: window.SCREENITY_DEBUG_RECORDER = true
+// Toggle: window.SAYLESS_DEBUG_RECORDER = true
 const DEBUG_RECORDER =
-  typeof window !== "undefined" ? !!window.SCREENITY_DEBUG_RECORDER : false;
+  typeof window !== "undefined" ? !!window.SAYLESS_DEBUG_RECORDER : false;
 const FORCE_MEDIARECORDER =
   typeof window !== "undefined"
-    ? !!window.SCREENITY_FORCE_MEDIARECORDER
+    ? !!window.SAYLESS_FORCE_MEDIARECORDER
     : false;
 const logPrefix = "[SayLess Recorder]";
 
@@ -136,38 +136,20 @@ const clampQualityValue = (value, maxValue) => {
     : max;
 };
 
-const getFreeCaptureCaps = async () => {
-  try {
-    const { isLoggedIn, isSubscribed } = await chrome.storage.local.get([
-      "isLoggedIn",
-      "isSubscribed",
-    ]);
-    const isPro = Boolean(isLoggedIn && isSubscribed);
-    return {
-      isPro,
-      maxQuality: "1080p",
-      maxFps: 60,
-    };
-  } catch {
-    return {
-      isPro: false,
-      maxQuality: "1080p",
-      maxFps: 60,
-    };
-  }
-};
+const getLocalCaptureCaps = async () => ({
+  maxQuality: "4k",
+  maxFps: 60,
+});
 
-// bits/pixel/sec. Pro gets higher quality, Free smaller files.
-const VIDEO_BPP_FPS_PRO = 0.10;
-const VIDEO_BPP_FPS_FREE = 0.08;
+// bits/pixel/sec. Same local quality target for every user.
+const VIDEO_BPP_FPS = 0.10;
 const VIDEO_BPS_MIN = 4_000_000;
 const VIDEO_BPS_MAX = 24_000_000;
 
-const computeTargetVideoBps = (width, height, fps, isPro = false) => {
+const computeTargetVideoBps = (width, height, fps) => {
   const pixels = Number(width) * Number(height);
   const rate = Number.isFinite(fps) && fps > 0 ? fps : 30;
-  const factor = isPro ? VIDEO_BPP_FPS_PRO : VIDEO_BPP_FPS_FREE;
-  const target = Math.round(pixels * rate * factor);
+  const target = Math.round(pixels * rate * VIDEO_BPP_FPS);
   return clamp(target, VIDEO_BPS_MIN, VIDEO_BPS_MAX);
 };
 
@@ -424,7 +406,7 @@ const Recorder = () => {
     perfMark("Recorder keepalive.enter");
 
     const inlineKA =
-      typeof window !== "undefined" ? window.__SCREENITY_KEEPALIVE : null;
+      typeof window !== "undefined" ? window.__SAYLESS_KEEPALIVE : null;
 
     // startedAt/completedAt are written by the inline IIFE in recorder.html.
     // Missing means the inline path failed (or was stripped) and we're cold.
@@ -500,7 +482,7 @@ const Recorder = () => {
           keepAliveLockAbort.current = ac;
           navigator.locks
             .request(
-              "screenity-recorder-keepalive",
+              "sayless-recorder-keepalive",
               { mode: "exclusive", signal: ac.signal },
               () => new Promise(() => {}),
             )
@@ -576,7 +558,7 @@ const Recorder = () => {
       // stop, but persists in multi-mode / slow editor / error paths.
       try {
         const KA =
-          typeof window !== "undefined" ? window.__SCREENITY_KEEPALIVE : null;
+          typeof window !== "undefined" ? window.__SAYLESS_KEEPALIVE : null;
         if (KA) {
           if (KA.priorityTick) {
             try { clearInterval(KA.priorityTick); } catch {}
@@ -1241,7 +1223,7 @@ const Recorder = () => {
   }
 
   async function startRecording() {
-    if (process.env.SCREENITY_DEV_MODE === "true") {
+    if (process.env.SAYLESS_DEV_MODE === "true") {
       console.log("[recorder-opfs][recorder] startRecording entry");
     }
     slLog("startRecording-enter", {
@@ -1356,15 +1338,13 @@ const Recorder = () => {
     const endCapsRead = perfSpan("Recorder.preflight storage+caps");
     const [
       { qualityValue, useWebCodecsRecorder: prefUseWebCodecs },
-      { isPro, maxQuality, maxFps },
+      { maxQuality, maxFps },
     ] = await Promise.all([
       chrome.storage.local.get(["qualityValue", "useWebCodecsRecorder"]),
-      getFreeCaptureCaps(),
+      getLocalCaptureCaps(),
     ]);
     endCapsRead();
-    const effectiveQualityValue = isPro
-      ? qualityValue
-      : clampQualityValue(qualityValue, maxQuality);
+    const effectiveQualityValue = clampQualityValue(qualityValue, maxQuality);
     const { audioBitsPerSecond, videoBitsPerSecond: bitratePreset } =
       getBitrates(effectiveQualityValue);
     let videoBitsPerSecond = bitratePreset;
@@ -1415,7 +1395,7 @@ const Recorder = () => {
 
     chunkWriter.current = null;
     chunkWriterBackend.current = null;
-    if (process.env.SCREENITY_DEV_MODE === "true") {
+    if (process.env.SAYLESS_DEV_MODE === "true") {
       console.log("[recorder-opfs][recorder] chooseWriter entry", {
         recordingId,
         shouldUseFast,
@@ -1441,7 +1421,7 @@ const Recorder = () => {
         selection = await chooseWriter({ preferOpfs: shouldUseFast });
       }
       endChoose({ backend: selection?.backend, prewarmed: prewarmedMatches });
-      if (process.env.SCREENITY_DEV_MODE === "true") {
+      if (process.env.SAYLESS_DEV_MODE === "true") {
         console.log("[recorder-opfs][recorder] chooseWriter returned", {
           backend: selection.backend,
           prewarmed: prewarmedMatches,
@@ -1457,7 +1437,7 @@ const Recorder = () => {
         endOpen({ backend: selection.backend, prewarmed: prewarmedMatches });
       } catch (openErr) {
         endOpen({ backend: selection.backend, ok: false });
-        if (process.env.SCREENITY_DEV_MODE === "true") {
+        if (process.env.SAYLESS_DEV_MODE === "true") {
           console.warn(
             "[recorder-opfs][recorder] writer.open failed",
             selection.backend,
@@ -1491,7 +1471,7 @@ const Recorder = () => {
       } catch {}
       endBackendRefSet();
       perfMark("Recorder.preflight.done");
-      if (process.env.SCREENITY_DEV_MODE === "true") {
+      if (process.env.SAYLESS_DEV_MODE === "true") {
         console.log("[recorder-opfs][recorder] writer-open", {
           backend: selection.backend,
           recordingId,
@@ -1499,7 +1479,7 @@ const Recorder = () => {
         });
       }
     } catch (err) {
-      if (process.env.SCREENITY_DEV_MODE === "true") {
+      if (process.env.SAYLESS_DEV_MODE === "true") {
         console.error("[recorder-opfs][recorder] chooseWriter path threw", err);
       }
       debugWarn("chooseWriter failed, falling back to direct chunksStore", err);
@@ -1571,17 +1551,12 @@ const Recorder = () => {
     let fps = parseInt(fpsValue);
     if (Number.isNaN(fps)) fps = 30;
 
-    if (!isPro) {
-      fps = Math.min(fps, maxFps);
-    }
-    const computedBps = computeTargetVideoBps(width, height, fps, isPro);
-    videoBitsPerSecond = !isPro
-      ? Math.min(computedBps, bitratePreset)
-      : computedBps;
+    fps = Math.min(fps, maxFps);
+    const computedBps = computeTargetVideoBps(width, height, fps);
+    videoBitsPerSecond = computedBps;
     debug("Video bitrate target", {
       bitratePreset,
       videoBitsPerSecond,
-      isPro,
     });
 
     debug("Recorder capabilities", {
@@ -1942,7 +1917,7 @@ const Recorder = () => {
                 if (closeResult?.backendRef) {
                   chunkBackendRef.current = closeResult.backendRef;
                 }
-                if (process.env.SCREENITY_DEV_MODE === "true") {
+                if (process.env.SAYLESS_DEV_MODE === "true") {
                   console.log("[recorder-opfs][recorder] writer-close", {
                     backendRef: chunkBackendRef.current,
                     byteSize: closeResult?.byteSize,
@@ -2967,7 +2942,7 @@ const Recorder = () => {
     resetGateState();
     isFinishing.current = true;
     isRecording.current = false;
-    // Don't block stop() on telemetry IPCs; diag showed 9.5s of
+    // Don't block stop() on diagnostic IPCs; diag showed 9.5s of
     // sequential awaits under contention, delaying editor-open.
     void updateFreeFinalizeStatus("stopping", 0);
 
@@ -3320,10 +3295,8 @@ const Recorder = () => {
     });
 
     const { qualityValue } = await chrome.storage.local.get(["qualityValue"]);
-    const { isPro, maxQuality, maxFps } = await getFreeCaptureCaps();
-    const effectiveQualityValue = isPro
-      ? qualityValue
-      : clampQualityValue(qualityValue, maxQuality);
+    const { maxQuality, maxFps } = await getLocalCaptureCaps();
+    const effectiveQualityValue = clampQualityValue(qualityValue, maxQuality);
     const { width, height } = getResolutionForQuality(effectiveQualityValue);
 
     const { fpsValue } = await chrome.storage.local.get(["fpsValue"]);
@@ -3332,9 +3305,7 @@ const Recorder = () => {
     if (isNaN(fps)) {
       fps = 30;
     }
-    if (!isPro) {
-      fps = Math.min(fps, maxFps);
-    }
+    fps = Math.min(fps, maxFps);
 
     let userConstraints = {
       audio: {
@@ -3353,7 +3324,7 @@ const Recorder = () => {
         },
       },
     };
-    if (!isPro && userConstraints.video) {
+    if (userConstraints.video) {
       userConstraints.video = {
         ...userConstraints.video,
         width: {
@@ -3989,7 +3960,7 @@ const Recorder = () => {
           // Offscreen docs can't consume a chrome.desktopCapture streamId
           // (AbortError "Error starting tab capture", esp. on Windows), so the
           // offscreen recorder always uses getDisplayMedia for screen capture,
-          // matching CloudRecorder. mac+141 also uses it for system audio.
+          // matching the recorder fallback path. mac+141 also uses it for system audio.
           debug("screen capture via getDisplayMedia (offscreen or mac+141)");
           slLog("getDisplayMedia-screen-route");
           chrome.storage.local.set({ lastScreenCaptureApi: "getDisplayMedia" });
@@ -4626,7 +4597,7 @@ const Recorder = () => {
   return (
     <>
       <RecorderUI started={started} isTab={isTab.current} />
-      {process.env.SCREENITY_DEV_MODE === "true" && (
+      {process.env.SAYLESS_DEV_MODE === "true" && (
         <div
           style={{
             position: "fixed",

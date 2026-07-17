@@ -2,15 +2,12 @@ import {
   registerMessage,
   messageRouter,
 } from "../../../../messaging/messageRouter";
-import { setContentState, contentStateRef } from "../ContentState";
+import { setContentState, contentStateRef, setTimer } from "../ContentState";
 import { updateFromStorage } from "../utils/updateFromStorage";
 
-import { checkAuthStatus } from "../utils/checkAuthStatus";
 import { traceStep, setStartFlowOutcome } from "../../../utils/startFlowTrace";
 import { perfMark } from "../../../utils/perfMarks";
 import { triggerSupportDownload } from "../../../utils/triggerSupportDownload";
-const CLOUD_FEATURES_ENABLED =
-  process.env.SCREENITY_ENABLE_CLOUD_FEATURES === "true";
 
 const getState = () => contentStateRef.current;
 
@@ -27,14 +24,7 @@ export const setupHandlers = () => {
   let localPlaybackBuildPromise = null;
   let localPlaybackBuildOfferId = null;
   let activeLocalPlaybackSource = null;
-  const TRUSTED_APP_ORIGIN = (() => {
-    try {
-      const appBase = process.env.SCREENITY_APP_BASE;
-      return appBase ? new URL(appBase).origin : null;
-    } catch {
-      return null;
-    }
-  })();
+  const TRUSTED_APP_ORIGIN = null;
 
   const getProjectMessageTargetOrigin = () => {
     if (!TRUSTED_APP_ORIGIN) return null;
@@ -93,7 +83,7 @@ export const setupHandlers = () => {
     if (!offerId) return;
     try {
       await chrome.runtime.sendMessage({
-        type: "cloud-local-playback-mark-fallback",
+        type: "local-playback-mark-fallback",
         offerId,
         projectId: projectId || null,
         sceneId: sceneId || null,
@@ -108,7 +98,7 @@ export const setupHandlers = () => {
     sceneId,
   }) => {
     const offerRes = await chrome.runtime.sendMessage({
-      type: "cloud-local-playback-get-offer",
+      type: "local-playback-get-offer",
       offerId,
       projectId,
       sceneId,
@@ -129,7 +119,7 @@ export const setupHandlers = () => {
     for (let i = 0; i < offer.chunkCount; i += 1) {
       // eslint-disable-next-line no-await-in-loop
       const chunkRes = await chrome.runtime.sendMessage({
-        type: "cloud-local-playback-read-chunk",
+        type: "local-playback-read-chunk",
         offerId: offer.offerId,
         projectId: offer.projectId,
         sceneId: offer.sceneId,
@@ -201,7 +191,7 @@ export const setupHandlers = () => {
 
       try {
         await chrome.runtime.sendMessage({
-          type: "cloud-local-playback-mark-used",
+          type: "local-playback-mark-used",
           offerId: source.offer.offerId,
           projectId: source.offer.projectId || null,
           sceneId: source.offer.sceneId || null,
@@ -275,7 +265,7 @@ export const setupHandlers = () => {
       return;
     }
 
-    if (data?.type !== "screenity-local-playback-request") return;
+    if (data?.type !== "sayless-local-playback-request") return;
 
     const requestedProjectId = data?.projectId || null;
     const requestedSceneId = data?.sceneId || null;
@@ -292,7 +282,7 @@ export const setupHandlers = () => {
         requestedSceneId !== latestLocalPlaybackSceneId)
     ) {
       postProjectHandoff({
-        source: "screenity-local-playback-response",
+        source: "sayless-local-playback-response",
         requestId,
         projectId: requestedProjectId,
         sceneId: requestedSceneId,
@@ -318,7 +308,7 @@ export const setupHandlers = () => {
           bytes: readySource?.size || 0,
         });
         postProjectHandoff({
-          source: "screenity-local-playback-response",
+          source: "sayless-local-playback-response",
           requestId,
           projectId: requestedProjectId,
           sceneId: requestedSceneId || latestLocalPlaybackSceneId || null,
@@ -356,7 +346,7 @@ export const setupHandlers = () => {
           reason,
         });
         postProjectHandoff({
-          source: "screenity-local-playback-response",
+          source: "sayless-local-playback-response",
           requestId,
           projectId: requestedProjectId,
           sceneId: requestedSceneId || latestLocalPlaybackSceneId || null,
@@ -625,14 +615,14 @@ export const setupHandlers = () => {
     const state = getState();
     if (state && typeof state.openModal === "function") {
       state.openModal(
-        "Upload couldn't finish",
-        "Your recording is safe. Retry the upload, or export diagnostics to help us figure out what went wrong.",
-        "Retry upload",
+        "Recording couldn't finish",
+        "Your recording is safe. Retry finalizing it, or export diagnostics to help us figure out what went wrong.",
+        "Retry finalize",
         "Dismiss",
         () => {
           chrome.runtime.sendMessage({ type: "retry-finalize" });
           if (typeof state.openToast === "function") {
-            state.openToast("Retrying upload…", () => {}, 5000);
+            state.openToast("Retrying finalize...", () => {}, 5000);
           }
         },
         () => {},
@@ -1175,53 +1165,6 @@ export const setupHandlers = () => {
       };
     }
     postProjectHandoff(payload);
-  });
-  registerMessage("check-auth", async (message) => {
-    if (!CLOUD_FEATURES_ENABLED) {
-      const { recording } = await chrome.storage.local.get("recording");
-
-      setContentState((prev) => ({
-        ...prev,
-        isLoggedIn: false,
-        screenityUser: null,
-        isSubscribed: false,
-        proSubscription: null,
-        showExtension: true,
-        showPopup: !recording,
-      }));
-
-      return;
-    }
-
-    const result = await checkAuthStatus();
-
-    const { recording } = await chrome.storage.local.get("recording");
-
-    setContentState((prev) => ({
-      ...prev,
-      isLoggedIn: result.authenticated,
-      screenityUser: result.user,
-      isSubscribed: result.subscribed,
-      proSubscription: result.proSubscription,
-      ...(result.authenticated ? { wasLoggedIn: false } : {}),
-      showExtension: true,
-      showPopup: !recording,
-    }));
-
-    if (result.authenticated) {
-      // Client-side zoom is unavailable for authenticated users.
-      setContentState((prev) => ({
-        ...prev,
-        onboarding: false,
-        showProSplash: false,
-        zoomEnabled: false,
-      }));
-
-      chrome.storage.local.set({
-        zoomEnabled: false,
-        wasLoggedIn: false,
-      });
-    }
   });
   registerMessage("update-project-loading", (message, sender) => {
     // Editor listeners gate on projectId; drop it and the handoff

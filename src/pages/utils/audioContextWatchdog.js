@@ -10,7 +10,7 @@
 // diagEvent directly: this runs in page realms (Web Audio has no SW context),
 // where diagEvent's session log is never initialized and would silently no-op.
 // Returns a live stats handle the caller can read at finalize time to attach
-// interruption totals to upload telemetry.
+// interruption totals to local diagnostic events.
 
 const forwardDiag = (event, data) => {
   try {
@@ -48,7 +48,7 @@ export function attachAudioContextWatchdog(aCtx, label) {
         sinceInterruptedMs: interruptedAt ? Date.now() - interruptedAt : null,
       });
       // Only auto-resume "interrupted" (OS-driven). "suspended" is the user's
-      // pause flow; resuming it would silently un-pause a Pro recording.
+      // pause flow; resuming it would silently un-pause a recording.
       if (state === "interrupted") {
         if (!interruptedAt) {
           interruptedAt = Date.now();

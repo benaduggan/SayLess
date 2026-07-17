@@ -1,10 +1,10 @@
-// Microphone acquisition shared by CloudRecorder, Recorder, Region.
+// Microphone acquisition shared by recorder contexts.
 // getUserMediaWithFallback re-resolves the device by label if the id drifted; falls
 // back to generic getUserMedia({audio:true}) before giving up with null.
 // Per-page options:
 //   bailOnNone:     return null for a "none"/empty id (Recorder)
 //   bluetoothDiag:  diag-forward when the mic comes up at a low sample rate (Recorder)
-//   toastOnBlocked: toast when even the generic fallback fails (CloudRecorder)
+//   toastOnBlocked: toast when even the generic fallback fails.
 //   logger:         optional { debug, warn } for dev breadcrumbs
 import { getUserMediaWithFallback } from "./mediaDeviceFallback";
 

@@ -1,5 +1,3 @@
-const querystring = require("querystring");
-
 const logger = (msg) => {
   console.log(`[Background] ${msg}`);
 };
@@ -7,7 +5,7 @@ const logger = (msg) => {
 logger("Initializing auto-reload client");
 
 // Parse port from query string
-const port = querystring.parse(__resourceQuery.slice(1)).port;
+const port = new URLSearchParams(__resourceQuery.slice(1)).get("port");
 
 // Connect to SSE endpoint
 const es = new EventSource(`http://localhost:${port}/__server_sent_events__`);
