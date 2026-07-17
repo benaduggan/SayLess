@@ -599,6 +599,123 @@ const openVideosTab = () => {
   return true;
 };
 
+const openTroubleshootingModal = async () => {
+  const clickElement = (element) => {
+    for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup"]) {
+      element.dispatchEvent(
+        new MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          button: 0,
+        }),
+      );
+    }
+    element.click();
+  };
+  const collectRoots = () => {
+    const host = document.querySelector("#screenity-ui");
+    const roots = [];
+    const visit = (node) => {
+      if (!node) return;
+      if (
+        node.nodeType !== Node.ELEMENT_NODE &&
+        node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE
+      ) {
+        return;
+      }
+      roots.push(node);
+      if (node.shadowRoot) visit(node.shadowRoot);
+      for (const child of node.children || []) {
+        if (child.shadowRoot) visit(child.shadowRoot);
+        visit(child);
+      }
+    };
+    visit(host?.shadowRoot || host);
+    return roots;
+  };
+
+  const roots = collectRoots();
+  const buttonCandidates = roots
+    .flatMap((root) => [...root.querySelectorAll("button,[role='button']")])
+    .map((button) =>
+      (button.textContent || button.getAttribute("aria-label") || "").trim(),
+    )
+    .filter(Boolean)
+    .slice(0, 30);
+  const settingsButton =
+    roots
+      .map((root) =>
+        root.querySelector(
+          ".popup-controls button.IconButton, .popup-controls [role='button'].IconButton",
+        ),
+      )
+      .find(Boolean) ||
+    roots
+      .flatMap((root) => [...root.querySelectorAll("button,[role='button']")])
+      .find((button) =>
+        /customise options|customize options|settings/i.test(
+          button.textContent || button.getAttribute("aria-label") || "",
+        ),
+      );
+  if (!settingsButton) {
+    return {
+      opened: false,
+      reason: `settings button not found: ${buttonCandidates.join(" | ")}`,
+    };
+  }
+  clickElement(settingsButton);
+  await new Promise((resolve) => setTimeout(resolve, 250));
+
+  const menuRoots = collectRoots();
+  const menuCandidates = menuRoots
+    .flatMap((root) => [...root.querySelectorAll("[role='menuitem'],button")])
+    .map((node) =>
+      (node.textContent || node.getAttribute("aria-label") || "").trim(),
+    )
+    .filter(Boolean)
+    .slice(0, 40);
+  const troubleshootingItem = menuRoots
+    .flatMap((root) => [...root.querySelectorAll("[role='menuitem'],button")])
+    .find((node) =>
+      /troubleshoot|troubleshooting|diagnostic/i.test(
+        node.textContent || node.getAttribute("aria-label") || "",
+      ),
+    );
+  if (!troubleshootingItem) {
+    return {
+      opened: false,
+      reason: `troubleshooting menu item not found: ${menuCandidates.join(" | ")}`,
+    };
+  }
+  clickElement(troubleshootingItem);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  const dialog =
+    document.querySelector("[role='alertdialog']") ||
+    collectRoots()
+      .flatMap((root) => [...root.querySelectorAll("[role='alertdialog']")])
+      .find(Boolean);
+  if (!dialog) {
+    return { opened: false, reason: "alert dialog not found" };
+  }
+
+  document.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "Escape",
+      code: "Escape",
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    }),
+  );
+  return {
+    opened: true,
+    labelledBy: dialog.getAttribute("aria-labelledby"),
+    describedBy: dialog.getAttribute("aria-describedby"),
+  };
+};
+
 const launchExtensionContext = async (userDataDir) => {
   const channel = process.env.SAYLESS_E2E_CHROME_CHANNEL || undefined;
   const launchOptions = {
@@ -810,6 +927,15 @@ const launchExtensionContext = async (userDataDir) => {
           }),
         });
       }
+      const troubleshootingModal = await contentPage.evaluate(openTroubleshootingModal);
+      if (!troubleshootingModal.opened) {
+        hits.push({
+          pageName: "content-script-popup",
+          pattern: "troubleshooting-modal",
+          match: troubleshootingModal.reason,
+        });
+      }
+      await contentPage.waitForTimeout(500);
       const openedVideos = await contentPage.evaluate(openVideosTab);
       if (!openedVideos) {
         hits.push({
@@ -873,6 +999,7 @@ const launchExtensionContext = async (userDataDir) => {
         hasHost: popupSurface.hasHost,
         hasContentRoot: popupSurface.hasContentRoot,
         usedShadowRoot: popupSurface.usedShadowRoot,
+        troubleshootingModal,
         pageErrors: contentErrors.slice(0, 3),
         consoleErrors: contentConsoleErrors.slice(0, 3),
       });
