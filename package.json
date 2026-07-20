@@ -1,6 +1,6 @@
 {
   "name": "sayless",
-  "version": "4.5.3",
+  "version": "4.6.0",
   "description": "Free to use, offline, local-first screen recorder with on-device transcription and word-based editing. No signup required.",
   "scripts": {
     "build": "cross-env NODE_ENV=production node utils/build.js",

@@ -15,7 +15,7 @@ on:
         default: false
         type: boolean
       release_tag:
-        description: "Tag name for a manual release, for example v4.5.3-ci"
+        description: "Tag name for a manual release, for example v4.6.0-ci"
         required: false
         default: ""
         type: string
