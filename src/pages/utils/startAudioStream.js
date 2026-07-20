@@ -13,12 +13,60 @@ const buildAudioConstraints = (id) => {
     sampleRate: { ideal: 48000 },
     channelCount: { ideal: 1 },
     echoCancellation: { ideal: false },
-    noiseSuppression: { ideal: true },
-    autoGainControl: { ideal: false },
+    noiseSuppression: { ideal: false },
+    autoGainControl: { ideal: true },
   };
   return id && id !== "none"
     ? { ...base, deviceId: { exact: id } }
     : base;
+};
+
+const recordMicInputDiagnostics = (stream, { bluetoothDiag = false } = {}) => {
+  if (!bluetoothDiag || !stream) return;
+  try {
+    const aTrack = stream.getAudioTracks?.()[0];
+    const settings = aTrack?.getSettings?.() || {};
+    const trackSampleRate = Number(settings.sampleRate) || null;
+    const trackChannelCount = Number(settings.channelCount) || null;
+    const label = String(aTrack?.label || "").slice(0, 80);
+    try {
+      chrome.storage.local.set({
+        lastMicInputSnapshot: {
+          at: Date.now(),
+          label,
+          settings: {
+            sampleRate: settings.sampleRate ?? null,
+            channelCount: settings.channelCount ?? null,
+            echoCancellation: settings.echoCancellation ?? null,
+            noiseSuppression: settings.noiseSuppression ?? null,
+            autoGainControl: settings.autoGainControl ?? null,
+            deviceId: settings.deviceId ?? null,
+          },
+        },
+      });
+    } catch {}
+    if (trackSampleRate && trackSampleRate <= 24000) {
+      console.warn(
+        "[recorder] mic acquired at low sample rate; likely Bluetooth HFP profile",
+        { trackSampleRate, trackChannelCount, label },
+      );
+      try {
+        chrome.runtime.sendMessage({
+          type: "diag-forward",
+          event: "recorder-low-sample-rate-mic",
+          data: { trackSampleRate, trackChannelCount, label },
+        });
+      } catch {}
+      try {
+        chrome.runtime.sendMessage({
+          type: "show-toast",
+          message:
+            "Your microphone is running in a low-quality Bluetooth call mode. Use the built-in mic, a wired mic, or switch your Bluetooth headphones to a different input.",
+          timeout: 10000,
+        });
+      } catch {}
+    }
+  } catch {}
 };
 
 export async function startAudioStream(
@@ -69,43 +117,16 @@ export async function startAudioStream(
           : [],
     });
 
-    if (bluetoothDiag && stream) {
-      // BT mic switches A2DP (48k) to HFP (8/16k mono); the 48k AudioContext then upsamples garbage.
-      try {
-        const aTrack = stream.getAudioTracks?.()[0];
-        const trackSampleRate = Number(aTrack?.getSettings?.()?.sampleRate) || null;
-        if (trackSampleRate && trackSampleRate <= 24000) {
-          const label = String(aTrack?.label || "").slice(0, 80);
-          console.warn(
-            "[recorder] mic acquired at low sample rate; likely Bluetooth HFP profile",
-            { trackSampleRate, label },
-          );
-          try {
-            chrome.runtime.sendMessage({
-              type: "diag-forward",
-              event: "recorder-low-sample-rate-mic",
-              data: { trackSampleRate, label },
-            });
-          } catch {}
-          try {
-            chrome.runtime.sendMessage({
-              type: "show-toast",
-              message:
-                "Your microphone is running in a low-quality Bluetooth call mode. Use the built-in mic, a wired mic, or switch your Bluetooth headphones to a different input.",
-              timeout: 10000,
-            });
-          } catch {}
-        }
-      } catch {}
-    }
-
+    recordMicInputDiagnostics(stream, { bluetoothDiag });
     return stream;
   } catch (err) {
     logger?.warn?.("startAudioStream() exact device failed, retrying generic", err);
     try {
-      return await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: buildAudioConstraints(null),
       });
+      recordMicInputDiagnostics(stream, { bluetoothDiag });
+      return stream;
     } catch (err2) {
       logger?.warn?.("startAudioStream() failed completely", err2);
       if (toastOnBlocked) {

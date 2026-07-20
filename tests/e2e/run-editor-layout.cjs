@@ -122,11 +122,29 @@ const assertLayout = (name, data) => {
     data.transcriptBody,
   );
   if (viewport.width > 1100) {
+    const playerTopGap = data.plyr.top - data.media.top;
+    assert(data.bodyScrollHeight <= viewport.height + 1, `${name}: desktop document creates vertical overflow`, {
+      bodyScrollHeight: data.bodyScrollHeight,
+      viewport,
+    });
+    assert(data.transcriptPanel.top >= 79 && data.transcriptPanel.top <= 81, `${name}: desktop transcript panel is not below fixed nav`, data.transcriptPanel);
+    assert(playerTopGap >= 0 && playerTopGap <= 72, `${name}: desktop video player is stranded too low in the media column`, {
+      playerTopGap,
+      media: data.media,
+      player: data.plyr,
+    });
+    assert(data.transcriptPanel.bottom <= viewport.height + 1, `${name}: desktop transcript panel extends below viewport`, data.transcriptPanel);
     assert(nearViewport(data.transcriptPanel, viewport), `${name}: desktop transcript panel is outside viewport`, data.transcriptPanel);
     assert(data.transcriptPanel.width >= 360, `${name}: desktop transcript panel too narrow`, data.transcriptPanel);
     assert(data.transcriptPanel.left >= data.media.right - 1, `${name}: transcript overlaps media column`, {
       media: data.media,
       transcriptPanel: data.transcriptPanel,
+    });
+    assert(data.media.bottom <= viewport.height + 1, `${name}: desktop media column extends below viewport`, data.media);
+    assert(data.media.right <= data.transcriptPanel.left + 1, `${name}: desktop media/transcript columns overflow or overlap`, {
+      media: data.media,
+      transcriptPanel: data.transcriptPanel,
+      viewport,
     });
   } else {
     assert(data.transcriptPanel.top >= data.timeline.bottom - 1, `${name}: compact transcript should stack below media`, data.transcriptPanel);
@@ -172,7 +190,12 @@ const assertLayout = (name, data) => {
   page.on("pageerror", (e) => console.log("  [pageerror]", e.message));
 
   const viewports = [
+    { name: "threshold-desktop", width: 1101, height: 720 },
+    { name: "reported-screenshot", width: 1103, height: 994 },
+    { name: "screenshot-desktop", width: 1103, height: 995 },
+    { name: "laptop", width: 1366, height: 768 },
     { name: "desktop", width: 1440, height: 900 },
+    { name: "ultrawide", width: 1920, height: 1080 },
     { name: "short-desktop", width: 1280, height: 720 },
     { name: "tablet", width: 900, height: 780 },
     { name: "phone", width: 390, height: 844 },
@@ -192,8 +215,13 @@ const assertLayout = (name, data) => {
         name: viewport.name,
         viewport: data.viewport,
         player: {
+          top: Math.round(data.plyr.top),
+          topGap: Math.round(data.plyr.top - data.media.top),
           width: Math.round(data.plyr.width),
           height: Math.round(data.plyr.height),
+        },
+        document: {
+          scrollHeight: Math.round(data.bodyScrollHeight),
         },
         timeline: {
           top: Math.round(data.timeline.top),

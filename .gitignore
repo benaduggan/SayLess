@@ -45,6 +45,8 @@ tests/e2e/*
 !tests/e2e/run-offline-transcription-speech.cjs
 !tests/e2e/editor-layout.entry.mjs
 !tests/e2e/run-editor-layout.cjs
+!tests/e2e/webcodecs-mic-quality.entry.mjs
+!tests/e2e/run-webcodecs-mic-quality.cjs
 !tests/e2e/run-editor-editing-proof.cjs
 !tests/e2e/run-built-extension-surface.cjs
 test-results/

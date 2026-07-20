@@ -4,6 +4,11 @@ import { selectMimeType, getCodecLabel, buildTrackSnapshot } from "../utils/reco
 import localforage from "localforage";
 import RecorderUI from "./RecorderUI";
 import { createMediaRecorder } from "./mediaRecorderUtils";
+import {
+  buildRecorderAudioRouteSnapshot,
+  getRecorderAudioRoute,
+  shouldRejectMicEnableWithoutMixer,
+} from "./recorderAudioRouting";
 import { sendRecordingError, sendStopRecording } from "../utils/recorderMessaging";
 import { getBitrates, getResolutionForQuality } from "./recorderConfig";
 import {
@@ -17,6 +22,7 @@ import {
 } from "./encoderPrewarm";
 import { getUserMediaWithFallback } from "../utils/mediaDeviceFallback";
 import { startAudioStream as acquireMicStream } from "../utils/startAudioStream";
+import { persistFinalWebCodecsAudioSnapshot } from "../utils/audioDiagnostics";
 import { shouldAcquireMicAtStart } from "../utils/micAcquisitionPolicy";
 import { attachAudioContextWatchdog } from "../utils/audioContextWatchdog";
 import { IS_OFFSCREEN_HOST } from "../utils/recordingHost";
@@ -153,6 +159,19 @@ const computeTargetVideoBps = (width, height, fps) => {
   return clamp(target, VIDEO_BPS_MIN, VIDEO_BPS_MAX);
 };
 
+const createRecordingAudioContext = () => {
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  try {
+    return new AudioContextCtor({
+      sampleRate: 48000,
+      latencyHint: "interactive",
+    });
+  } catch (err) {
+    debugWarn("Falling back to default AudioContext", err);
+    return new AudioContextCtor();
+  }
+};
+
 
 const Recorder = () => {
   const isRestarting = useRef(false);
@@ -285,6 +304,7 @@ const Recorder = () => {
   const audioOutputSource = useRef(null);
   const audioInputGain = useRef(null);
   const audioOutputGain = useRef(null);
+  const directMicTrack = useRef(null);
   // Re-entry guard: the ~400ms startAudioStream await would otherwise let
   // a second toggle-on acquire a duplicate stream and orphan the first.
   const isLazyAcquiringMic = useRef(false);
@@ -1891,6 +1911,7 @@ const Recorder = () => {
           onFinalized: async (payload) => {
             perfMark("Recorder.onFinalized.enter");
             debug("WebCodecsRecorder onFinalized()", payload);
+            await persistFinalWebCodecsAudioSnapshot(payload);
             if (payload?.swRetry) {
               try {
                 await chrome.storage.local.set({
@@ -1967,7 +1988,11 @@ const Recorder = () => {
                   minBytes: 64 * 1024,
                   timeoutMs: 15000,
                   videoCodec: recorder.current?.selectedVideoCodec || undefined,
-                  audioCodec: hasAudioTrack ? "mp4a.40.2" : null,
+                  audioCodec: hasAudioTrack
+                    ? containerKind === "webm"
+                      ? "opus"
+                      : "mp4a.40.2"
+                    : null,
                   recordingId,
                 });
                 debugRecordingEvent(recdbgSessionRef, "fast-recorder-validate", {
@@ -3019,6 +3044,7 @@ const Recorder = () => {
       liveStream.current = null;
       helperVideoStream.current = null;
       helperAudioStream.current = null;
+      directMicTrack.current = null;
 
       // Close the audio graph or it keeps ticking the audio thread if
       // the tab is reused for another recording.
@@ -3201,7 +3227,18 @@ const Recorder = () => {
 
   function setAudioInputVolume(volume) {
     if (!audioInputGain.current) {
-      debugWarn("setAudioInputVolume() called but audioInputGain is null");
+      const track =
+        directMicTrack.current ||
+        helperAudioStream.current?.getAudioTracks?.()[0] ||
+        null;
+      if (track) {
+        track.enabled = volume > 0;
+        debug("setAudioInputVolume() toggled direct mic track", {
+          enabled: track.enabled,
+        });
+        return;
+      }
+      debugWarn("setAudioInputVolume() called but no mic volume control is available");
       return;
     }
     debug("setAudioInputVolume()", volume);
@@ -3234,7 +3271,36 @@ const Recorder = () => {
 
     // Cold-start path: mic was off at recording start; acquire now and
     // splice into the audio graph.
-    if (!result.active || !aCtx.current || !destination.current) return;
+    if (!result.active) return;
+    if (
+      shouldRejectMicEnableWithoutMixer({
+        requestedActive: result.active,
+        hasAudioContext: Boolean(aCtx.current),
+        hasDestination: Boolean(destination.current),
+      })
+    ) {
+      try {
+        chrome.storage.local.set({ micActive: false });
+      } catch {}
+      try {
+        chrome.runtime.sendMessage({
+          type: "diag-forward",
+          event: "recorder-mic-enable-requires-restart",
+          data: {
+            hasAudioContext: Boolean(aCtx.current),
+            hasDestination: Boolean(destination.current),
+          },
+        });
+      } catch {}
+      try {
+        chrome.runtime.sendMessage({
+          type: "show-toast",
+          message: chrome.i18n.getMessage("micEnableRequiresRestartToast"),
+          timeout: 8000,
+        }).catch(() => {});
+      } catch {}
+      return;
+    }
     if (isLazyAcquiringMic.current) return;
     isLazyAcquiringMic.current = true;
     try {
@@ -3643,11 +3709,6 @@ const Recorder = () => {
     }
 
     perfMark("Recorder pre-audio-setup");
-    aCtx.current = new AudioContext();
-    // A mid-recording AudioContext "interrupted" (macOS audio-server restart,
-    // exclusive-audio grab, Energy Saver) silently encodes a muted gap; watchdog logs+resumes.
-    attachAudioContextWatchdog(aCtx.current, "Recorder");
-    destination.current = aCtx.current.createMediaStreamDestination();
     liveStream.current = new MediaStream();
     let mixedAudioConnected = false;
 
@@ -3665,9 +3726,24 @@ const Recorder = () => {
     // chrome `tab` mediaSource always returns an audio track when available;
     // gate mixing on `data.systemAudio`.
     const sysTracks = helperVideoStream.current.getAudioTracks();
+    const micTracks = helperAudioStream.current?.getAudioTracks() ?? [];
+    const primaryMicTrack = micTracks[0] || null;
+    const primarySystemTrack = sysTracks[0] || null;
+    const audioRoute = getRecorderAudioRoute({
+      micTrackCount: micTracks.length,
+      systemTrackCount: sysTracks.length,
+      systemAudio: data.systemAudio,
+    });
+    if (audioRoute.attachMixedAudioTrack) {
+      aCtx.current = createRecordingAudioContext();
+      // A mid-recording AudioContext "interrupted" (macOS audio-server restart,
+      // exclusive-audio grab, Energy Saver) silently encodes a muted gap; watchdog logs+resumes.
+      attachAudioContextWatchdog(aCtx.current, "Recorder");
+      destination.current = aCtx.current.createMediaStreamDestination();
+    }
     debug("System/tab audio tracks", sysTracks.length, "systemAudio:", data.systemAudio);
-    if (sysTracks.length > 0 && data.systemAudio) {
-      const sysTrack = sysTracks[0];
+    if (audioRoute.connectSystemToMixer) {
+      const sysTrack = primarySystemTrack;
       const sysSource = aCtx.current.createMediaStreamSource(
         new MediaStream([sysTrack]),
       );
@@ -3712,18 +3788,17 @@ const Recorder = () => {
           });
         } catch {}
       };
-    } else if (sysTracks.length > 0) {
+    } else if (audioRoute.stopUnusedSystemTrack) {
       // Stop unused tab-audio so the captured-audio indicator doesn't show.
       try {
         sysTracks[0].stop();
       } catch {}
     }
 
-    const micTracks = helperAudioStream.current?.getAudioTracks() ?? [];
     debug("Mic audio tracks", micTracks.length);
-    if (micTracks.length > 0) {
+    if (audioRoute.connectMicToMixer) {
       const micSource = aCtx.current.createMediaStreamSource(
-        new MediaStream([micTracks[0]]),
+        new MediaStream([primaryMicTrack]),
       );
       audioInputGain.current = aCtx.current.createGain();
       micSource.connect(audioInputGain.current).connect(destination.current);
@@ -3741,6 +3816,12 @@ const Recorder = () => {
       return;
     }
     liveStream.current.addTrack(helperVideoTrack);
+    if (audioRoute.useDirectMicTrack) {
+      const micTrack = primaryMicTrack;
+      micTrack.enabled = Boolean(data.micActive);
+      directMicTrack.current = micTrack;
+      liveStream.current.addTrack(micTrack);
+    }
 
     const mainVideoTrack = liveStream.current?.getVideoTracks()[0];
     if (mainVideoTrack) {
@@ -3756,7 +3837,7 @@ const Recorder = () => {
     }
     // Only attach a mixed track if at least one source (mic or sys/tab audio)
     // was connected; otherwise we'd append a silent AAC track to every recording.
-    if (mixedAudioConnected) {
+    if (audioRoute.attachMixedAudioTrack && mixedAudioConnected) {
       const mixedAudioTrack = destination.current.stream.getAudioTracks()[0];
       if (mixedAudioTrack) {
         liveStream.current.addTrack(mixedAudioTrack);
@@ -3842,6 +3923,18 @@ const Recorder = () => {
         console.warn("[Recorder] silence watchdog setup failed", err);
       }
     }
+
+    try {
+      chrome.storage.local.set({
+        lastRecordingAudioGraphSnapshot: buildRecorderAudioRouteSnapshot({
+          route: audioRoute,
+          audioContextSampleRate: aCtx.current?.sampleRate ?? null,
+          micTrack: primaryMicTrack,
+          systemTrack: primarySystemTrack,
+          liveStream: liveStream.current,
+        }),
+      });
+    } catch {}
 
     debug("liveStream ready", {
       videoTracks: liveStream.current.getVideoTracks().length,

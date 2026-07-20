@@ -1,7 +1,11 @@
 // Builds a diagnostic ZIP. Returns { blob, filename }. JSZip lives in
 // the BG (make-zip handler) so the ~100 KB dep doesn't ship into every
 // content script.
-import { getStartFlowTrace } from "./startFlowTrace";
+import { getStartFlowTrace } from "./startFlowTrace.js";
+import {
+  AUDIO_DIAGNOSTIC_KEYS,
+  buildAudioDiagnosticsSnapshot,
+} from "./audioDiagnostics.js";
 
 // Strip user-home paths and URL query/fragments (recording IDs,
 // signed-URL tokens) before the zip leaves the machine.
@@ -83,6 +87,7 @@ export const buildDiagnosticZip = async ({
     platformInfo,
     diagData,
     fastRecorderData,
+    audioDiagnosticData,
     lifecycleData,
     perfTimeline,
     localRecordingEvents,
@@ -91,6 +96,9 @@ export const buildDiagnosticZip = async ({
       chrome.runtime.sendMessage({ type: "get-diagnostic-log" }),
       new Promise((resolve) =>
         chrome.storage.local.get(FAST_RECORDER_KEYS, resolve),
+      ),
+      new Promise((resolve) =>
+        chrome.storage.local.get(AUDIO_DIAGNOSTIC_KEYS, resolve),
       ),
       new Promise((resolve) =>
         chrome.storage.local.get(["lifecycleLog"], (r) =>
@@ -149,6 +157,7 @@ export const buildDiagnosticZip = async ({
 
   files["config.json"] = JSON.stringify({
     fastRecorder: fastRecorderData,
+    audioDiagnostics: buildAudioDiagnosticsSnapshot(audioDiagnosticData),
     ...extraConfig,
   });
 

@@ -15,10 +15,12 @@ import {
   AAC_SUPPORTED_RATES,
   AVC_MAX_PIXELS,
   VIDEO_DIM_HARD_CAP,
+  advanceAudioClock,
   computeAvcCappedDimensions,
   isAacRateInSpec,
   isReclaimErrorMessage,
   shouldFailZeroChunksAtStop,
+  shouldDropAudioForBackpressure,
   shouldResetReclaimCounter,
   shouldThrottleReclaimRebuild,
   shouldTriggerSleepRecovery,
@@ -98,6 +100,7 @@ export class WebCodecsRecorder {
     this._keyFrameIntervalFrames = 60;
 
     this.audioSamplesWritten = 0;
+    this.audioElapsedUs = 0;
     this.audioSampleRate = null;
     this.audioChannelCount = null;
     this._firstAudioFrameSampleRate = null;
@@ -166,11 +169,12 @@ export class WebCodecsRecorder {
       : 4;
     this._forceNextKeyframe = false;
     this._droppedForBackpressureCount = 0;
-    // Audio: same pattern, deeper queue. Frames are smaller / more
-    // frequent (~10-25ms vs 33ms video at 30fps).
+    // Audio frames are small and frequent (~10-25ms). Dropping them is
+    // audible, so keep a deeper burst buffer and only shed when the encoder
+    // is truly falling behind.
     this._audioEncoderMaxQueueSize = Number.isFinite(options.audioEncoderMaxQueueSize)
       ? options.audioEncoderMaxQueueSize
-      : 10;
+      : 80;
     this._droppedAudioForBackpressureCount = 0;
     // Peak queue depth; leading indicator for backpressure tuning.
     // Drops tell us when the encoder failed; this tells us when it
@@ -393,6 +397,7 @@ export class WebCodecsRecorder {
     this._frameDurationUs = null;
     this._lastKeyFrameIndex = 0;
     this.audioSamplesWritten = 0;
+    this.audioElapsedUs = 0;
 
     if (this.running) return this._startPromise;
 
@@ -729,7 +734,7 @@ export class WebCodecsRecorder {
       this.err("[WCR] Error while waiting for loops:", err);
     }
 
-    // Drain queued a/v so audioSamplesWritten is reliable for the
+    // Drain queued a/v so audioElapsedUs is reliable for the
     // final track duration. 15s cap (webcodecs#723: flush can take
     // 5-10s, HW glitches hang indefinitely); muxer has its own.
     const flushBounded = async (encoder, kind) => {
@@ -774,11 +779,7 @@ export class WebCodecsRecorder {
       this._frameDurationUs
     ) {
       try {
-        const sampleRate = this.audioSampleRate || 48000;
-        const audioEndUs =
-          this.audioSamplesWritten > 0
-            ? Math.round((this.audioSamplesWritten * 1_000_000) / sampleRate)
-            : 0;
+        const audioEndUs = Math.round(this.audioElapsedUs || 0);
         const holdStartUs = this._videoFrameIndex * this._frameDurationUs;
         // Cushion for audio drain lag + muxer rounding; 150ms is imperceptible.
         const cushionUs = 150_000;
@@ -999,6 +1000,13 @@ export class WebCodecsRecorder {
       firstChunkLatencyMs,
       videoEncoderStateAtStop: this._videoEncoderStateAtStop,
       encoderConstructCount: this._encoderConstructCount,
+      audioElapsedUs: Math.round(this.audioElapsedUs || 0),
+      audioSamplesWritten: this.audioSamplesWritten,
+      audioSampleRate: this.audioSampleRate,
+      firstAudioFrameSampleRate: this._firstAudioFrameSampleRate,
+      audioSampleRateMismatchRebuilds: this._audioSampleRateMismatchRebuilds,
+      droppedAudioForBackpressure: this._droppedAudioForBackpressureCount,
+      peakAudioEncodeQueueSize: this._peakAudioEncodeQueueSize,
       lastWebCodecsFailureCode: this._lastFailureCode || null,
     };
   }
@@ -1123,6 +1131,7 @@ export class WebCodecsRecorder {
     this._frameDurationUs = null;
     this._lastKeyFrameIndex = 0;
     this.audioSamplesWritten = 0;
+    this.audioElapsedUs = 0;
     this.audioSampleRate = null;
     this.audioChannelCount = null;
     this._firstAudioFrameSampleRate = null;
@@ -1177,6 +1186,13 @@ export class WebCodecsRecorder {
         flushMs: {
           video: this._videoFlushMs ?? null,
           audio: this._audioFlushMs ?? null,
+        },
+        audioTiming: {
+          elapsedUs: Math.round(this.audioElapsedUs || 0),
+          samplesWritten: this.audioSamplesWritten,
+          sampleRate: this.audioSampleRate,
+          firstFrameSampleRate: this._firstAudioFrameSampleRate,
+          sampleRateMismatchRebuilds: this._audioSampleRateMismatchRebuilds,
         },
         swRetry: this._didSwRetry
           ? { reason: this._swRetryReason || null }
@@ -2140,6 +2156,58 @@ export class WebCodecsRecorder {
     }
   }
 
+  _retimeAudioData(audioData, timestampUs) {
+    if (!audioData || typeof AudioData === "undefined") return audioData;
+    const frames =
+      typeof audioData.numberOfFrames === "number"
+        ? audioData.numberOfFrames
+        : 0;
+    const channels =
+      typeof audioData.numberOfChannels === "number"
+        ? audioData.numberOfChannels
+        : 0;
+    const sampleRate = audioData.sampleRate || this.audioSampleRate || 48000;
+    if (frames <= 0 || channels <= 0 || !Number.isFinite(sampleRate)) {
+      return audioData;
+    }
+    if (
+      Math.round(audioData.timestamp || 0) === Math.round(timestampUs || 0) &&
+      audioData.format
+    ) {
+      return audioData;
+    }
+
+    try {
+      const samples = new Float32Array(frames * channels);
+      for (let planeIndex = 0; planeIndex < channels; planeIndex += 1) {
+        const plane = samples.subarray(
+          planeIndex * frames,
+          (planeIndex + 1) * frames,
+        );
+        audioData.copyTo(plane, {
+          planeIndex,
+          format: "f32-planar",
+        });
+      }
+      return new AudioData({
+        format: "f32-planar",
+        sampleRate,
+        numberOfFrames: frames,
+        numberOfChannels: channels,
+        timestamp: Math.round(timestampUs || 0),
+        data: samples,
+        transfer: [samples.buffer],
+      });
+    } catch (err) {
+      this.warn("[WCR] failed to retime audio data; using source timestamp", {
+        err: err?.message || String(err),
+        sourceTimestamp: audioData.timestamp ?? null,
+        targetTimestamp: Math.round(timestampUs || 0),
+      });
+      return audioData;
+    }
+  }
+
   async prepareAudioEncoderConfig() {
     if (!this.audioTrack) return null;
 
@@ -2658,6 +2726,17 @@ export class WebCodecsRecorder {
       }
       const realSampleRate = audioData.sampleRate || null;
       const incomingSampleRate = overrideRate || realSampleRate;
+      const sampleRate = realSampleRate || this.audioSampleRate || 48000;
+      const frames =
+        typeof audioData.numberOfFrames === "number"
+          ? audioData.numberOfFrames
+          : 0;
+      const { timestampUs: tsUs, durationUs: durUs, nextElapsedUs } =
+        advanceAudioClock({
+          elapsedUs: this.audioElapsedUs,
+          frames,
+          sampleRate,
+        });
 
       // Mic switched mid-recording: rebuild at the new rate. Pre-check
       // AAC's allowed rates so configure() can't brick the encoder.
@@ -2710,6 +2789,8 @@ export class WebCodecsRecorder {
           this.audioSampleRate = incomingSampleRate;
           this._audioSampleRateMismatchRebuilds += 1;
           // Drop this frame so the next one starts at the new rate.
+          this.audioSamplesWritten += frames;
+          this.audioElapsedUs = nextElapsedUs;
           try {
             audioData.close?.();
           } catch {}
@@ -2740,18 +2821,6 @@ export class WebCodecsRecorder {
         } catch {}
       }
 
-      // Timestamps use the real rate; the override is test-only.
-      const sampleRate =
-        realSampleRate || this.audioSampleRate || 48000;
-      const frames =
-        typeof audioData.numberOfFrames === "number"
-          ? audioData.numberOfFrames
-          : 0;
-      const tsUs = Math.round(
-        (this.audioSamplesWritten * 1_000_000) / sampleRate
-      );
-      const durUs = Math.round((frames * 1_000_000) / sampleRate);
-
       // Track peak audio encode-queue depth (leading indicator).
       const aQueueSize = this.audioEncoder.encodeQueueSize;
       if (aQueueSize > this._peakAudioEncodeQueueSize) {
@@ -2761,30 +2830,47 @@ export class WebCodecsRecorder {
       // Backpressure mirror of the video path. Advance the sample
       // counter even on a drop so subsequent timestamps stay aligned
       // (brief silence gap, beats audio drifting out of sync).
-      if (aQueueSize > this._audioEncoderMaxQueueSize) {
+      if (
+        shouldDropAudioForBackpressure(
+          aQueueSize,
+          this._audioEncoderMaxQueueSize,
+        )
+      ) {
         this._droppedAudioForBackpressureCount += 1;
         this.audioSamplesWritten += frames;
+        this.audioElapsedUs = nextElapsedUs;
         return;
       }
 
+      let audioForEncode = audioData;
       try {
-        this.audioEncoder.encode(audioData, {
-          timestamp: tsUs,
-        });
+        audioForEncode = this._retimeAudioData(audioData, tsUs);
+        this.audioEncoder.encode(audioForEncode);
       } catch (encErr) {
         // Audio encode-queue overflow: drop as backpressure (mirrors video) and
         // advance the sample counter so timestamps stay aligned.
         if (encErr?.name === "QuotaExceededError") {
           this._droppedAudioForBackpressureCount += 1;
           this.audioSamplesWritten += frames;
+          this.audioElapsedUs = nextElapsedUs;
           this.warn(
             "[WCR] audio encode() QuotaExceededError; dropping audio data",
           );
           return;
         }
         throw encErr;
+      } finally {
+        if (audioForEncode !== audioData) {
+          try {
+            audioForEncode.close?.();
+          } catch {}
+          try {
+            audioData.close?.();
+          } catch {}
+        }
       }
       this.audioSamplesWritten += frames;
+      this.audioElapsedUs = nextElapsedUs;
 
       if (this.debug && (this.audioSamplesWritten === frames || this.audioSamplesWritten % (sampleRate * 10) < frames)) {
         this.log("[WCR] audio pts", {
@@ -2815,9 +2901,7 @@ export class WebCodecsRecorder {
         sampleRate,
         numberOfFrames: frames,
         numberOfChannels: channels,
-        timestamp: Math.round(
-          (this.audioSamplesWritten * 1_000_000) / sampleRate,
-        ),
+        timestamp: Math.round(this.audioElapsedUs || 0),
         data,
       });
     };

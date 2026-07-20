@@ -779,6 +779,10 @@
     "message": "Microphone disabled",
     "description": "Microphone disabled toast title"
   },
+  "micEnableRequiresRestartToast": {
+    "message": "Start a new recording to add microphone audio.",
+    "description": "Toast shown when microphone audio cannot be added after a recording started without an audio track"
+  },
   "hideUIAlerts": {
     "message": "Hide UI notifications",
     "description": "Hide UI alerts button"

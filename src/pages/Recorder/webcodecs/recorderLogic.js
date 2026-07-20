@@ -38,6 +38,27 @@ export function isAacRateInSpec(rate) {
   return Number.isFinite(rate) && AAC_SUPPORTED_RATES.has(rate);
 }
 
+export function advanceAudioClock({ elapsedUs = 0, frames, sampleRate }) {
+  const safeElapsedUs = Number.isFinite(elapsedUs) ? elapsedUs : 0;
+  const safeFrames = Number.isFinite(frames) && frames > 0 ? frames : 0;
+  const safeSampleRate =
+    Number.isFinite(sampleRate) && sampleRate > 0 ? sampleRate : 48000;
+  const exactDurationUs = (safeFrames * 1_000_000) / safeSampleRate;
+  const durationUs = Math.round(exactDurationUs);
+  const timestampUs = Math.round(safeElapsedUs);
+  return {
+    timestampUs,
+    durationUs,
+    nextElapsedUs: safeElapsedUs + exactDurationUs,
+  };
+}
+
+export function shouldDropAudioForBackpressure(queueSize, maxQueueSize) {
+  if (!Number.isFinite(queueSize) || queueSize < 0) return false;
+  if (!Number.isFinite(maxQueueSize) || maxQueueSize < 0) return false;
+  return queueSize > maxQueueSize;
+}
+
 // Cap each dim by min(userMax, hardCap), preserve aspect, round even
 // (H.264 requirement) with min 32, then scale down if total pixels
 // still exceed avcMaxPixels.

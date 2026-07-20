@@ -3,8 +3,12 @@
  * Same privacy rules as buildSupportContext, no URLs, tokens, or user content.
  */
 
-import { makeSupportCode } from "./errorCodes";
-import { getStartFlowTrace, formatStartFlowTimeline } from "./startFlowTrace";
+import { makeSupportCode } from "./errorCodes.js";
+import { getStartFlowTrace, formatStartFlowTimeline } from "./startFlowTrace.js";
+import {
+  AUDIO_DIAGNOSTIC_KEYS,
+  formatAudioDiagnosticsLines,
+} from "./audioDiagnostics.js";
 
 const MAX_ERR_LEN = 120;
 
@@ -54,6 +58,7 @@ export const buildSupportDebugInfo = async (opts = {}) => {
       "lastAutoDiscardableError",
       "streamLifecycleLog",
       "diagnosticLog",
+      ...AUDIO_DIAGNOSTIC_KEYS,
     ]);
   } catch {}
 
@@ -116,6 +121,7 @@ export const buildSupportDebugInfo = async (opts = {}) => {
     const tags = sl.map((e) => `${e.tag}@${e.t}`).join(" → ");
     lines.push(`SL(${sl.length}): ${tags.slice(0, 300)}`);
   }
+  lines.push(...formatAudioDiagnosticsLines(store));
   if (attemptId) lines.push(`Ref:       ${attemptId}`);
   lines.push(`Time:      ${ts}`);
 

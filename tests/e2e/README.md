@@ -16,6 +16,7 @@ genuine code paths — not mocks.
 | `run-offline-transcription-speech.cjs` | Slow real-speech offline Whisper smoke: generates temporary macOS `say` clean, deterministic noisy, and longer paused WAVs and verifies bundled Whisper recognizes expected words with monotonic timings in all fixtures without remote model downloads. | no |
 | `run-built-extension-surface.cjs` | Packaged extension smoke: loads `build/` as an unpacked extension, verifies a completed local Chrome download id, fails on page-level JavaScript and console errors, scans rendered extension pages for paid/account/cloud calls to action plus account-tier, license-key, activation, and contact-sales gates, mounts the packaged content script on a local page, opens the popup, and verifies the Videos tab renders local-library text. | no |
 | `run-editor-layout.cjs` | Editor layout smoke: bundles production editor SCSS into a real Chrome page and verifies the video player, timeline, and independently scrollable transcript pane remain visible and usable across desktop, short desktop, tablet, and phone viewports. | no |
+| `run-webcodecs-mic-quality.cjs` | WebCodecs microphone quality smoke: records deterministic synthetic mic tones through the real `WebCodecsRecorder` at 44.1 kHz and narrowband 16 kHz, demuxes/decodes the WebM output, and verifies duration, pitch, RMS, and zero audio backpressure drops. | no |
 | `run-editor-editing-proof.cjs` | Packaged extension editing proof: loads `build/` as an unpacked extension, seeds a local recording with transcript/project data, clicks through player edit entry, timeline split/mute/reorder, transcript word delete, save, and export controls, then writes step screenshots to `test-artifacts/editor-editing-proof/`. | no |
 | `run-edl.cjs` | Non-destructive EDL render: audio extraction, DELETE shortens the encoded output, MUTE silences the window interior, and `previewController` skips/mutes correctly. | no |
 | `run-timeline.cjs` | Clip timeline render: split, reorder, delete, and verify encoded output order by audio frequency. | no |
@@ -35,6 +36,7 @@ npm run test:e2e:offline-transcription-smoke  # slow; loads bundled Whisper
 npm run test:e2e:offline-transcription-speech # macOS clean + noisy + longer paused say/afconvert speech fixtures
 npm run test:e2e:built-extension-surface      # requires build/
 npm run test:e2e:editor-layout         # editor player/timeline/transcript geometry
+npm run test:e2e:webcodecs-mic-quality # synthetic mic timing/pitch through WebCodecsRecorder
 npm run test:e2e:editor-editing-proof  # requires build/, writes proof screenshots
 node tests/e2e/run-edl.cjs             # ~30s
 node tests/e2e/run-timeline.cjs        # ~30s
@@ -66,3 +68,18 @@ manual QA. The local-recordings harness covers the project workflow after media
 exists locally, including transcript-driven edits, reopen, timeline-rendered export,
 decoded noisy-room silence suggestions, synthetic zoom-rendered export pixels, and
 export-job progress/cancel/retry/reveal/dismiss state transitions.
+
+Hardware microphone playback quality still needs a real mic recording because
+the WebCodecs mic-quality harness uses deterministic synthetic audio. After a
+real recording, use the troubleshooting export or support debug info and inspect
+the sanitized audio fields:
+
+- `micHz` / `micCh` / `micLowHz`: catches Bluetooth call-mode or narrowband mic
+  capture. `micLowHz=1` means the input opened at 24 kHz or below.
+- `audioRoute`: should be `direct-mic` for mic-only recordings. Mixed routes are
+  expected only when system/tab audio is also recorded.
+- `encHz` / `firstAudioHz`: confirm the encoder and first audio frame rates
+  match the capture path.
+- `finalAudioMs`, `audioDrops`, `audioQPeak`, and `audioRateRebuilds`: confirm
+  the final WebCodecs audio clock, backpressure drops, queue pressure, and any
+  sample-rate rebuilds for the completed recording.

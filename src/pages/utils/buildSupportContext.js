@@ -3,6 +3,11 @@
  * No URLs, tokens, page content, or blobs, only sanitized technical metadata.
  */
 
+import {
+  AUDIO_DIAGNOSTIC_KEYS,
+  buildAudioDiagnosticsContext,
+} from "./audioDiagnostics.js";
+
 const MAX_ERR_LEN = 120;
 
 const sanitizeError = (err) => {
@@ -84,6 +89,7 @@ export const buildSupportContext = async (opts = {}) => {
         "lastTabStreamMintMs",
         "lastTabStreamMintOk",
         "lastTabStreamMintOffscreen",
+        ...AUDIO_DIAGNOSTIC_KEYS,
       ];
       const store = await chrome.storage.local.get(keys);
 
@@ -124,6 +130,8 @@ export const buildSupportContext = async (opts = {}) => {
         ctx.mintOk = store.lastTabStreamMintOk ? "1" : "0";
         ctx.mintOff = store.lastTabStreamMintOffscreen ? "1" : "0";
       }
+
+      Object.assign(ctx, buildAudioDiagnosticsContext(store));
 
       if (store.freeRecorderSession) {
         if (store.freeRecorderSession.chunkCount != null)
