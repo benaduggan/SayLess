@@ -15,12 +15,8 @@ const RecordingType = (props) => {
   const [contentState, setContentState] = useContext(contentStateContext);
   const [cropActive, setCropActive] = useState(false);
   const [time, setTime] = useState(0);
-  const [URL] = useState(
-    chrome.runtime.getURL("setup.html")
-  );
-  const [URL2] = useState(
-    chrome.runtime.getURL("permissions.html")
-  );
+  const [URL] = useState(chrome.runtime.getURL("setup.html"));
+  const [URL2] = useState(chrome.runtime.getURL("permissions.html"));
 
   const buttonRef = useRef(null);
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
@@ -30,9 +26,15 @@ const RecordingType = (props) => {
   // microphone, the usual "click the camera icon in the address bar" advice
   // is wrong (the site is the blocker, not the browser). Route to a
   // site-specific modal in that case.
-  const openPermissionsModal = () => {
+  const openPermissionsModal = (mediaTypes) => {
     if (typeof contentState.openModal !== "function") return;
-    if (contentState.sitePermissionsBlocked) {
+    const isBlockedBySite = mediaTypes.some(
+      (type) =>
+        contentState[
+          `site${type[0].toUpperCase()}${type.slice(1)}PermissionBlocked`
+        ]
+    );
+    if (isBlockedBySite) {
       contentState.openModal(
         chrome.i18n.getMessage("sitePermissionsBlockedTitle"),
         chrome.i18n.getMessage("sitePermissionsBlockedDescription"),
@@ -41,23 +43,39 @@ const RecordingType = (props) => {
         () => {},
         () => {},
         null,
-        chrome.i18n.getMessage("learnMoreDot"),
-        chrome.runtime.getURL("permissions.html"),
+        null,
+        null,
         true,
         false
       );
       return;
     }
+    const hasDeniedPermission = mediaTypes.some(
+      (type) => contentState[`${type}PermissionState`] === "denied"
+    );
+    const requestPermissions = () => {
+      if (hasDeniedPermission) {
+        chrome.runtime.sendMessage({
+          type: "extension-media-permissions",
+        });
+        return;
+      }
+      const requestStarted =
+        typeof contentState.requestMediaPermissions === "function" &&
+        contentState.requestMediaPermissions(mediaTypes);
+      if (!requestStarted) {
+        chrome.runtime.sendMessage({
+          type: "extension-media-permissions",
+        });
+      }
+    };
+
     contentState.openModal(
       chrome.i18n.getMessage("permissionsModalTitle"),
       chrome.i18n.getMessage("permissionsModalDescription"),
       chrome.i18n.getMessage("permissionsModalReview"),
       chrome.i18n.getMessage("permissionsModalDismiss"),
-      () => {
-        chrome.runtime.sendMessage({
-          type: "extension-media-permissions",
-        });
-      },
+      requestPermissions,
       () => {},
       chrome.runtime.getURL("assets/helper/permissions.webp"),
       chrome.i18n.getMessage("learnMoreDot"),
@@ -154,10 +172,7 @@ const RecordingType = (props) => {
               </div>
             </div>
             <div className="popup-warning-right">
-              <a
-                href={URL}
-                target="_blank"
-              >
+              <a href={URL} target="_blank">
                 {chrome.i18n.getMessage("customAreaRecordingDisabledAction")}
               </a>
             </div>
@@ -166,7 +181,7 @@ const RecordingType = (props) => {
       {!contentState.cameraPermission && (
         <button
           className="permission-button"
-          onClick={openPermissionsModal}
+          onClick={() => openPermissionsModal(["camera"])}
         >
           <img src={CameraOffBlue} />
           <span>{chrome.i18n.getMessage("allowCameraAccessButton")}</span>
@@ -199,7 +214,7 @@ const RecordingType = (props) => {
       {!contentState.microphonePermission && (
         <button
           className="permission-button"
-          onClick={openPermissionsModal}
+          onClick={() => openPermissionsModal(["microphone"])}
         >
           <img src={MicOffBlue} />
           <span>{chrome.i18n.getMessage("allowMicrophoneAccessButton")}</span>

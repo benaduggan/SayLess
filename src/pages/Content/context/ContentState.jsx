@@ -50,12 +50,8 @@ const ENABLE_TAB_SCOPED_UI = true;
 const ContentState = (props) => {
   const [timer, setTimerInternal] = React.useState(0);
   setTimer = setTimerInternal;
-  const [URL] = useState(
-    chrome.runtime.getURL("setup.html"),
-  );
-  const [URL2] = useState(
-    chrome.runtime.getURL("permissions.html"),
-  );
+  const [URL] = useState(chrome.runtime.getURL("setup.html"));
+  const [URL2] = useState(chrome.runtime.getURL("permissions.html"));
   const startBeepRef = useRef(null);
   const stopBeepRef = useRef(null);
   const prevRecordingRef = useRef(null);
@@ -112,7 +108,7 @@ const ContentState = (props) => {
             s?.countdownActive ||
             s?.isCountdownVisible ||
             s?.preparingRecording ||
-            s?.pendingRecording,
+            s?.pendingRecording
         );
       let allowed = true;
       if (ENABLE_TAB_SCOPED_UI && tabBoundFlow && tabIdRef.current != null) {
@@ -131,7 +127,7 @@ const ContentState = (props) => {
         setContentState((prev) => ({ ...prev, recordingUiAllowed: allowed }));
       }
     },
-    [isTargetTab],
+    [isTargetTab]
   );
 
   useEffect(() => {
@@ -158,7 +154,7 @@ const ContentState = (props) => {
         recordingStartTimeRef.current = result.recordingStartTime ?? null;
         recordingBeepTabIdRef.current = result.recordingBeepTabId ?? null;
         recomputeRecordingUiAllowed("storage-mount");
-      },
+      }
     );
   }, [recomputeRecordingUiAllowed]);
 
@@ -187,13 +183,13 @@ const ContentState = (props) => {
       const pp = document.permissionsPolicy || document.featurePolicy;
       if (!pp || typeof pp.allowsFeature !== "function") return;
       const cameraBlocked = !pp.allowsFeature("camera");
-      const micBlocked = !pp.allowsFeature("microphone");
-      if (cameraBlocked || micBlocked) {
-        setContentState((prev) => ({
-          ...prev,
-          sitePermissionsBlocked: true,
-        }));
-      }
+      const microphoneBlocked = !pp.allowsFeature("microphone");
+      setContentState((prev) => ({
+        ...prev,
+        sitePermissionsBlocked: cameraBlocked || microphoneBlocked,
+        siteCameraPermissionBlocked: cameraBlocked,
+        siteMicrophonePermissionBlocked: microphoneBlocked,
+      }));
     } catch {}
   }, []);
 
@@ -343,16 +339,16 @@ const ContentState = (props) => {
     chrome.runtime.sendMessage(
       { type: "stop-recording-tab", reason: "content-toolbar-stop" },
       (res) => {
-      if (!res || res.ok !== true) {
-        console.warn("Stop command not acknowledged, retrying…");
-        setTimeout(() => {
-          chrome.runtime.sendMessage({
-            type: "stop-recording-tab",
-            reason: "content-toolbar-stop-retry",
-          });
-        }, 200);
+        if (!res || res.ok !== true) {
+          console.warn("Stop command not acknowledged, retrying…");
+          setTimeout(() => {
+            chrome.runtime.sendMessage({
+              type: "stop-recording-tab",
+              reason: "content-toolbar-stop-retry",
+            });
+          }, 200);
+        }
       }
-      },
     );
     // Watchdog: clear finalizing if BG never signals editor-open.
     // 30s is past worst-case (encoder flush is ~15s cap).
@@ -406,7 +402,7 @@ const ContentState = (props) => {
       if (!dismiss) {
         contentStateRef.current.openToast(
           chrome.i18n.getMessage("pausedRecordingToast"),
-          function () {},
+          function () {}
         );
       }
     }, 100);
@@ -521,7 +517,7 @@ const ContentState = (props) => {
         { type: "check-capture-permissions" },
         (response) => {
           resolve(Boolean(response && response.status === "ok"));
-        },
+        }
       );
     });
   }, []);
@@ -540,7 +536,9 @@ const ContentState = (props) => {
     // Kick off synchronously: later awaits (trace init, quota checks) would
     // consume the click's user-gesture before it reaches
     // chrome.permissions.request in the SW.
-    const isExtensionPage = window.location.href.includes("chrome-extension://");
+    const isExtensionPage = window.location.href.includes(
+      "chrome-extension://"
+    );
     const permissionPromise = isExtensionPage
       ? null
       : checkChromeCapturePermissionsSW();
@@ -592,7 +590,7 @@ const ContentState = (props) => {
         null,
         chrome.i18n.getMessage("learnMoreDot"),
         URL,
-        true,
+        true
       );
       setStartFlowOutcome("cancelled", { error: "permission-denied" });
       chrome.storage.local.set({ pendingRecording: false });
@@ -642,7 +640,7 @@ const ContentState = (props) => {
               source: "not-enough-space",
               zipBundled: true,
             });
-          },
+          }
         );
       }
       setStartFlowOutcome("error", { error: "insufficient-memory" });
@@ -669,7 +667,7 @@ const ContentState = (props) => {
           width: contentStateRef.current.regionWidth,
           height: contentStateRef.current.regionHeight,
         },
-        "*",
+        "*"
       );
     }
 
@@ -724,7 +722,7 @@ const ContentState = (props) => {
             askMicrophone: false,
           }));
           chrome.storage.local.set({ askMicrophone: false });
-        },
+        }
       );
     } else {
       perfMark("Content desktop-capture.sent");
@@ -768,7 +766,7 @@ const ContentState = (props) => {
       },
       () => {
         contentStateRef.current.resumeRecording();
-      },
+      }
     );
   }, []);
 
@@ -787,7 +785,7 @@ const ContentState = (props) => {
         },
         () => {
           contentStateRef.current.resumeRecording();
-        },
+        }
       );
     } else {
       contentStateRef.current.dismissRecording("user-discard");
@@ -800,6 +798,8 @@ const ContentState = (props) => {
       const videoInput = data.videoinput;
       const cameraPermission = data.cameraPermission;
       const microphonePermission = data.microphonePermission;
+      const cameraPermissionState = data.cameraPermissionState;
+      const microphonePermissionState = data.microphonePermissionState;
 
       setContentState((prevContentState) => ({
         ...prevContentState,
@@ -807,16 +807,18 @@ const ContentState = (props) => {
         videoInput: videoInput,
         cameraPermission: cameraPermission,
         microphonePermission: microphonePermission,
+        cameraPermissionState: cameraPermissionState,
+        microphonePermissionState: microphonePermissionState,
       }));
 
       const audioInputById = Array.isArray(audioInput)
         ? Object.fromEntries(
-            audioInput.map((device) => [device.deviceId, device.label]),
+            audioInput.map((device) => [device.deviceId, device.label])
           )
         : {};
       const videoInputById = Array.isArray(videoInput)
         ? Object.fromEntries(
-            videoInput.map((device) => [device.deviceId, device.label]),
+            videoInput.map((device) => [device.deviceId, device.label])
           )
         : {};
 
@@ -903,7 +905,7 @@ const ContentState = (props) => {
             chrome.i18n.getMessage("learnMoreDot"),
             chrome.runtime.getURL("permissions.html"),
             true,
-            false,
+            false
           );
         } else {
           contentStateRef.current.openModal(
@@ -919,7 +921,7 @@ const ContentState = (props) => {
             chrome.i18n.getMessage("learnMoreDot"),
             URL2,
             true,
-            false,
+            false
           );
         }
       }
@@ -994,9 +996,13 @@ const ContentState = (props) => {
     setToolbarMode: null,
     openModal: null,
     openToast: null,
+    requestMediaPermissions: null,
+    recheckMediaPermissions: null,
     // Page-level Permissions-Policy disallows camera/mic. Lets us show a
     // site-specific modal instead of the misleading "check your permissions" one.
     sitePermissionsBlocked: false,
+    siteCameraPermissionBlocked: false,
+    siteMicrophonePermissionBlocked: false,
     timeWarning: false,
     audioInput: [],
     videoInput: [],
@@ -1055,6 +1061,8 @@ const ContentState = (props) => {
     askForPermissions: true,
     cameraPermission: true,
     microphonePermission: true,
+    cameraPermissionState: "unknown",
+    microphonePermissionState: "unknown",
     askMicrophone: true,
     recordingShortcut: "⌥⇧W",
     recordingShortcut: "⌥⇧D",
@@ -1119,7 +1127,9 @@ const ContentState = (props) => {
         recording: false,
         restarting: false,
       });
-      chrome.runtime.sendMessage({ type: "diag-countdown-cancelled" }).catch(() => {});
+      chrome.runtime
+        .sendMessage({ type: "diag-countdown-cancelled" })
+        .catch(() => {});
       setContentState((prev) => ({
         ...prev,
         countdownActive: false,
@@ -1258,7 +1268,7 @@ const ContentState = (props) => {
     const onChanged = (changes, area) => {
       if (area !== "local") return;
       const entry = Object.keys(changes).find((k) =>
-        k.startsWith("freeFinalizeStatus:"),
+        k.startsWith("freeFinalizeStatus:")
       );
       if (!entry) return;
       applyStatus(changes[entry].newValue);
@@ -1289,10 +1299,7 @@ const ContentState = (props) => {
     let timer = null;
     let fired = false;
 
-    if (
-      contentState.pendingRecording &&
-      !contentState.preparingRecording
-    ) {
+    if (contentState.pendingRecording && !contentState.preparingRecording) {
       timer = setTimeout(() => {
         if (fired) return;
         fired = true;
@@ -1422,10 +1429,10 @@ const ContentState = (props) => {
           chrome.i18n.getMessage("audioWarningTitle"),
           chrome.i18n.getMessage(
             "audioWarningDescription",
-            chrome.i18n.getMessage("tabType"),
+            chrome.i18n.getMessage("tabType")
           ),
           "AudioIcon",
-          10000,
+          10000
         );
       } else if (
         window.location.href.includes("playground.html") &&
@@ -1436,7 +1443,7 @@ const ContentState = (props) => {
           chrome.i18n.getMessage("extensionNotSupportedTitle"),
           chrome.i18n.getMessage("extensionNotSupportedDescription"),
           "NotSupportedIcon",
-          10000,
+          10000
         );
       }
     }
@@ -1478,7 +1485,7 @@ const ContentState = (props) => {
         : 0;
     const elapsedSeconds = Math.max(
       0,
-      Math.floor((now - startTime - basePaused - extraPaused) / 1000),
+      Math.floor((now - startTime - basePaused - extraPaused) / 1000)
     );
 
     if (contentStateRef.current?.alarm) {
@@ -1565,7 +1572,7 @@ const ContentState = (props) => {
                 restartingRecording: false,
                 recording: false,
               }
-            : prev,
+            : prev
         );
       } catch {}
     };
@@ -1612,7 +1619,7 @@ const ContentState = (props) => {
           setContentState((prev) =>
             prev.restartingRecording
               ? { ...prev, restartingRecording: false }
-              : prev,
+              : prev
           );
         }
         // Recording true → false: clear start-side flow flags the
@@ -1633,7 +1640,7 @@ const ContentState = (props) => {
                   pendingRecording: false,
                   restartingRecording: false,
                 }
-              : prev,
+              : prev
           );
         }
       }
@@ -1647,7 +1654,7 @@ const ContentState = (props) => {
         setContentState((prev) =>
           prev.restartingRecording
             ? { ...prev, restartingRecording: false }
-            : prev,
+            : prev
         );
       }
       if (changes.paused) {
@@ -1733,7 +1740,7 @@ const ContentState = (props) => {
                 cursorEffects: wasMulti ? prev.cursorEffects : [],
                 cameraActive: false,
               }
-            : prev,
+            : prev
         );
         setTimer(0);
         // Match the old stop handler's DOM cleanup; pre-clear blur
@@ -1746,8 +1753,7 @@ const ContentState = (props) => {
       if (changes.recording) {
         const isRecording = Boolean(changes.recording.newValue);
         // Read recordingType from this batch; the React ref may lag.
-        const recordingTypeFromChange =
-          changes.recordingType?.newValue ?? null;
+        const recordingTypeFromChange = changes.recordingType?.newValue ?? null;
         lifecycle("Content.ContentState", "recording-flag-observed", {
           isRecording,
           isTargetTab: isTargetTab(),
@@ -1759,8 +1765,7 @@ const ContentState = (props) => {
         if (isRecording && !isTargetTab()) {
           // Tab/region recordings: clear UI flags that preparing-recording set on non-target tabs.
           const recordingType =
-            recordingTypeFromChange ??
-            contentStateRef.current?.recordingType;
+            recordingTypeFromChange ?? contentStateRef.current?.recordingType;
           const isTabBound =
             recordingType === "tab" || recordingType === "region";
           if (isTabBound) {
@@ -1799,8 +1804,7 @@ const ContentState = (props) => {
         // the editor is still being prepared. sandboxTab → newValue
         // is what clears the finalizing state cleanly.
         const isLocallyFinalizing =
-          !isRecording &&
-          contentStateRef.current?.finalizingRecording === true;
+          !isRecording && contentStateRef.current?.finalizingRecording === true;
         if (isLocallyFinalizing) {
           // Keep the toolbar-facing `recording` flag true so its
           // Recording UI persists during finalize, but expose the
@@ -1811,7 +1815,7 @@ const ContentState = (props) => {
           setContentState((prev) =>
             prev.encoderActive !== false
               ? { ...prev, encoderActive: false }
-              : prev,
+              : prev
           );
           shouldUpdateTimer = false;
         } else {
@@ -1831,7 +1835,7 @@ const ContentState = (props) => {
       }
       if (changes.cursorEffects) {
         const nextEffects = normalizeCursorEffects(
-          changes.cursorEffects.newValue,
+          changes.cursorEffects.newValue
         );
         const fallbackMode =
           changes.cursorMode?.newValue ||
@@ -2057,7 +2061,7 @@ const ContentState = (props) => {
   // Memoize: a fresh array literal would re-render every consumer per parent update.
   const providerValue = useMemo(
     () => [contentState, setContentState, timer, setTimer],
-    [contentState, timer],
+    [contentState, timer]
   );
 
   return (
@@ -2065,7 +2069,10 @@ const ContentState = (props) => {
       {props.children}
       <Shortcuts shortcuts={contentState.shortcuts} />
       {process.env.SAYLESS_DEV_MODE === "true" && (
-        <DevHUD contentStateRef={contentStateRef} setContentState={setContentState} />
+        <DevHUD
+          contentStateRef={contentStateRef}
+          setContentState={setContentState}
+        />
       )}
     </contentStateContext.Provider>
   );

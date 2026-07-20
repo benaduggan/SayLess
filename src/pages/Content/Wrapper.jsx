@@ -247,7 +247,6 @@ const Wrapper = () => {
   }, [regionCaptureRef.current]);
 
   useEffect(() => {
-    if (contentState.permissionsChecked) return;
     if (!permissionsRef.current) return;
     if (!contentState.showExtension) return;
     if (!contentState.permissionsLoaded) return;
@@ -263,11 +262,69 @@ const Wrapper = () => {
       ...prevContentState,
       permissionsChecked: true,
     }));
-  }, [
-    permissionsRef.current,
-    contentState.showExtension,
-    contentState.permissionsLoaded,
-  ]);
+  }, [contentState.showExtension, contentState.permissionsLoaded]);
+
+  useEffect(() => {
+    if (contentState.showExtension) return;
+    setContentState((prevContentState) => {
+      if (
+        !prevContentState.permissionsLoaded &&
+        !prevContentState.permissionsChecked
+      ) {
+        return prevContentState;
+      }
+      return {
+        ...prevContentState,
+        permissionsLoaded: false,
+        permissionsChecked: false,
+      };
+    });
+  }, [contentState.showExtension]);
+
+  useEffect(() => {
+    const requestMediaPermissions = (mediaTypes) => {
+      const permissionsWindow = permissionsRef.current?.contentWindow;
+      if (!permissionsWindow) return false;
+      permissionsWindow.postMessage(
+        {
+          type: "screenity-request-permissions",
+          mediaTypes,
+        },
+        "*"
+      );
+      return true;
+    };
+
+    const recheckMediaPermissions = () => {
+      const permissionsWindow = permissionsRef.current?.contentWindow;
+      if (!permissionsWindow) return false;
+      permissionsWindow.postMessage({ type: "screenity-get-permissions" }, "*");
+      return true;
+    };
+
+    setContentState((prevContentState) => ({
+      ...prevContentState,
+      requestMediaPermissions,
+      recheckMediaPermissions,
+    }));
+
+    const onFocus = () => {
+      if (contentStateRef.current.showExtension) {
+        recheckMediaPermissions();
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+      setContentState((prevContentState) => ({
+        ...prevContentState,
+        requestMediaPermissions: null,
+        recheckMediaPermissions: null,
+      }));
+    };
+  }, []);
 
   useEffect(() => {
     let stopTracking = null;
