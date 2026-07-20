@@ -16,6 +16,7 @@ genuine code paths — not mocks.
 | `run-offline-transcription-speech.cjs` | Slow real-speech offline Whisper smoke: generates temporary macOS `say` clean, deterministic noisy, and longer paused WAVs and verifies bundled Whisper recognizes expected words with monotonic timings in all fixtures without remote model downloads. | no |
 | `run-built-extension-surface.cjs` | Packaged extension smoke: loads `build/` as an unpacked extension, verifies a completed local Chrome download id, fails on page-level JavaScript and console errors, scans rendered extension pages for paid/account/cloud calls to action plus account-tier, license-key, activation, and contact-sales gates, mounts the packaged content script on a local page, opens the popup, and verifies the Videos tab renders local-library text. | no |
 | `run-editor-layout.cjs` | Editor layout smoke: bundles production editor SCSS into a real Chrome page and verifies the video player, timeline, and independently scrollable transcript pane remain visible and usable across desktop, short desktop, tablet, and phone viewports. | no |
+| `run-editor-editing-proof.cjs` | Packaged extension editing proof: loads `build/` as an unpacked extension, seeds a local recording with transcript/project data, clicks through player edit entry, timeline split/mute/reorder, transcript word delete, save, and export controls, then writes step screenshots to `test-artifacts/editor-editing-proof/`. | no |
 | `run-edl.cjs` | Non-destructive EDL render: audio extraction, DELETE shortens the encoded output, MUTE silences the window interior, and `previewController` skips/mutes correctly. | no |
 | `run-timeline.cjs` | Clip timeline render: split, reorder, delete, and verify encoded output order by audio frequency. | no |
 | `run-local-recordings.cjs` | Local recording library: persistence, sidecars, transcript cache, transcript-driven edit -> reopen -> timeline export, browser-decoded silence suggestions including WebM, M4A export/decode, and noisy-room audio, timeline video/audio render aborts, zoom-rendered export pixels, import/export, thumbnails, bulk actions, storage pressure, missing-media repair, orphan cleanup, and export-job lifecycle state for progress/cancel/retry/reveal/dismiss. | no |
@@ -34,6 +35,7 @@ npm run test:e2e:offline-transcription-smoke  # slow; loads bundled Whisper
 npm run test:e2e:offline-transcription-speech # macOS clean + noisy + longer paused say/afconvert speech fixtures
 npm run test:e2e:built-extension-surface      # requires build/
 npm run test:e2e:editor-layout         # editor player/timeline/transcript geometry
+npm run test:e2e:editor-editing-proof  # requires build/, writes proof screenshots
 node tests/e2e/run-edl.cjs             # ~30s
 node tests/e2e/run-timeline.cjs        # ~30s
 npm run test:e2e:local-recordings      # local library + project workflow

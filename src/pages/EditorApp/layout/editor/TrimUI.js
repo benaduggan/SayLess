@@ -33,10 +33,10 @@ const TrimUI = () => {
         <span style={{ flex: 1 }} />
         {hasEdits && (
           <>
-            <button className="button simpleButton" onClick={resetTimeline} disabled={exporting}>
+            <button className="button simpleButton" onClick={resetTimeline} disabled={exporting} data-testid="timeline-reset-edits">
               Reset
             </button>
-            <button className="button secondaryButton" onClick={applyEdits} disabled={exporting}>
+            <button className="button secondaryButton" onClick={applyEdits} disabled={exporting} data-testid="timeline-apply-edits">
               {exporting ? `Applying ${Math.round((exportProgress || 0) * 100)}%` : "Apply edits"}
             </button>
           </>

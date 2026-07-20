@@ -47,6 +47,7 @@
     "test:e2e:offline-transcription-smoke": "SAYLESS_E2E_HEADLESS=1 node tests/e2e/run-offline-transcription-smoke.cjs",
     "test:e2e:offline-transcription-speech": "SAYLESS_E2E_HEADLESS=1 node tests/e2e/run-offline-transcription-speech.cjs",
     "test:e2e:editor-layout": "SAYLESS_E2E_HEADLESS=1 node tests/e2e/run-editor-layout.cjs",
+    "test:e2e:editor-editing-proof": "SAYLESS_E2E_HEADLESS=1 node tests/e2e/run-editor-editing-proof.cjs",
     "test:e2e:built-extension-surface": "node tests/e2e/run-built-extension-surface.cjs",
     "test:e2e:local-recordings": "SAYLESS_E2E_HEADLESS=1 node tests/e2e/run-local-recordings.cjs"
   },

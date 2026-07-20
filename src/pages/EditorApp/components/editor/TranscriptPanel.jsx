@@ -293,7 +293,7 @@ const TranscriptPanel = ({ variant = "drawer" }) => {
         </div>
       ) : (
         <>
-          <button style={btnPrimary} onClick={() => runTranscription()}>
+          <button style={btnPrimary} onClick={() => runTranscription()} data-testid="transcript-generate">
             Generate transcript
           </button>
           <div style={hintText}>
@@ -308,22 +308,32 @@ const TranscriptPanel = ({ variant = "drawer" }) => {
     <div>
       {modelStatusPanel}
       <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-        <button style={sel ? btnDanger : btnDisabled} disabled={!sel} onClick={() => applyToSelection("delete")}>
+        <button
+          style={sel ? btnDanger : btnDisabled}
+          disabled={!sel}
+          onClick={() => applyToSelection("delete")}
+          data-testid="transcript-delete-words"
+        >
           Delete words
         </button>
-        <button style={sel ? btn : btnDisabled} disabled={!sel} onClick={() => applyToSelection("mute")}>
+        <button
+          style={sel ? btn : btnDisabled}
+          disabled={!sel}
+          onClick={() => applyToSelection("mute")}
+          data-testid="transcript-mute-words"
+        >
           Mute words
         </button>
         <span style={{ flex: 1 }} />
-        <button style={btn} onClick={regenerateTranscript} disabled={!modelReady || transcribing || exporting}>
+        <button style={btn} onClick={regenerateTranscript} disabled={!modelReady || transcribing || exporting} data-testid="transcript-regenerate">
           Regenerate
         </button>
-        <button style={btnDanger} onClick={deleteTranscript} disabled={transcribing || exporting}>
+        <button style={btnDanger} onClick={deleteTranscript} disabled={transcribing || exporting} data-testid="transcript-delete">
           Delete transcript
         </button>
         {hasEdits && (
           <>
-            <button style={btn} onClick={resetTimeline} disabled={exporting}>Reset</button>
+            <button style={btn} onClick={resetTimeline} disabled={exporting} data-testid="transcript-reset-edits">Reset</button>
             <button style={btnPrimary} onClick={applyEdits} disabled={exporting}>
               {exporting ? `Applying ${Math.round((exportProgress || 0) * 100)}%` : "Apply edits"}
             </button>
@@ -356,6 +366,16 @@ const TranscriptPanel = ({ variant = "drawer" }) => {
                     <span
                       key={w.index}
                       onClick={(e) => onWordClick(e, w)}
+                      role="button"
+                      tabIndex={0}
+                      data-testid="transcript-word"
+                      aria-label={`Select transcript word ${w.text}`}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onWordClick(e, w);
+                        }
+                      }}
                       style={{
                         ...wordStyle,
                         ...(group.muted ? mutedStyle : {}),
@@ -379,12 +399,12 @@ const TranscriptPanel = ({ variant = "drawer" }) => {
 
   if (variant === "inline") {
     return (
-      <div style={inlinePanelStyle}>
+      <div style={inlinePanelStyle} data-testid="transcript-panel">
         <div style={inlineHeaderStyle}>
           <span style={{ fontWeight: 700 }}>Transcript</span>
           <span style={inlineSubheadStyle}>word-level local editing</span>
         </div>
-        <div style={inlineBodyStyle}>{body}</div>
+        <div style={inlineBodyStyle} data-testid="transcript-body">{body}</div>
       </div>
     );
   }

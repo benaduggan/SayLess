@@ -258,7 +258,9 @@
     background-color: $color-light-grey;
   }
   &:disabled,
-  &[disabled] {
+  &[disabled],
+  &[aria-disabled="true"],
+  &[data-disabled="true"] {
     background-color: $color-light-grey !important;
     opacity: 0.5;
     cursor: not-allowed;

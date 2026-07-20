@@ -495,6 +495,17 @@ const RightPanel = () => {
       exportSettings,
     ],
   );
+  const editActionDisabled =
+    (contentState.duration > contentState.editLimit && !contentState.override) ||
+    !contentState.mp4ready ||
+    contentState.noffmpeg;
+  const activateCard = (event, handler, disabled) => {
+    if (disabled) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handler();
+    }
+  };
 
   return (
     <div className={styles.panel}>
@@ -825,12 +836,11 @@ const RightPanel = () => {
                 role="button"
                 className={styles.button}
                 onClick={handleEdit}
-                disabled={
-                  (contentState.duration > contentState.editLimit &&
-                    !contentState.override) ||
-                  !contentState.mp4ready ||
-                  contentState.noffmpeg
-                }
+                onKeyDown={(event) => activateCard(event, handleEdit, editActionDisabled)}
+                tabIndex={editActionDisabled ? -1 : 0}
+                aria-disabled={editActionDisabled}
+                data-disabled={editActionDisabled ? "true" : undefined}
+                data-testid="player-edit-action"
               >
                 <div className={styles.buttonLeft}>
                   <ReactSVG src={ASSET_URL + "editor/icons/trim.svg"} />
@@ -860,12 +870,11 @@ const RightPanel = () => {
                 role="button"
                 className={styles.button}
                 onClick={handleCrop}
-                disabled={
-                  (contentState.duration > contentState.editLimit &&
-                    !contentState.override) ||
-                  !contentState.mp4ready ||
-                  contentState.noffmpeg
-                }
+                onKeyDown={(event) => activateCard(event, handleCrop, editActionDisabled)}
+                tabIndex={editActionDisabled ? -1 : 0}
+                aria-disabled={editActionDisabled}
+                data-disabled={editActionDisabled ? "true" : undefined}
+                data-testid="player-crop-action"
               >
                 <div className={styles.buttonLeft}>
                   <ReactSVG src={ASSET_URL + "editor/icons/crop.svg"} />
@@ -895,12 +904,11 @@ const RightPanel = () => {
                 role="button"
                 className={styles.button}
                 onClick={handleAddAudio}
-                disabled={
-                  (contentState.duration > contentState.editLimit &&
-                    !contentState.override) ||
-                  !contentState.mp4ready ||
-                  contentState.noffmpeg
-                }
+                onKeyDown={(event) => activateCard(event, handleAddAudio, editActionDisabled)}
+                tabIndex={editActionDisabled ? -1 : 0}
+                aria-disabled={editActionDisabled}
+                data-disabled={editActionDisabled ? "true" : undefined}
+                data-testid="player-audio-action"
               >
                 <div className={styles.buttonLeft}>
                   <ReactSVG src={ASSET_URL + "editor/icons/audio.svg"} />
@@ -1151,6 +1159,7 @@ const RightPanel = () => {
                 className={styles.button}
                 onClick={handleSelectedExport}
                 disabled={getSelectedExportDisabled()}
+                data-testid="export-selected-action"
               >
                 <div className={styles.buttonLeft}>
                   <ReactSVG src={ASSET_URL + "editor/icons/download.svg"} />

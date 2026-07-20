@@ -4,7 +4,7 @@
 //    point; drag a clip to reorder; select to mute/delete; ✂ splits at the playhead.
 // The red playhead line reflects the current output position and moves during play.
 
-import React, { useContext, useRef } from "react";
+import React, { useContext, useEffect, useRef } from "react";
 import { ContentStateContext } from "../../context/ContentState";
 import { EdlContext } from "../../context/EdlContext";
 import { outputToSource, sourceToOutput } from "../../../../edl/timeline";
@@ -16,6 +16,7 @@ const TimelineStrip = () => {
   const edlCtx = useContext(EdlContext);
   const trackRef = useRef(null);
   const scrubbing = useRef(false);
+  const lastSeekSourceRef = useRef(null);
 
   if (!edlCtx || !edlCtx.timeline) return null;
   const {
@@ -37,7 +38,17 @@ const TimelineStrip = () => {
   if (!segs.length || outDur <= 0) return null;
 
   const selIndex = segs.findIndex((s) => s.clipId === selectedClipId);
-  const seekSource = (t) => setContentState((prev) => ({ ...prev, time: t, updatePlayerTime: true }));
+  useEffect(() => {
+    lastSeekSourceRef.current = contentState.time || 0;
+  }, [contentState.time]);
+
+  const seekSource = (t) => {
+    lastSeekSourceRef.current = t;
+    setContentState((prev) => ({ ...prev, time: t, updatePlayerTime: true }));
+  };
+
+  const splitAtCurrentTime = () =>
+    splitAtSourceTime(lastSeekSourceRef.current ?? contentState.time ?? 0);
 
   // current playhead as a % of the output timeline
   const playheadOut = sourceToOutput(timeline, contentState.time || 0);
@@ -81,30 +92,35 @@ const TimelineStrip = () => {
   };
 
   return (
-    <div style={wrap}>
-      <div style={toolbar}>
-        <button style={btn} onClick={undoTimeline} disabled={!canUndoTimeline} title="Undo timeline edit">
+    <div style={wrap} data-testid="timeline-editor">
+      <div style={toolbar} data-testid="timeline-toolbar">
+        <button style={btn} onClick={undoTimeline} disabled={!canUndoTimeline} title="Undo timeline edit" data-testid="timeline-undo">
           Undo
         </button>
-        <button style={btn} onClick={redoTimeline} disabled={!canRedoTimeline} title="Redo timeline edit">
+        <button style={btn} onClick={redoTimeline} disabled={!canRedoTimeline} title="Redo timeline edit" data-testid="timeline-redo">
           Redo
         </button>
-        <button style={btn} onClick={() => splitAtSourceTime(contentState.time || 0)} title="Split the clip at the playhead">
+        <button
+          style={btn}
+          onClick={splitAtCurrentTime}
+          title="Split the clip at the playhead"
+          data-testid="timeline-split"
+        >
           ✂ Split at playhead
         </button>
         {selIndex >= 0 && (
           <>
-            <button style={btn} disabled={selIndex <= 0} onClick={() => moveClip(selIndex, selIndex - 1)} title="Move left">◀</button>
-            <button style={btn} disabled={selIndex >= segs.length - 1} onClick={() => moveClip(selIndex, selIndex + 1)} title="Move right">▶</button>
-            <button style={btn} onClick={() => toggleMuteClip(selectedClipId)}>{segs[selIndex].muted ? "Unmute" : "Mute"}</button>
-            <button style={btnDanger} onClick={() => deleteClip(selectedClipId)}>Delete clip</button>
+            <button style={btn} disabled={selIndex <= 0} onClick={() => moveClip(selIndex, selIndex - 1)} title="Move left" data-testid="timeline-move-left">◀</button>
+            <button style={btn} disabled={selIndex >= segs.length - 1} onClick={() => moveClip(selIndex, selIndex + 1)} title="Move right" data-testid="timeline-move-right">▶</button>
+            <button style={btn} onClick={() => toggleMuteClip(selectedClipId)} data-testid="timeline-mute">{segs[selIndex].muted ? "Unmute" : "Mute"}</button>
+            <button style={btnDanger} onClick={() => deleteClip(selectedClipId)} data-testid="timeline-delete">Delete clip</button>
           </>
         )}
       </div>
 
-      <div ref={trackRef} style={track}>
+      <div ref={trackRef} style={track} data-testid="timeline-track">
         {/* scrub ruler */}
-        <div style={ruler} onMouseDown={onRulerDown} title="Click or drag to scrub" />
+        <div style={ruler} onMouseDown={onRulerDown} title="Click or drag to scrub" data-testid="timeline-ruler" />
         {/* clip blocks */}
         <div style={strip}>
           {segs.map((seg, i) => {
@@ -118,6 +134,17 @@ const TimelineStrip = () => {
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => onDrop(e, i)}
                 onClick={(e) => onClipClick(e, seg)}
+                role="button"
+                tabIndex={0}
+                data-testid="timeline-clip"
+                aria-label={`Select clip ${i + 1}`}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedClipId(seg.clipId);
+                    seekSource(seg.sourceStart);
+                  }
+                }}
                 style={{
                   ...clip,
                   width: `${(len / outDur) * 100}%`,

@@ -81,6 +81,7 @@ const EditorNav = () => {
           <button
             className="button simpleButton blackButton"
             onClick={handleCancel}
+            data-testid="editor-cancel"
           >
             {chrome.i18n.getMessage("sandboxEditorCancelButton")}
           </button>
@@ -88,6 +89,7 @@ const EditorNav = () => {
             className="button secondaryButton"
             onClick={handleRevert}
             disabled={contentState.isFfmpegRunning}
+            data-testid="editor-revert"
           >
             {chrome.i18n.getMessage("sandboxEditorRevertButton")}
           </button>
@@ -96,6 +98,7 @@ const EditorNav = () => {
             className="button primaryButton"
             onClick={saveChanges}
             disabled={contentState.isFfmpegRunning}
+            data-testid="editor-save"
           >
             {contentState.reencoding
               ? chrome.i18n.getMessage("sandboxEditorSaveProgressButton")
