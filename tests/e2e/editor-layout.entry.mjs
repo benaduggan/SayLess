@@ -9,7 +9,9 @@ const transcriptWords = Array.from({ length: 520 }, (_, index) => {
 
 const clipNodes = Array.from({ length: 5 }, (_, index) => {
   const widths = [28, 18, 24, 12, 18];
-  return `<div class="layout-clip" style="width:${widths[index]}%"><span>${index + 1}</span><span>${widths[index] / 10}s</span></div>`;
+  return `<div class="layout-clip" style="width:${widths[index]}%"><span>${
+    index + 1
+  }</span><span>${widths[index] / 10}s</span></div>`;
 }).join("");
 
 document.body.innerHTML = `
@@ -19,7 +21,7 @@ document.body.innerHTML = `
       <section class="saylessEditor__mediaColumn">
         <div class="videoPlayer">
           <div class="playerWrap">
-            <div class="plyr plyr--video sayless-native-player-shell" style="aspect-ratio: 16 / 9">
+            <div class="plyr plyr--video sayless-native-player-shell" style="aspect-ratio: var(--proof-video-ratio, 16 / 9)">
               <video class="sayless-native-player" controls></video>
             </div>
           </div>
@@ -216,6 +218,9 @@ const rectOf = (selector) => {
 };
 
 window.EDITOR_LAYOUT_SMOKE = {
+  setVideoRatio(ratio) {
+    document.documentElement.style.setProperty("--proof-video-ratio", ratio);
+  },
   measure() {
     return {
       viewport: { width: window.innerWidth, height: window.innerHeight },

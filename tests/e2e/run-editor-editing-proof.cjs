@@ -34,7 +34,7 @@ const launchExtension = async () => {
     fail("build/manifest.json is missing; run npm run build:release first");
   }
   const userDataDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), "sayless-editor-proof-"),
+    path.join(os.tmpdir(), "sayless-editor-proof-")
   );
   const channel = process.env.SAYLESS_E2E_CHROME_CHANNEL || undefined;
   const options = {
@@ -51,7 +51,10 @@ const launchExtension = async () => {
   try {
     context = await chromium.launchPersistentContext(userDataDir, options);
   } catch (error) {
-    if (channel || !/Executable doesn't exist/.test(String(error?.message || error))) {
+    if (
+      channel ||
+      !/Executable doesn't exist/.test(String(error?.message || error))
+    ) {
       throw error;
     }
     context = await chromium.launchPersistentContext(userDataDir, {
@@ -105,7 +108,7 @@ const getExtensionId = async (context, userDataDir) => {
   const id = await extensionIdFromPreferences(userDataDir);
   if (id) return id;
   throw new Error(
-    "Unable to derive extension id from service worker or Chrome Preferences",
+    "Unable to derive extension id from service worker or Chrome Preferences"
   );
 };
 
@@ -129,7 +132,11 @@ const screenshot = async (page, name) => {
 const visibleBox = async (locator, name) => {
   await locator.waitFor({ state: "visible", timeout: 30000 });
   const box = await locator.boundingBox();
-  assert(box && box.width > 0 && box.height > 0, `${name} has no clickable box`, box);
+  assert(
+    box && box.width > 0 && box.height > 0,
+    `${name} has no clickable box`,
+    box
+  );
   return box;
 };
 
@@ -309,17 +316,81 @@ const seedRecording = async (page) => {
     collectConsole(page, "editor", consoleErrors);
     await page.setViewportSize({ width: 1440, height: 980 });
     await page.goto(
-      `chrome-extension://${extensionId}/editor.html?localRecordingId=${encodeURIComponent(seed.recordingId)}`,
-      { waitUntil: "domcontentloaded" },
+      `chrome-extension://${extensionId}/editor.html?localRecordingId=${encodeURIComponent(
+        seed.recordingId
+      )}`,
+      { waitUntil: "domcontentloaded" }
     );
 
-    await visibleBox(page.getByTestId("player-edit-action"), "player edit action");
+    await visibleBox(
+      page.getByTestId("player-edit-action"),
+      "player edit action"
+    );
     await screenshot(page, "01-player-edit-entry-visible.png");
 
     await page.getByTestId("player-edit-action").click();
+    await page.getByTestId("editor-layout").waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
+    await page.getByTestId("timeline-editor").waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
+    const initialEditorGeometry = await page.evaluate(() => {
+      const rect = (selector) => {
+        const node = document.querySelector(selector);
+        if (!node) return null;
+        const box = node.getBoundingClientRect();
+        return {
+          top: box.top,
+          right: box.right,
+          bottom: box.bottom,
+          left: box.left,
+          width: box.width,
+          height: box.height,
+        };
+      };
+      return {
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        documentHeight: document.documentElement.scrollHeight,
+        editor: rect('[data-testid="editor-layout"]'),
+        workspace: rect(".saylessEditor__workspace"),
+        media: rect(".saylessEditor__mediaColumn"),
+        timeline: rect(".trimWrap"),
+        transcript: rect(".saylessEditor__transcriptPanel"),
+      };
+    });
+    const { viewport, documentHeight, workspace, media, timeline, transcript } =
+      initialEditorGeometry;
+    assert(
+      workspace?.top === 80,
+      "editor workspace is not anchored directly below the navigation",
+      initialEditorGeometry
+    );
+    assert(
+      timeline?.height >= 176 && timeline.bottom <= viewport.height + 1,
+      "timeline is collapsed or below the initial viewport",
+      initialEditorGeometry
+    );
+    assert(
+      transcript?.top === workspace.top &&
+        transcript.bottom <= viewport.height + 1,
+      "transcript is not anchored to the workspace top",
+      initialEditorGeometry
+    );
+    assert(
+      media?.bottom <= viewport.height + 1 &&
+        documentHeight <= viewport.height + 1,
+      "desktop editor creates unexpected document overflow",
+      initialEditorGeometry
+    );
     await visibleBox(page.getByTestId("timeline-editor"), "timeline editor");
     await visibleBox(page.getByTestId("transcript-panel"), "transcript panel");
-    await visibleBox(page.getByTestId("transcript-word").first(), "transcript word");
+    await visibleBox(
+      page.getByTestId("transcript-word").first(),
+      "transcript word"
+    );
     await screenshot(page, "02-editor-timeline-and-transcript-visible.png");
 
     const firstClip = page.getByTestId("timeline-clip").first();
@@ -332,9 +403,10 @@ const seedRecording = async (page) => {
     });
     await page.getByTestId("timeline-split").click();
     await page.waitForFunction(
-      () => document.querySelectorAll('[data-testid="timeline-clip"]').length >= 2,
+      () =>
+        document.querySelectorAll('[data-testid="timeline-clip"]').length >= 2,
       null,
-      { timeout: 10000 },
+      { timeout: 10000 }
     );
     await page.getByTestId("timeline-clip").first().click();
     await visibleBox(page.getByTestId("timeline-delete"), "timeline delete");
@@ -348,38 +420,54 @@ const seedRecording = async (page) => {
     const words = page.getByTestId("transcript-word");
     await words.nth(0).click();
     await words.nth(1).click({ modifiers: ["Shift"] });
-    await visibleBox(page.getByTestId("transcript-delete-words"), "transcript delete words");
+    await visibleBox(
+      page.getByTestId("transcript-delete-words"),
+      "transcript delete words"
+    );
     await screenshot(page, "05-transcript-word-selection-visible.png");
 
     await page.getByTestId("transcript-delete-words").click();
     await page.waitForFunction(
-      () => document.querySelectorAll('[data-testid="timeline-clip"]').length >= 1,
+      () =>
+        document.querySelectorAll('[data-testid="timeline-clip"]').length >= 1,
       null,
-      { timeout: 10000 },
+      { timeout: 10000 }
     );
     await visibleBox(page.getByTestId("timeline-apply-edits"), "apply edits");
-    await screenshot(page, "06-transcript-delete-updates-timeline-apply-visible.png");
+    await screenshot(
+      page,
+      "06-transcript-delete-updates-timeline-apply-visible.png"
+    );
     const editorSummary = await page.evaluate(() => ({
-      timelineClipCount: document.querySelectorAll('[data-testid="timeline-clip"]').length,
+      timelineClipCount: document.querySelectorAll(
+        '[data-testid="timeline-clip"]'
+      ).length,
       transcriptWords: Array.from(
-        document.querySelectorAll('[data-testid="transcript-word"]'),
+        document.querySelectorAll('[data-testid="transcript-word"]')
       ).map((node) => node.textContent.trim()),
       hasApplyEditsButton: Boolean(
-        document.querySelector('[data-testid="timeline-apply-edits"]'),
+        document.querySelector('[data-testid="timeline-apply-edits"]')
       ),
       hasTranscriptDeleteButton: Boolean(
-        document.querySelector('[data-testid="transcript-delete-words"]'),
+        document.querySelector('[data-testid="transcript-delete-words"]')
       ),
     }));
 
     await page.getByTestId("editor-save").click();
-    await visibleBox(page.getByTestId("export-selected-action"), "export selected action");
+    await visibleBox(
+      page.getByTestId("export-selected-action"),
+      "export selected action"
+    );
     await screenshot(page, "07-player-export-after-edit-visible.png");
 
     const playerSummary = await page.evaluate(() => ({
       bodyText: document.body.innerText,
-      hasEditAction: Boolean(document.querySelector('[data-testid="player-edit-action"]')),
-      hasExportAction: Boolean(document.querySelector('[data-testid="export-selected-action"]')),
+      hasEditAction: Boolean(
+        document.querySelector('[data-testid="player-edit-action"]')
+      ),
+      hasExportAction: Boolean(
+        document.querySelector('[data-testid="export-selected-action"]')
+      ),
     }));
 
     fs.writeFileSync(
@@ -388,6 +476,7 @@ const seedRecording = async (page) => {
         {
           extensionId,
           recording: seed,
+          initialEditorGeometry,
           screenshots: fs
             .readdirSync(OUT_DIR)
             .filter((name) => name.endsWith(".png"))
@@ -397,21 +486,27 @@ const seedRecording = async (page) => {
           consoleErrors,
         },
         null,
-        2,
-      ),
+        2
+      )
     );
 
     const filteredConsoleErrors = consoleErrors.filter(
-      (line) => !/ResizeObserver loop completed/i.test(line),
+      (line) => !/ResizeObserver loop completed/i.test(line)
     );
     assert(
       filteredConsoleErrors.length === 0,
       "page emitted console/page errors",
-      filteredConsoleErrors.join("\n"),
+      filteredConsoleErrors.join("\n")
     );
 
     console.log("=== EDITOR EDITING PROOF PASS ===");
-    console.log(JSON.stringify({ outDir: OUT_DIR, screenshots: fs.readdirSync(OUT_DIR).sort() }, null, 2));
+    console.log(
+      JSON.stringify(
+        { outDir: OUT_DIR, screenshots: fs.readdirSync(OUT_DIR).sort() },
+        null,
+        2
+      )
+    );
   } catch (error) {
     if (activePage && !activePage.isClosed()) {
       await activePage
@@ -430,7 +525,7 @@ const seedRecording = async (page) => {
         .catch((debugError) => ({ debugError: String(debugError) }));
       fs.writeFileSync(
         path.join(OUT_DIR, "failure-debug.json"),
-        JSON.stringify({ debug, consoleErrors }, null, 2),
+        JSON.stringify({ debug, consoleErrors }, null, 2)
       );
     }
     throw error;

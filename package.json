@@ -13,6 +13,7 @@
     "watch": "cross-env NODE_ENV=development webpack --watch",
     "hot-reload": "cross-env NODE_ENV=development webpack serve --hot",
     "prettier": "prettier --write '**/*.{js,jsx,ts,tsx,json,css,scss,md}'",
+    "typecheck": "tsc --noEmit --pretty false",
     "postinstall": "patch-package && node scripts/patch-radix.js",
     "package": "npm run package:release",
     "package:release": "node scripts/package-release.mjs",

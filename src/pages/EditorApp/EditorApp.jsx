@@ -119,7 +119,6 @@ const EditorApp = () => {
     <div ref={parentRef}>
       <Modal />
       <Toast />
-      <video></video>
       {contentState.ffmpeg &&
         contentState.ready &&
         contentState.mode === "edit" && (
