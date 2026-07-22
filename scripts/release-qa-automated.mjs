@@ -29,6 +29,7 @@ const BUILD_MANIFEST_PATH = join(BUILD_DIR, "manifest.json");
 
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const commands = [
+  { label: "typecheck", command: npm, args: ["run", "typecheck"] },
   { label: "test:unit", command: npm, args: ["run", "test:unit"] },
   {
     label: "test:e2e:offline-whisper-assets",
@@ -129,7 +130,12 @@ const run = (label, command, args) => {
     error.durationMs = durationMs;
     throw error;
   }
-  return { label, status: "passed", command: [command, ...args].join(" "), durationMs };
+  return {
+    label,
+    status: "passed",
+    command: [command, ...args].join(" "),
+    durationMs,
+  };
 };
 
 const gitValue = (args) => {
@@ -142,7 +148,12 @@ const gitValue = (args) => {
 
 const gitLines = (args) => {
   const output = gitValue(args);
-  return output ? output.split("\n").map((line) => line.trim()).filter(Boolean) : [];
+  return output
+    ? output
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+    : [];
 };
 
 const gitWorktreeFingerprint = () => {
@@ -181,7 +192,9 @@ const arrayFrom = (value) => (Array.isArray(value) ? value : []);
 
 const releaseManifestSurface = (manifest) => {
   const permissions = arrayFrom(manifest.permissions).slice().sort();
-  const optionalPermissions = arrayFrom(manifest.optional_permissions).slice().sort();
+  const optionalPermissions = arrayFrom(manifest.optional_permissions)
+    .slice()
+    .sort();
   const hostPermissions = arrayFrom(manifest.host_permissions).slice().sort();
   const allPermissions = new Set([...permissions, ...optionalPermissions]);
   const csp =
@@ -311,4 +324,6 @@ writeFileAtomic(EVIDENCE_PATH, `${JSON.stringify(evidence, null, 2)}\n`);
 console.log(`\nAutomated release QA passed.`);
 console.log(`Evidence: ${relative(ROOT, EVIDENCE_PATH)}`);
 console.log(`Build size: ${evidence.build.formattedBytes}`);
-console.log(`Bundled Whisper assets: ${evidence.bundledWhisper.formattedBytes}`);
+console.log(
+  `Bundled Whisper assets: ${evidence.bundledWhisper.formattedBytes}`
+);

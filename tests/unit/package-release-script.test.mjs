@@ -46,6 +46,10 @@ const releaseQaAutomatedScript = readFileSync(
   join(ROOT, "scripts", "release-qa-automated.mjs"),
   "utf8"
 );
+const typecheckScript = readFileSync(
+  join(ROOT, "scripts", "typecheck.mjs"),
+  "utf8"
+);
 const verifyLocalWhisperAssetsScript = readFileSync(
   join(ROOT, "scripts", "verify-local-whisper-assets.mjs"),
   "utf8"
@@ -1516,6 +1520,17 @@ test("release build fails on unexpected webpack warnings", () => {
     releaseAuditScript,
     /utils\/build\.cts must fail release builds on unexpected webpack warnings/
   );
+});
+
+test("TypeScript 7 is a required CI and release evidence gate", () => {
+  assert.equal(packageJson.scripts.typecheck, "node scripts/typecheck.mjs");
+  assert.equal(packageJson.scripts.lint, "npm run typecheck");
+  assert.match(typecheckScript, /spawnSync\("tsgo"/);
+  assert.match(typecheckScript, /"nix-shell"/);
+  assert.match(releaseQaAutomatedScript, /label: "typecheck"/);
+  assert.match(releaseAuditScript, /node-version:\\s\*24/);
+  assert.match(releaseAuditScript, /determinate-nix-action@v3/);
+  assert.match(releaseAuditScript, /npm run typecheck/);
 });
 
 test("release transcription config preserves bundled model path against remote overrides", () => {

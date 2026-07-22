@@ -13,7 +13,8 @@ npm run qa:release:status
 
 Expected results:
 
-- The automated runner executes `test:unit`, `test:e2e:offline-whisper-assets`, `test:e2e:offline-transcription-smoke`, `test:e2e:local-recordings`, `build:release`, `test:e2e:built-extension-surface`, and `verify:release` in order.
+- The automated runner executes `typecheck`, `test:unit`, `test:e2e:offline-whisper-assets`, `test:e2e:offline-transcription-smoke`, `test:e2e:local-recordings`, `build:release`, `test:e2e:built-extension-surface`, and `verify:release` in order. `typecheck` uses TypeScript 7 (`tsgo`) directly when available and otherwise enters the pinned Nix environment.
+- GitHub Actions installs upstream Nix, runs the TypeScript 7 gate explicitly on Node 24, and then runs the same automated release QA sequence so the typecheck is both a CI gate and part of release evidence.
 - On macOS, the automated runner also executes `test:e2e:offline-transcription-speech` with local `say`/`afconvert` clean, deterministic noisy, and longer paused speech fixtures; on other platforms, the evidence file records that harness as skipped because those tools are unavailable.
 - After `build:release`, the automated runner executes `test:e2e:built-extension-surface` against the packaged extension pages, packaged bundled-Whisper model assets, and the content-script popup mounted on a local page.
 - Unit tests, the offline Whisper asset-readiness browser harness, the offline Whisper startup/inference browser smoke, the macOS generated-speech offline transcription harness when available, the local-recordings browser harness, and the packaged-extension surface smoke pass.

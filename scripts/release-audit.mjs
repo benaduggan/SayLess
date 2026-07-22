@@ -1662,10 +1662,26 @@ if (
   fail("verify:cws-package must run scripts/verify-cws-package.mjs.");
 }
 if (
+  packageJson.scripts?.typecheck !== "node scripts/typecheck.mjs" ||
+  packageJson.scripts?.lint !== "npm run typecheck" ||
+  !existsSync(join(ROOT, "scripts", "typecheck.mjs"))
+) {
+  fail(
+    "typecheck and lint must use the canonical scripts/typecheck.mjs TypeScript 7 gate."
+  );
+}
+const ciNode24Count = (ciWorkflowText.match(/node-version:\s*24/g) || [])
+  .length;
+if (
   !/pull_request:/.test(ciWorkflowText) ||
   !/push:/.test(ciWorkflowText) ||
   !/workflow_dispatch:/.test(ciWorkflowText) ||
+  ciNode24Count < 2 ||
   !/npm ci/.test(ciWorkflowText) ||
+  !/DeterminateSystems\/determinate-nix-action@v3/.test(ciWorkflowText) ||
+  !/determinate:\s*false/.test(ciWorkflowText) ||
+  !/Typecheck with TypeScript 7/.test(ciWorkflowText) ||
+  !/npm run typecheck/.test(ciWorkflowText) ||
   !/actions\/cache@v4/.test(ciWorkflowText) ||
   !/~\/\.cache\/ms-playwright/.test(ciWorkflowText) ||
   !/playwright-core\/package\.json/.test(ciWorkflowText) ||
@@ -1690,7 +1706,23 @@ if (
   !/draft:\s*false/.test(ciWorkflowText)
 ) {
   fail(
-    "GitHub Actions CI must run release checks, upload evidence, build a verified downloadable extension bundle, and publish direct-download release assets only from tags or explicit manual tags."
+    "GitHub Actions CI must run release checks with Node 24, Nix, and TypeScript 7, upload evidence, build a verified downloadable extension bundle, and publish direct-download release assets only from tags or explicit manual tags."
+  );
+}
+if (
+  !/label:\s*["']typecheck["']/.test(releaseQaAutomatedScriptText) ||
+  !/args:\s*\[["']run["'],\s*["']typecheck["']\]/.test(
+    releaseQaAutomatedScriptText
+  ) ||
+  !/REQUIRED_AUTOMATED_COMMANDS\s*=\s*\[\s*["']typecheck["']/.test(
+    releaseStatusScriptText
+  ) ||
+  !/REQUIRED_AUTOMATED_COMMANDS\s*=\s*\[\s*["']typecheck["']/.test(
+    verifyManualQaScriptText
+  )
+) {
+  fail(
+    "Automated release QA and its evidence verifiers must require npm run typecheck."
   );
 }
 if (

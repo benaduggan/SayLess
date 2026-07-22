@@ -59,6 +59,7 @@ const makeFixture = ({ failCommand = null } = {}) => {
   writeJson(join(dir, "package.json"), {
     version: "9.9.9",
     scripts: {
+      typecheck: "node scripts/fixture-command.mjs typecheck",
       "test:unit": "node scripts/fixture-command.mjs test-unit",
       "test:e2e:offline-whisper-assets":
         "node scripts/fixture-command.mjs offline-whisper-assets",
@@ -66,8 +67,10 @@ const makeFixture = ({ failCommand = null } = {}) => {
         "node scripts/fixture-command.mjs offline-transcription-smoke",
       "test:e2e:offline-transcription-speech":
         "node scripts/fixture-command.mjs offline-transcription-speech",
-      "test:e2e:local-recordings": "node scripts/fixture-command.mjs local-recordings",
-      "test:e2e:editor-layout": "node scripts/fixture-command.mjs editor-layout",
+      "test:e2e:local-recordings":
+        "node scripts/fixture-command.mjs local-recordings",
+      "test:e2e:editor-layout":
+        "node scripts/fixture-command.mjs editor-layout",
       "build:release": "node scripts/fixture-build.mjs",
       "test:e2e:built-extension-surface":
         "node scripts/fixture-command.mjs built-extension-surface",
@@ -89,7 +92,7 @@ const makeFixture = ({ failCommand = null } = {}) => {
         ? `if (label === ${JSON.stringify(failCommand)}) process.exit(42);`
         : "",
       "",
-    ].join("\n"),
+    ].join("\n")
   );
   writeFileSync(
     join(dir, "scripts", "fixture-build.mjs"),
@@ -102,7 +105,7 @@ const makeFixture = ({ failCommand = null } = {}) => {
       "writeFileSync(join('build', 'editor.html'), '<html>SayLess local fixture</html>');",
       "writeFileSync(join('build', 'assets', 'whisper', 'model.bin'), 'local whisper bytes');",
       "",
-    ].join("\n"),
+    ].join("\n")
   );
 
   return dir;
@@ -123,7 +126,11 @@ test("automated release QA writes traceable build evidence atomically", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /Automated release QA passed/);
 
-    const evidencePath = join(fixture, "release-artifacts", "release-qa-automated.json");
+    const evidencePath = join(
+      fixture,
+      "release-artifacts",
+      "release-qa-automated.json"
+    );
     const buildDir = join(fixture, "build");
     const whisperDir = join(buildDir, "assets", "whisper");
     assert.ok(existsSync(evidencePath));
@@ -150,7 +157,10 @@ test("automated release QA writes traceable build evidence atomically", () => {
     assert.equal(evidence.build.fileCount, buildFingerprint.fileCount);
     assert.equal(evidence.build.sha256, buildFingerprint.sha256);
     assert.equal(evidence.bundledWhisper.path, "build/assets/whisper");
-    assert.equal(evidence.bundledWhisper.fileCount, whisperFingerprint.fileCount);
+    assert.equal(
+      evidence.bundledWhisper.fileCount,
+      whisperFingerprint.fileCount
+    );
     assert.equal(evidence.bundledWhisper.sha256, whisperFingerprint.sha256);
     assert.deepEqual(evidence.releaseSurface, {
       permissions: [],
@@ -164,8 +174,11 @@ test("automated release QA writes traceable build evidence atomically", () => {
       contentSecurityPolicyExtensionPages: "",
     });
 
-    const commandsByLabel = new Map(evidence.commands.map((command) => [command.label, command]));
+    const commandsByLabel = new Map(
+      evidence.commands.map((command) => [command.label, command])
+    );
     for (const label of [
+      "typecheck",
       "test:unit",
       "test:e2e:offline-whisper-assets",
       "test:e2e:offline-transcription-smoke",
@@ -198,30 +211,50 @@ test("automated release QA writes traceable build evidence atomically", () => {
 test("automated release QA overwrites stale passing evidence on failure", () => {
   const fixture = makeFixture({ failCommand: "offline-transcription-smoke" });
   try {
-    const evidencePath = join(fixture, "release-artifacts", "release-qa-automated.json");
+    const evidencePath = join(
+      fixture,
+      "release-artifacts",
+      "release-qa-automated.json"
+    );
     mkdirSync(join(fixture, "release-artifacts"), { recursive: true });
     writeJson(evidencePath, {
       kind: "sayless.releaseQaAutomated",
       generatedAt: "2026-07-16T00:00:00.000Z",
-      commands: [{ label: "stale", status: "passed", command: "npm run stale", durationMs: 1 }],
+      commands: [
+        {
+          label: "stale",
+          status: "passed",
+          command: "npm run stale",
+          durationMs: 1,
+        },
+      ],
     });
 
     const result = runAutomatedQa(fixture);
 
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Automated release QA failed: test:e2e:offline-transcription-smoke failed with exit code 42/);
+    assert.match(
+      result.stderr,
+      /Automated release QA failed: test:e2e:offline-transcription-smoke failed with exit code 42/
+    );
     assert.ok(!existsSync(`${evidencePath}.tmp`));
 
     const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
     assert.equal(evidence.kind, "sayless.releaseQaAutomatedFailed");
     assert.equal(evidence.status, "failed");
-    assert.equal(evidence.failedCommand.label, "test:e2e:offline-transcription-smoke");
-    assert.equal(evidence.failedCommand.command, "npm run test:e2e:offline-transcription-smoke");
+    assert.equal(
+      evidence.failedCommand.label,
+      "test:e2e:offline-transcription-smoke"
+    );
+    assert.equal(
+      evidence.failedCommand.command,
+      "npm run test:e2e:offline-transcription-smoke"
+    );
     assert.equal(evidence.failedCommand.exitCode, 42);
     assert.ok(evidence.durationMs > 0);
     assert.deepEqual(
       evidence.commands.map((command) => command.label),
-      ["test:unit", "test:e2e:offline-whisper-assets"],
+      ["typecheck", "test:unit", "test:e2e:offline-whisper-assets"]
     );
   } finally {
     rmSync(fixture, { recursive: true, force: true });

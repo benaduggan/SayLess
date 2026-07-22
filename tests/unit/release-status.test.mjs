@@ -29,8 +29,10 @@ const writeJson = (path, value) => {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 };
 
-const sha256File = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+const sha256File = (path) =>
+  createHash("sha256").update(readFileSync(path)).digest("hex");
 const requiredAutomatedCommands = [
+  "typecheck",
   "test:unit",
   "test:e2e:offline-whisper-assets",
   "test:e2e:offline-transcription-smoke",
@@ -61,8 +63,14 @@ const makeFixture = () => {
   });
   writeJson(join(dir, "src", "manifest.json"), { version: "9.9.9" });
   writeJson(join(dir, "build", "manifest.json"), { version: "9.9.9" });
-  writeFileSync(join(dir, "build", "editor.html"), "<html>SayLess local fixture</html>");
-  writeFileSync(join(dir, "build", "assets", "whisper", "model.bin"), "local whisper bytes");
+  writeFileSync(
+    join(dir, "build", "editor.html"),
+    "<html>SayLess local fixture</html>"
+  );
+  writeFileSync(
+    join(dir, "build", "assets", "whisper", "model.bin"),
+    "local whisper bytes"
+  );
   const buildDir = join(dir, "build");
   const whisperDir = join(buildDir, "assets", "whisper");
   const buildFingerprint = dirFingerprint(buildDir);
@@ -162,10 +170,16 @@ const makeReadyFixture = async () => {
   await writeBuildZip(extensionZipPath, buildDir);
   writeFileSync(cwsZipPath, readFileSync(extensionZipPath));
 
-  const automatedEvidence = JSON.parse(readFileSync(automatedEvidencePath, "utf8"));
+  const automatedEvidence = JSON.parse(
+    readFileSync(automatedEvidencePath, "utf8")
+  );
   const manualEvidence = JSON.parse(readFileSync(manualEvidencePath, "utf8"));
-  const packageGeneratedAt = new Date(Date.parse(manualEvidence.testedAt) + 1_000).toISOString();
-  const cwsGeneratedAt = new Date(Date.parse(packageGeneratedAt) + 1_000).toISOString();
+  const packageGeneratedAt = new Date(
+    Date.parse(manualEvidence.testedAt) + 1_000
+  ).toISOString();
+  const cwsGeneratedAt = new Date(
+    Date.parse(packageGeneratedAt) + 1_000
+  ).toISOString();
   const extensionBytes = statSync(extensionZipPath).size;
   const cwsBytes = statSync(cwsZipPath).size;
   const buildFingerprint = dirFingerprint(buildDir);
@@ -265,7 +279,10 @@ test("release status reports next manual QA template action without creating art
     assert.equal(report.manualQa.status, "missing");
     assert.equal(report.manualQa.verifierPassed, false);
     assert.equal(report.manualQa.verifierErrorCount, 2);
-    assert.match(report.manualQa.verifierSummary[0], /manual QA evidence file is missing/);
+    assert.match(
+      report.manualQa.verifierSummary[0],
+      /manual QA evidence file is missing/
+    );
     assert.deepEqual(report.manualQa.todo, [
       "Generate release-artifacts/manual-qa-evidence.json with npm run qa:release:manual:template.",
       "Run npm run qa:release:manual:profile, then use the printed clean Chrome profile command against the current build.",
@@ -274,11 +291,18 @@ test("release status reports next manual QA template action without creating art
     assert.equal(report.releasePackage.status, "failed");
     assert.equal(
       report.releasePackage.remainingReleaseWork,
-      "Release package has not passed. Rerun npm run package:release after automated and manual release QA pass.",
+      "Release package has not passed. Rerun npm run package:release after automated and manual release QA pass."
     );
-    assert.equal(report.releasePackage.failedStep.script, "scripts/verify-manual-qa-evidence.mjs");
+    assert.equal(
+      report.releasePackage.failedStep.script,
+      "scripts/verify-manual-qa-evidence.mjs"
+    );
     assert.equal(report.cwsPackage.status, "missing");
-    assert.throws(() => readFileSync(join(fixture, "release-artifacts", "manual-qa-evidence.json")));
+    assert.throws(() =>
+      readFileSync(
+        join(fixture, "release-artifacts", "manual-qa-evidence.json")
+      )
+    );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }
@@ -291,15 +315,27 @@ test("release status prints a concise human summary", () => {
 
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /Release status: blocked/);
-    assert.match(result.stdout, /Next action: npm run qa:release:manual:template/);
+    assert.match(
+      result.stdout,
+      /Next action: npm run qa:release:manual:template/
+    );
     assert.match(result.stdout, /Next steps:/);
     assert.match(result.stdout, /npm run qa:release:manual:profile/);
-    assert.match(result.stdout, /complete docs\/RELEASE_QA\.md, fill release-artifacts\/manual-qa-evidence\.json/);
+    assert.match(
+      result.stdout,
+      /complete docs\/RELEASE_QA\.md, fill release-artifacts\/manual-qa-evidence\.json/
+    );
     assert.match(result.stdout, /automatedQa: passed/);
     assert.match(result.stdout, /manualQa: missing/);
-    assert.match(result.stdout, /2 verifier issue\(s\); first: manual QA evidence file is missing/);
+    assert.match(
+      result.stdout,
+      /2 verifier issue\(s\); first: manual QA evidence file is missing/
+    );
     assert.match(result.stdout, /Manual QA todo:/);
-    assert.match(result.stdout, /Generate release-artifacts\/manual-qa-evidence\.json/);
+    assert.match(
+      result.stdout,
+      /Generate release-artifacts\/manual-qa-evidence\.json/
+    );
     assert.match(result.stdout, /releasePackage: failed/);
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -313,8 +349,14 @@ test("release status require-ready fails closed when evidence is blocked", () =>
 
     assert.equal(result.status, 1);
     assert.match(result.stdout, /Release status: blocked/);
-    assert.match(result.stderr, /Release status must be ready before this action can continue/);
-    assert.match(result.stderr, /Next action: npm run qa:release:manual:template/);
+    assert.match(
+      result.stderr,
+      /Release status must be ready before this action can continue/
+    );
+    assert.match(
+      result.stderr,
+      /Next action: npm run qa:release:manual:template/
+    );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }
@@ -323,19 +365,25 @@ test("release status require-ready fails closed when evidence is blocked", () =>
 test("release status blocks stale automated evidence before manual QA", () => {
   const fixture = makeFixture();
   try {
-    writeFileSync(join(fixture, "build", "editor.html"), "<html>stale build after QA</html>");
+    writeFileSync(
+      join(fixture, "build", "editor.html"),
+      "<html>stale build after QA</html>"
+    );
 
     const jsonResult = runStatus(fixture, ["--json"]);
     assert.equal(jsonResult.status, 0, jsonResult.stderr);
     const report = JSON.parse(jsonResult.stdout);
     assert.equal(report.overall, "blocked");
     assert.equal(report.nextAction, "npm run qa:release:auto");
-    assert.deepEqual(report.nextActions, ["npm run qa:release:auto", "npm run qa:release:status"]);
+    assert.deepEqual(report.nextActions, [
+      "npm run qa:release:auto",
+      "npm run qa:release:status",
+    ]);
     assert.equal(report.automatedQa.gateStatus, "invalid");
     assert.equal(report.automatedQa.verifierPassed, false);
     assert.match(
       report.automatedQa.verifierSummary.join("\n"),
-      /automated QA evidence build\.(bytes|formattedBytes|sha256) must match current build/,
+      /automated QA evidence build\.(bytes|formattedBytes|sha256) must match current build/
     );
 
     const humanResult = runStatus(fixture);
@@ -350,7 +398,11 @@ test("release status blocks stale automated evidence before manual QA", () => {
 test("release status blocks incomplete automated command evidence before manual QA", () => {
   const fixture = makeFixture();
   try {
-    const evidencePath = join(fixture, "release-artifacts", "release-qa-automated.json");
+    const evidencePath = join(
+      fixture,
+      "release-artifacts",
+      "release-qa-automated.json"
+    );
     const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
     writeJson(evidencePath, {
       ...evidence,
@@ -365,7 +417,7 @@ test("release status blocks incomplete automated command evidence before manual 
         .map((command) =>
           command.label === "build:release"
             ? { ...command, command: "npm run fake-release-build" }
-            : command,
+            : command
         ),
       skippedCommands: [],
     });
@@ -375,18 +427,27 @@ test("release status blocks incomplete automated command evidence before manual 
     const report = JSON.parse(jsonResult.stdout);
     assert.equal(report.overall, "blocked");
     assert.equal(report.nextAction, "npm run qa:release:auto");
-    assert.deepEqual(report.nextActions, ["npm run qa:release:auto", "npm run qa:release:status"]);
+    assert.deepEqual(report.nextActions, [
+      "npm run qa:release:auto",
+      "npm run qa:release:status",
+    ]);
     assert.equal(report.automatedQa.gateStatus, "invalid");
     assert.equal(report.automatedQa.verifierPassed, false);
-    assert.match(report.automatedQa.verifierSummary.join("\n"), /git\.commit must be a 40-character SHA-1 commit/);
     assert.match(
       report.automatedQa.verifierSummary.join("\n"),
-      /automated QA evidence command build:release must be "npm run build:release"/,
+      /git\.commit must be a 40-character SHA-1 commit/
     );
-    assert.match(report.automatedQa.verifierSummary.join("\n"), /automated QA evidence command verify:release is required/);
     assert.match(
       report.automatedQa.verifierSummary.join("\n"),
-      /automated QA evidence command test:e2e:offline-transcription-speech must be completed or skipped/,
+      /automated QA evidence command build:release must be "npm run build:release"/
+    );
+    assert.match(
+      report.automatedQa.verifierSummary.join("\n"),
+      /automated QA evidence command verify:release is required/
+    );
+    assert.match(
+      report.automatedQa.verifierSummary.join("\n"),
+      /automated QA evidence command test:e2e:offline-transcription-speech must be completed or skipped/
     );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -396,7 +457,11 @@ test("release status blocks incomplete automated command evidence before manual 
 test("release status blocks automated git worktree drift before manual QA", () => {
   const fixture = makeFixture();
   try {
-    const evidencePath = join(fixture, "release-artifacts", "release-qa-automated.json");
+    const evidencePath = join(
+      fixture,
+      "release-artifacts",
+      "release-qa-automated.json"
+    );
     const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
     writeJson(evidencePath, {
       ...evidence,
@@ -417,7 +482,7 @@ test("release status blocks automated git worktree drift before manual QA", () =
     assert.equal(report.automatedQa.gateStatus, "invalid");
     assert.match(
       report.automatedQa.verifierSummary.join("\n"),
-      /git\.workingTree\.sha256 must match the current git worktree/,
+      /git\.workingTree\.sha256 must match the current git worktree/
     );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -447,23 +512,44 @@ test("release status tells releasers to complete manual evidence when the templa
     assert.equal(report.manualQa.status, "template");
     assert.equal(report.manualQa.gateStatus, "invalid");
     assert.equal(report.manualQa.verifierPassed, false);
-    assert.match(report.manualQa.verifierSummary[0], /manual QA evidence status must be "passed"/);
-    assert.match(report.manualQa.todo.join("\n"), /npm run qa:release:manual:profile/);
-    assert.match(report.manualQa.todo.join("\n"), /Record at least two real recordings/);
-    assert.match(report.manualQa.todo.join("\n"), /Fill offline transcription evidence/);
-    assert.match(report.manualQa.todo.join("\n"), /account-tier\/license-key\/activation\/contact-sales/);
+    assert.match(
+      report.manualQa.verifierSummary[0],
+      /manual QA evidence status must be "passed"/
+    );
+    assert.match(
+      report.manualQa.todo.join("\n"),
+      /npm run qa:release:manual:profile/
+    );
+    assert.match(
+      report.manualQa.todo.join("\n"),
+      /Record at least two real recordings/
+    );
+    assert.match(
+      report.manualQa.todo.join("\n"),
+      /Fill offline transcription evidence/
+    );
+    assert.match(
+      report.manualQa.todo.join("\n"),
+      /account-tier\/license-key\/activation\/contact-sales/
+    );
 
     const humanResult = runStatus(fixture);
     assert.equal(humanResult.status, 0, humanResult.stderr);
     assert.match(
       humanResult.stdout,
-      /Next action: npm run qa:release:manual:profile/,
+      /Next action: npm run qa:release:manual:profile/
     );
-    assert.match(humanResult.stdout, /complete docs\/RELEASE_QA\.md, fill release-artifacts\/manual-qa-evidence\.json/);
+    assert.match(
+      humanResult.stdout,
+      /complete docs\/RELEASE_QA\.md, fill release-artifacts\/manual-qa-evidence\.json/
+    );
     assert.match(humanResult.stdout, /manualQa: invalid/);
     assert.match(humanResult.stdout, /Manual QA todo:/);
     assert.match(humanResult.stdout, /Fill export evidence for MP4, WebM, GIF/);
-    assert.match(humanResult.stdout, /Fill publication-surface evidence for release notes, screenshots, and docs\/STORE_LISTING\.md store text/);
+    assert.match(
+      humanResult.stdout,
+      /Fill publication-surface evidence for release notes, screenshots, and docs\/STORE_LISTING\.md store text/
+    );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }
@@ -488,7 +574,10 @@ test("release status does not display unverified manual evidence as passed", () 
     assert.equal(report.manualQa.verifierPassed, false);
     assert.ok(report.manualQa.verifierErrorCount > 0);
     assert.ok(report.manualQa.verifierSummary[0].length > 0);
-    assert.match(report.manualQa.todo[0], /Fix release-artifacts\/manual-qa-evidence\.json/);
+    assert.match(
+      report.manualQa.todo[0],
+      /Fix release-artifacts\/manual-qa-evidence\.json/
+    );
     assert.equal(report.nextAction, "npm run qa:release:manual");
     assert.deepEqual(report.nextActions, [
       "fix release-artifacts/manual-qa-evidence.json",
@@ -536,7 +625,10 @@ test("release status reports publication handoff only when all evidence verifies
     assert.match(humanResult.stdout, /Release status: ready/);
     assert.match(humanResult.stdout, /Release handoff:/);
     assert.match(humanResult.stdout, /npm run release:cws:publish/);
-    assert.match(humanResult.stdout, /attach release-artifacts\/cws-package\.json/);
+    assert.match(
+      humanResult.stdout,
+      /attach release-artifacts\/cws-package\.json/
+    );
     assert.match(humanResult.stdout, /attach docs\/STORE_LISTING\.md/);
     assert.match(humanResult.stdout, /attach extension\.zip/);
     assert.match(humanResult.stdout, /attach build-cws\.zip/);
