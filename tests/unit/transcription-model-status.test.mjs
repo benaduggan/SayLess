@@ -6,7 +6,7 @@ import {
   loadLocalWhisperManifest,
   MODEL_STATUS_MANIFEST_PATH,
   resolveExtensionAssetUrl,
-} from "../../src/transcription/modelStatus.js";
+} from "../../src/transcription/modelStatus.ts";
 
 const jsonResponse = (body) => ({
   ok: true,

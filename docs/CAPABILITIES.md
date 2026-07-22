@@ -79,7 +79,7 @@ Known stale UI:
 
 ## Local Recording Library
 
-Implemented in `src/pages/localRecordings/localRecordingLibrary.js` and wired into `VideosTab.jsx`.
+Implemented in `src/pages/localRecordings/localRecordingLibrary.ts` and wired into `VideosTab.jsx`.
 
 Current behavior:
 

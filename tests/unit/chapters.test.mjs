@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   buildChapterMarkers,
   normalizeChapterMarkers,
-} from "../../src/edl/chapters.js";
+} from "../../src/edl/chapters.ts";
 
 test("buildChapterMarkers creates transcript pause section markers", () => {
   const markers = buildChapterMarkers({

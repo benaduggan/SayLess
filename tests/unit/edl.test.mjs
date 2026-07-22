@@ -6,9 +6,9 @@ import {
   addEdit,
   removeEdit,
   mergeRanges,
-} from "../../src/edl/model.js";
-import { compose, sourceToOutput, outputToSource } from "../../src/edl/compose.js";
-import { editWords, wordRange } from "../../src/edl/fromTranscript.js";
+} from "../../src/edl/model.ts";
+import { compose, sourceToOutput, outputToSource } from "../../src/edl/compose.ts";
+import { editWords, wordRange } from "../../src/edl/fromTranscript.ts";
 
 test("mergeRanges merges overlapping and adjacent", () => {
   assert.deepEqual(

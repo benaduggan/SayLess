@@ -1,24 +1,35 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2022",
     "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
+    "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "rewriteRelativeImportExtensions": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "noEmit": false,
-    "checkJs": false,
-    "types": ["node"],
+    "types": ["node", "chrome"],
     "jsx": "react-jsx",
     "incremental": true,
     "isolatedModules": true
   },
-  "include": ["src"],
-  "exclude": ["build", "node_modules"]
+  "include": [
+    "src",
+    "utils",
+    "scripts/patch-radix.cts",
+    "custom.config.cts",
+    "webpack.config.cts"
+  ],
+  "exclude": [
+    "build",
+    "node_modules",
+    "src/assets/mediapipeVision/vision_wasm_internal.ts",
+    "src/assets/vendor/gif.js/gif.worker.ts"
+  ]
 }

@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   buildZoomSuggestions,
   normalizeZoomKeyframes,
-} from "../../src/edl/zoom.js";
+} from "../../src/edl/zoom.ts";
 
 test("buildZoomSuggestions creates local click zoom keyframes", () => {
   const suggestions = buildZoomSuggestions(

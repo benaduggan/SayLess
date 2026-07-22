@@ -13,7 +13,7 @@ import {
   outputToSource,
   sourceToOutput,
   clipWords,
-} from "../../src/edl/timeline.js";
+} from "../../src/edl/timeline.ts";
 
 test("createTimeline = one full-span clip", () => {
   const tl = createTimeline(10);

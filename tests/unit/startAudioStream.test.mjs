@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { startAudioStream } from "../../src/pages/utils/startAudioStream.js";
+import { startAudioStream } from "../../src/pages/utils/startAudioStream.ts";
 
 const withBrowserAudioMocks = async (
   {

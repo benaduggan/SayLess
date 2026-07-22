@@ -7,7 +7,7 @@ import {
   buildAudioDiagnosticsSnapshot,
   formatAudioDiagnosticsLines,
   persistFinalWebCodecsAudioSnapshot,
-} from "../../src/pages/utils/audioDiagnostics.js";
+} from "../../src/pages/utils/audioDiagnostics.ts";
 
 const rawStore = {
   lastMicInputSnapshot: {

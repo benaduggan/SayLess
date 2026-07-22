@@ -5,7 +5,7 @@ import {
   buildAudioSilenceSuggestions,
   buildTranscriptSuggestions,
   mergeEditSuggestions,
-} from "../../src/edl/suggestions.js";
+} from "../../src/edl/suggestions.ts";
 
 const transcript = (words) => ({ version: 1, words });
 

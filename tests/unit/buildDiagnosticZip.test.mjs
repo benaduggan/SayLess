@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildDiagnosticZip } from "../../src/pages/utils/buildDiagnosticZip.js";
+import { buildDiagnosticZip } from "../../src/pages/utils/buildDiagnosticZip.ts";
 
 const originalChrome = globalThis.chrome;
 const originalWindow = globalThis.window;

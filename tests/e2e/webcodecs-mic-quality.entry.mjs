@@ -5,7 +5,7 @@ import {
   WEBM,
 } from "mediabunny";
 
-import { WebCodecsRecorder } from "../../src/pages/Recorder/webcodecs/WebCodecsRecorder.js";
+import { WebCodecsRecorder } from "../../src/pages/Recorder/webcodecs/WebCodecsRecorder.ts";
 
 const fail = (message, detail = {}) => {
   throw new Error(`${message}: ${JSON.stringify(detail)}`);

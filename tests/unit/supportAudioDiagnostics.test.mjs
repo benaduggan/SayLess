@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildSupportContext } from "../../src/pages/utils/buildSupportContext.js";
-import { buildSupportDebugInfo } from "../../src/pages/utils/buildSupportDebugInfo.js";
+import { buildSupportContext } from "../../src/pages/utils/buildSupportContext.ts";
+import { buildSupportDebugInfo } from "../../src/pages/utils/buildSupportDebugInfo.ts";
 
 const originalChrome = globalThis.chrome;
 const originalNavigatorDescriptor = Object.getOwnPropertyDescriptor(

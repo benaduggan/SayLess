@@ -5,7 +5,7 @@ import {
   filterLocalVideos,
   isRecordedToday,
   videoMatchesSearch,
-} from "../../src/pages/Content/popup/layout/localVideoFilters.js";
+} from "../../src/pages/Content/popup/layout/localVideoFilters.ts";
 
 const NOW = new Date("2026-07-15T18:00:00Z").getTime();
 

@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { createEdl, addEdit } from "../../src/edl/model.js";
-import { planEdlOps, isEmptyEdl, applyEdl } from "../../src/edl/render.js";
+import { createEdl, addEdit } from "../../src/edl/model.ts";
+import { planEdlOps, isEmptyEdl, applyEdl } from "../../src/edl/render.ts";
 
 test("planEdlOps: mutes ascending, deletes descending, after mutes", () => {
   let edl = createEdl(20);

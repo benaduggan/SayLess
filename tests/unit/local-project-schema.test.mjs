@@ -5,7 +5,7 @@ import {
   PROJECT_SCHEMA_VERSION,
   normalizeExportSettings,
   normalizeProjectSchema,
-} from "../../src/pages/localRecordings/projectSchema.js";
+} from "../../src/pages/localRecordings/projectSchema.ts";
 
 test("export settings normalize legacy format-only projects", () => {
   const settings = normalizeExportSettings({ format: "webm" }, { duration: 30 });

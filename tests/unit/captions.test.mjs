@@ -5,7 +5,7 @@ import {
   buildCaptionCues,
   normalizeCaptionWords,
   sanitizeCaptionText,
-} from "../../src/edl/captions.js";
+} from "../../src/edl/captions.ts";
 
 test("normalizeCaptionWords maps transcript words through timeline output order", () => {
   const project = {

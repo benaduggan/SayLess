@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   collectMediaPermissionResult,
   queryMediaPermissionStates,
-} from "../../src/pages/Permissions/mediaPermissions.js";
+} from "../../src/pages/Permissions/mediaPermissions.ts";
 
 const createMocks = ({
   camera = "prompt",

@@ -8,7 +8,7 @@ import {
   hasFileSystemSavePicker,
   saveBlobWithPicker,
   saveOrDownloadBlob,
-} from "../../src/pages/utils/localFileExport.js";
+} from "../../src/pages/utils/localFileExport.ts";
 
 test("assertLocalBlobUrl rejects remote and extension URLs", () => {
   assert.equal(assertLocalBlobUrl("blob:test"), "blob:test");

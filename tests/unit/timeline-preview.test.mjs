@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { attachTimelinePreview } from "../../src/edl/timelinePreview.js";
+import { attachTimelinePreview } from "../../src/edl/timelinePreview.ts";
 
 const makePlayer = (initialTime = 0) => {
   const events = [];

@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createTimeline, splitAtSource } from "../../src/edl/timeline.js";
+import { createTimeline, splitAtSource } from "../../src/edl/timeline.ts";
 import {
   pushTimelineHistory,
   redoTimelineHistory,
   undoTimelineHistory,
-} from "../../src/edl/timelineHistory.js";
+} from "../../src/edl/timelineHistory.ts";
 
 test("timeline history pushes edits and supports undo redo", () => {
   const original = createTimeline(10, { id: "base" });

@@ -14,6 +14,7 @@ let
       jfmt
       nixup
       codex-latest
+      typescript-go
     ];
     scripts = pkgs.lib.attrsets.attrValues scripts;
   };

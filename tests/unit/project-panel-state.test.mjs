@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildProjectSaveStatus,
   buildProjectSummary,
-} from "../../src/pages/EditorApp/layout/player/projectPanelState.js";
+} from "../../src/pages/EditorApp/layout/player/projectPanelState.ts";
 
 test("project summary reports local project counts and export sidecars", () => {
   const summary = buildProjectSummary({

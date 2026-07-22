@@ -20,20 +20,20 @@ globalThis.chrome = {
 };
 
 const library = await import(
-  "../../src/pages/localRecordings/localRecordingLibrary.js"
+  "../../src/pages/localRecordings/localRecordingLibrary.ts"
 );
-const transcriptCache = await import("../../src/transcription/cache.js");
-const timeline = await import("../../src/edl/timeline.js");
-const transcriptEdit = await import("../../src/edl/fromTranscript.js");
-const suggestions = await import("../../src/edl/suggestions.js");
-const renderTimeline = await import("../../src/pages/Editor/utils/renderTimeline.js");
-const renderTimelineAudio = await import("../../src/pages/Editor/utils/renderTimelineAudio.js");
-const audio = await import("../../src/transcription/audio.js");
+const transcriptCache = await import("../../src/transcription/cache.ts");
+const timeline = await import("../../src/edl/timeline.ts");
+const transcriptEdit = await import("../../src/edl/fromTranscript.ts");
+const suggestions = await import("../../src/edl/suggestions.ts");
+const renderTimeline = await import("../../src/pages/Editor/utils/renderTimeline.ts");
+const renderTimelineAudio = await import("../../src/pages/Editor/utils/renderTimelineAudio.ts");
+const audio = await import("../../src/transcription/audio.ts");
 const exportJobState = await import(
-  "../../src/pages/EditorApp/context/exportJobState.js"
+  "../../src/pages/EditorApp/context/exportJobState.ts"
 );
 const exportPanelState = await import(
-  "../../src/pages/EditorApp/layout/player/exportPanelState.js"
+  "../../src/pages/EditorApp/layout/player/exportPanelState.ts"
 );
 
 window.LOCAL_RECORDINGS = library;

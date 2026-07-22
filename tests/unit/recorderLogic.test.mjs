@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   advanceAudioClock,
   shouldDropAudioForBackpressure,
-} from "../../src/pages/Recorder/webcodecs/recorderLogic.js";
+} from "../../src/pages/Recorder/webcodecs/recorderLogic.ts";
 
 test("advanceAudioClock keeps timestamps contiguous across sample-rate changes", () => {
   const chunks = [

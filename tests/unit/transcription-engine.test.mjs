@@ -4,8 +4,8 @@ import test from "node:test";
 import {
   getActiveProvider,
   registerProvider,
-} from "../../src/transcription/index.js";
-import { TRANSCRIPTION_ERROR_CODES } from "../../src/transcription/errors.js";
+} from "../../src/transcription/index.ts";
+import { TRANSCRIPTION_ERROR_CODES } from "../../src/transcription/errors.ts";
 
 const REMOTE_TEST_PROVIDER_ID = "unit-remote-provider";
 

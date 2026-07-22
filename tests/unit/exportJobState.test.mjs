@@ -8,7 +8,7 @@ import {
   dismissExportJobState,
   finishExportJobState,
   updateExportJobProgressState,
-} from "../../src/pages/EditorApp/context/exportJobState.js";
+} from "../../src/pages/EditorApp/context/exportJobState.ts";
 
 test("createExportJob builds a running export job with stable defaults", () => {
   const job = createExportJob({}, 101);

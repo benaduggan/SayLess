@@ -10,7 +10,7 @@ import {
   normalizeTranscriptionLanguage,
   saveTranscriptionSettings,
   TRANSCRIPTION_STORAGE_KEY,
-} from "../../src/transcription/config.js";
+} from "../../src/transcription/config.ts";
 
 test("bundled local whisper options resolve through chrome.runtime.getURL", () => {
   const cfg = getBundledLocalWhisperOptions({

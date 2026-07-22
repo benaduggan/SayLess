@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   computeThumbnailCanvasSize,
   computeThumbnailCaptureTime,
-} from "../../src/pages/localRecordings/thumbnail.js";
+} from "../../src/pages/localRecordings/thumbnail.ts";
 
 test("computeThumbnailCaptureTime uses an explicit requested time when safe", () => {
   assert.equal(computeThumbnailCaptureTime(10, 3), 3);

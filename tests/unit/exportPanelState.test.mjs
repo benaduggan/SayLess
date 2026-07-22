@@ -9,7 +9,7 @@ import {
   buildRetryExportSettings,
   canRetryExportJob,
   canRevealExportJob,
-} from "../../src/pages/EditorApp/layout/player/exportPanelState.js";
+} from "../../src/pages/EditorApp/layout/player/exportPanelState.ts";
 
 test("export job title reflects terminal states", () => {
   assert.equal(buildExportJobTitle(null), "Export");

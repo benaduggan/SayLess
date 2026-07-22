@@ -5,7 +5,7 @@ import {
   clampZoomRatio,
   computeZoomViewportTransform,
   zoomTransformToCss,
-} from "../../src/edl/zoomViewport.js";
+} from "../../src/edl/zoomViewport.ts";
 
 const cssTranslate = (css) => {
   const match = css.transform.match(

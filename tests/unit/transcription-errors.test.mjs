@@ -6,7 +6,7 @@ import {
   TranscriptionError,
   classifyTranscriptionError,
   formatTranscriptionError,
-} from "../../src/transcription/errors.js";
+} from "../../src/transcription/errors.ts";
 
 test("transcription errors preserve structured user-facing guidance", () => {
   const err = new TranscriptionError({

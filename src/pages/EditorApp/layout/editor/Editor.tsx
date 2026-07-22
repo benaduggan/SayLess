@@ -5,24 +5,8 @@ import TrimUI from "./TrimUI";
 import { ContentStateContext } from "../../context/ContentState";
 import TranscriptPanel from "../../components/editor/TranscriptPanel";
 
-type EditorContentState = Record<string, unknown> & {
-  blob?: Blob;
-  time?: number;
-  updatePlayerTime?: boolean;
-  history?: Array<Record<string, unknown>>;
-  redoHistory?: Array<Record<string, unknown>>;
-  addToHistory: () => void;
-};
-
-type EditorContentContext = [
-  EditorContentState,
-  React.Dispatch<React.SetStateAction<EditorContentState>>
-];
-
 const Editor = () => {
-  const [contentState, setContentState] = useContext(
-    ContentStateContext
-  ) as EditorContentContext;
+  const [contentState, setContentState] = useContext(ContentStateContext);
 
   const handleSeek = (time: number, updatePlayerTime: boolean) => {
     setContentState((previous) => ({

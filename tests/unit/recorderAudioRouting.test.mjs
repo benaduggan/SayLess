@@ -6,7 +6,7 @@ import {
   getRecorderAudioRoute,
   shouldUseDirectMicTrack,
   shouldRejectMicEnableWithoutMixer,
-} from "../../src/pages/Recorder/recorderAudioRouting.js";
+} from "../../src/pages/Recorder/recorderAudioRouting.ts";
 
 test("shouldUseDirectMicTrack bypasses Web Audio for mic-only capture", () => {
   assert.equal(
