@@ -45,6 +45,10 @@ import {
   validateFastRecorderOutputBlob,
   isFastRecorderFailureTransient,
 } from "../../media/fastRecorderGate";
+import {
+  parseStreamingDataPayload,
+  type StreamingDataPayload,
+} from "../../messaging/streamingDataProtocol";
 import { chooseWriter } from "../Recorder/recorderStorage/chooseWriter";
 import { chooseReader } from "../Recorder/recorderStorage/chooseReader";
 import { lifecycle } from "../utils/lifecycleLog";
@@ -185,7 +189,9 @@ const Recorder = () => {
     if (regionRef.current) {
       pendingStreamingData.current = null;
       try {
-        startStreaming(JSON.parse(dataStr));
+        const data = parseStreamingDataPayload(dataStr);
+        if (!data) throw new Error("Invalid streaming data payload");
+        startStreaming(data);
       } catch (e) {
         persistRegionStartDebug({
           stage: "apply-streaming-data-error",
@@ -208,7 +214,9 @@ const Recorder = () => {
     pendingStreamingData.current = null;
     perfMark("Region.Recorder streaming-data.flushed");
     try {
-      startStreaming(JSON.parse(dataStr));
+      const data = parseStreamingDataPayload(dataStr);
+      if (!data) throw new Error("Invalid streaming data payload");
+      startStreaming(data);
     } catch (e) {
       persistRegionStartDebug({
         stage: "flush-streaming-data-error",
@@ -975,7 +983,7 @@ const Recorder = () => {
         stickyState
       );
       const selectedVideoConfig =
-        probeResult?.details?.selectedVideoConfig || null;
+        probeResult?.details?.selectedVideoConfig || undefined;
       const containerKind =
         probeResult?.details?.containerKind === "webm" ? "webm" : "mp4";
       let recorderToken = 0;
@@ -2361,7 +2369,7 @@ const Recorder = () => {
     audioOutputGain.current.gain.value = volume;
   }
 
-  async function startStreaming(data: Record<string, any>) {
+  async function startStreaming(data: StreamingDataPayload) {
     perfMark("Region.Recorder startStreaming.enter", {
       hasTarget: Boolean(target.current),
       systemAudio: Boolean(data?.systemAudio),
@@ -2639,10 +2647,12 @@ const Recorder = () => {
     };
   }, []);
 
-  const setMic = async (result: Record<string, any>) => {
-    pendingMicIntent.current = Boolean(result.active);
+  const setMic = async (result: unknown) => {
+    if (!isRecord(result)) return;
+    const active = result.active === true;
+    pendingMicIntent.current = active;
     if (helperAudioStream.current != null) {
-      if (result.active) {
+      if (active) {
         setAudioInputVolume(1);
       } else {
         setAudioInputVolume(0);
@@ -2652,10 +2662,10 @@ const Recorder = () => {
 
     // Cold-start path: mic was off at recording start; acquire now and
     // splice into the audio graph.
-    if (!result.active) return;
+    if (!active) return;
     if (
       shouldRejectMicEnableWithoutMixer({
-        requestedActive: result.active,
+        requestedActive: active,
         hasAudioContext: Boolean(aCtx.current),
         hasDestination: Boolean(destination.current),
       })
@@ -2687,10 +2697,16 @@ const Recorder = () => {
     if (isLazyAcquiringMic.current) return;
     isLazyAcquiringMic.current = true;
     try {
-      const deviceId =
-        result.defaultAudioInput ||
-        (await chrome.storage.local.get(["defaultAudioInput"]))
-          .defaultAudioInput;
+      const stored = await chrome.storage.local.get(["defaultAudioInput"]);
+      const requestedDeviceId =
+        typeof result.defaultAudioInput === "string"
+          ? result.defaultAudioInput
+          : null;
+      const storedDeviceId =
+        isRecord(stored) && typeof stored.defaultAudioInput === "string"
+          ? stored.defaultAudioInput
+          : null;
+      const deviceId = requestedDeviceId || storedDeviceId;
       const acquired = await startAudioStream(deviceId);
       const acquireFailed = !acquired || !acquired.getAudioTracks().length;
       const tornDown =
@@ -2723,10 +2739,11 @@ const Recorder = () => {
 
   const onMessage = useCallback(
     (
-      request: Record<string, any>,
+      request: unknown,
       sender: chrome.runtime.MessageSender,
       sendResponse: (response?: unknown) => void
     ): true | void => {
+      if (!isRecord(request) || typeof request.type !== "string") return;
       if (request.type === "loaded") {
         perfMark("Region.Recorder loaded.received", {
           isRegion: Boolean(request.region),
@@ -2747,7 +2764,7 @@ const Recorder = () => {
         const wasDuplicate = streamingDataHandled.current;
         // Push path; the pull response usually wins. applyStreamingData
         // dedupes, and defers if the crop target hasn't arrived yet.
-        applyStreamingData(request.data);
+        if (typeof request.data === "string") applyStreamingData(request.data);
         try {
           sendResponse?.({ ok: true, duplicate: wasDuplicate });
         } catch {}
@@ -2774,7 +2791,8 @@ const Recorder = () => {
             else recorderType = "other";
           }
           return {
-            attemptId: request.attemptId || null,
+            attemptId:
+              typeof request.attemptId === "string" ? request.attemptId : null,
             hasRecorder: Boolean(r),
             recorderType,
             mediaRecorderState: r instanceof MediaRecorder ? r.state : null,
@@ -2817,7 +2835,7 @@ const Recorder = () => {
             });
           })
           .catch((error) => {
-            const reason = error?.message || String(error);
+            const reason = errorMessage(error);
             lifecycle("Region.Recorder", "restart-tab-result", {
               ...recState(),
               ok: false,
@@ -2855,7 +2873,9 @@ const Recorder = () => {
       } else if (request.type === "set-mic-active-tab") {
         setMic(request);
       } else if (request.type === "set-audio-output-volume") {
-        setAudioOutputVolume(request.volume);
+        if (typeof request.volume === "number") {
+          setAudioOutputVolume(request.volume);
+        }
       } else if (request.type === "pause-recording-tab") {
         if (!recorder.current) return;
         if (pausedStateRef.current) return;

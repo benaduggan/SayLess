@@ -64,6 +64,10 @@ import {
   isTransientFastRecorderError,
   isFastRecorderFailureTransient,
 } from "../../media/fastRecorderGate";
+import {
+  parseStreamingDataPayload,
+  type StreamingDataPayload,
+} from "../../messaging/streamingDataProtocol";
 
 localforage.config({
   driver: localforage.INDEXEDDB,
@@ -98,7 +102,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
 
 const fastRecorderProbeDetails = (
-  storage: Record<string, unknown>,
+  storage: Record<string, unknown>
 ): Record<string, unknown> | null => {
   const probe = storage.fastRecorderProbe;
   if (!isRecord(probe) || !isRecord(probe.details)) return null;
@@ -220,7 +224,7 @@ interface SilenceWatchdog {
 }
 
 type RuntimeMessageHandler = (
-  request: Record<string, any>,
+  request: unknown,
   sender: chrome.runtime.MessageSender,
   sendResponse: (response?: unknown) => void
 ) => true | void;
@@ -289,7 +293,9 @@ const Recorder = () => {
       streamingDataTimeout.current = null;
     }
     try {
-      startStreaming(JSON.parse(dataStr));
+      const data = parseStreamingDataPayload(dataStr);
+      if (!data) throw new Error("Invalid streaming data payload");
+      startStreaming(data);
     } catch (e) {
       slLog("apply-streaming-data-error", {
         err: errorMessage(e).slice(0, 120),
@@ -1663,7 +1669,7 @@ const Recorder = () => {
       } catch {}
     }
     const selectedVideoConfig =
-      probeResult?.details?.selectedVideoConfig || null;
+      probeResult?.details?.selectedVideoConfig || undefined;
     const containerKind = recordingExtension;
 
     await chrome.storage.local.set({
@@ -3443,14 +3449,16 @@ const Recorder = () => {
     audioOutputGain.current.gain.value = volume;
   }
 
-  const setMic = async (result: Record<string, any>) => {
+  const setMic = async (result: unknown) => {
+    if (!isRecord(result)) return;
     debug("setMic()", result);
     // Record intent before any early-return so the lazy path can honor a
     // mid-acquire toggle-off after its await.
-    pendingMicIntent.current = Boolean(result.active);
+    const active = result.active === true;
+    pendingMicIntent.current = active;
 
     if (helperAudioStream.current != null) {
-      if (result.active) {
+      if (active) {
         setAudioInputVolume(1);
       } else {
         setAudioInputVolume(0);
@@ -3460,10 +3468,10 @@ const Recorder = () => {
 
     // Cold-start path: mic was off at recording start; acquire now and
     // splice into the audio graph.
-    if (!result.active) return;
+    if (!active) return;
     if (
       shouldRejectMicEnableWithoutMixer({
-        requestedActive: result.active,
+        requestedActive: active,
         hasAudioContext: Boolean(aCtx.current),
         hasDestination: Boolean(destination.current),
       })
@@ -3495,10 +3503,16 @@ const Recorder = () => {
     if (isLazyAcquiringMic.current) return;
     isLazyAcquiringMic.current = true;
     try {
-      const deviceId =
-        result.defaultAudioInput ||
-        (await chrome.storage.local.get(["defaultAudioInput"]))
-          .defaultAudioInput;
+      const stored = await chrome.storage.local.get(["defaultAudioInput"]);
+      const requestedDeviceId =
+        typeof result.defaultAudioInput === "string"
+          ? result.defaultAudioInput
+          : null;
+      const storedDeviceId =
+        isRecord(stored) && typeof stored.defaultAudioInput === "string"
+          ? stored.defaultAudioInput
+          : null;
+      const deviceId = requestedDeviceId || storedDeviceId;
       const acquired = await startAudioStream(deviceId);
       const acquireFailed = !acquired || !acquired.getAudioTracks().length;
       const tornDown =
@@ -3532,9 +3546,9 @@ const Recorder = () => {
   };
 
   async function startStream(
-    data: Record<string, any>,
+    data: StreamingDataPayload,
     id: string | null,
-    options: any,
+    options: chrome.desktopCapture.StreamOptions | null,
     permissions: PermissionStatus,
     permissions2: PermissionStatus,
     streamOpts: { useDisplayMedia?: boolean } = {}
@@ -4193,9 +4207,7 @@ const Recorder = () => {
       const w = Number(settings.width) || 0;
       const h = Number(settings.height) || 0;
       if (w > 0 && h > 0) {
-        const probeData = await chrome.storage.local.get([
-          "fastRecorderProbe",
-        ]);
+        const probeData = await chrome.storage.local.get(["fastRecorderProbe"]);
         const probeDetails = fastRecorderProbeDetails(probeData);
         const probeConfig = isRecord(probeDetails?.selectedVideoConfig)
           ? probeDetails.selectedVideoConfig
@@ -4227,7 +4239,7 @@ const Recorder = () => {
     tryStartIfReady();
   }
 
-  async function startStreaming(data: Record<string, any>) {
+  async function startStreaming(data: StreamingDataPayload) {
     perfMark("Recorder startStreaming.enter");
     startTabKeepAlive();
 
@@ -4583,23 +4595,27 @@ const Recorder = () => {
   // Registered once on mount; refs keep the closure fresh.
   const onMessageRef = useRef<RuntimeMessageHandler | null>(null);
   onMessageRef.current = (request, sender, sendResponse) => {
+    if (!isRecord(request) || typeof request.type !== "string") return;
     if (DEBUG_RECORDER) {
       debug("onMessage()", request.type, { request, sender });
     }
 
     if (request.type === "loaded") {
-      perfMark("Recorder loaded.received", { isTab: Boolean(request?.isTab) });
+      const requestedIsTab = request.isTab === true;
+      const requestedTabId =
+        typeof request.tabID === "number" ? request.tabID : null;
+      perfMark("Recorder loaded.received", { isTab: requestedIsTab });
       slLog("msg-loaded");
       // offscreen has no visible Warning; surface system-audio guidance as a toast
-      if (IS_OFFSCREEN_HOST && !request.isTab) {
+      if (IS_OFFSCREEN_HOST && !requestedIsTab) {
         sendSystemAudioGuidanceToast();
       }
       if (!tabPreferred.current) {
-        isTab.current = request.isTab;
-        if (request.isTab) {
-          recordedTabId.current = request.tabID ?? null;
-          getStreamID(request.tabID).catch((err) => {
-            tabIDError.current = String(err?.message || err);
+        isTab.current = requestedIsTab;
+        if (requestedIsTab && requestedTabId !== null) {
+          recordedTabId.current = requestedTabId;
+          getStreamID(requestedTabId).catch((error) => {
+            tabIDError.current = errorMessage(error);
           });
         }
       } else {
@@ -4612,7 +4628,7 @@ const Recorder = () => {
     } else if (request.type === "streaming-data") {
       // Push path; the pull response usually wins. applyStreamingData
       // dedupes whichever arrives second.
-      applyStreamingData(request.data);
+      if (typeof request.data === "string") applyStreamingData(request.data);
     } else if (request.type === "start-recording-tab") {
       slLog("msg-start-recording-tab", {
         hasStream: !!helperVideoStream.current,
@@ -4632,7 +4648,8 @@ const Recorder = () => {
           else recorderType = "other";
         }
         return {
-          attemptId: request.attemptId || null,
+          attemptId:
+            typeof request.attemptId === "string" ? request.attemptId : null,
           hasRecorder: Boolean(r),
           recorderType,
           mediaRecorderState: r instanceof MediaRecorder ? r.state : null,
@@ -4684,7 +4701,7 @@ const Recorder = () => {
           });
         })
         .catch((error) => {
-          const reason = error?.message || String(error);
+          const reason = errorMessage(error);
           lifecycle("Recorder", "restart-tab-result", {
             ...recState(),
             ok: false,
@@ -4802,7 +4819,10 @@ const Recorder = () => {
       sendResponse?.({ ok: true, woke: true });
       return true;
     } else if (request.type === "offscreen-shutdown") {
-      const timeoutMs = Number(request.timeoutMs) || 20000;
+      const timeoutMs =
+        typeof request.timeoutMs === "number" && request.timeoutMs > 0
+          ? request.timeoutMs
+          : 20000;
       (async () => {
         try {
           if (isRecording.current) stopRecording();
@@ -4820,7 +4840,9 @@ const Recorder = () => {
     } else if (request.type === "set-mic-active-tab") {
       setMic(request);
     } else if (request.type === "set-audio-output-volume") {
-      setAudioOutputVolume(request.volume);
+      if (typeof request.volume === "number") {
+        setAudioOutputVolume(request.volume);
+      }
     } else if (request.type === "pause-recording-tab") {
       if (!recorder.current) return;
       if (pausedStateRef.current) return;
