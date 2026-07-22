@@ -10,7 +10,7 @@ import styles from "../../styles/edit/_Dropdown.module.scss";
 //import CheckWhiteIcon from "../../public/assets/icons/check-white.svg";
 
 // Context
-import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
+import { useEditorContent } from "../../context/ContentState";
 
 const assetUrl = (path: string) => chrome.runtime.getURL(`assets/${path}`);
 
@@ -26,7 +26,7 @@ interface CropPreset {
 }
 
 const Dropdown = (props: DropdownProps) => {
-  const [contentState, setContentState] = useContext(ContentStateContext); // Access the ContentState context
+  const [contentState, setContentState] = useEditorContent();
 
   const [label, setLabel] = useState("None");
   const [value, setValue] = useState("none");

@@ -3,10 +3,10 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import styles from "../../styles/edit/_Trimmer.module.scss";
 import WaveformGenerator from "./Waveform";
 
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 
 const Trimmer = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
 
   const trimmerRef = useRef<HTMLDivElement>(null);
   const startHandleRef = useRef<HTMLDivElement>(null);

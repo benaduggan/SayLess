@@ -1,10 +1,10 @@
 import { useContext, useRef, useEffect, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import styles from "../../styles/edit/_Waveform.module.scss";
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 
 const WaveformGenerator = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const waveformContainerRef = useRef<HTMLDivElement>(null);
   const customCursorRef = useRef<HTMLDivElement>(null);

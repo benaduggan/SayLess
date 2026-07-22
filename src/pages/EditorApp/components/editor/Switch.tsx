@@ -5,10 +5,10 @@ import * as S from "@radix-ui/react-switch";
 import styles from "../../styles/edit/_Switch.module.scss";
 
 // Context
-import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
+import { useEditorContent } from "../../context/ContentState";
 
 const Switch = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
 
   return (
     <form>

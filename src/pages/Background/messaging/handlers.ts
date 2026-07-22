@@ -1,5 +1,11 @@
 import JSZip from "jszip";
 import { registerMessage } from "../../../messaging/messageRouter";
+import {
+  LOCAL_PLAYBACK_MAX_BYTES,
+  normalizeLocalPlaybackOffer,
+  parseStoredLocalPlaybackOffer,
+  type LocalPlaybackOffer,
+} from "../../../messaging/localPlaybackProtocol";
 import { perfMark, perfSpan } from "../../utils/perfMarks";
 import {
   focusTab,
@@ -92,11 +98,27 @@ const REVIEW_GATE = {
 
 const MAX_CAPTURED_CLICK_EVENTS = 500;
 
-type LooseRecord = Record<string, any>;
+type LooseRecord = Record<string, unknown>;
+const isLooseRecord = (value: unknown): value is LooseRecord =>
+  Boolean(value && typeof value === "object" && !Array.isArray(value));
+const asLooseRecord = (value: unknown): LooseRecord =>
+  isLooseRecord(value) ? value : {};
+const asNullableLooseRecord = (value: unknown): LooseRecord | null =>
+  isLooseRecord(value) ? value : null;
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 const asTabId = (value: unknown): number | null =>
   typeof value === "number" && Number.isInteger(value) ? value : null;
+const stringOr = (value: unknown, fallback: string): string =>
+  typeof value === "string" && value ? value : fallback;
+const optionalString = (value: unknown): string | undefined =>
+  typeof value === "string" ? value : undefined;
+const nullableString = (value: unknown): string | null =>
+  typeof value === "string" && value ? value : null;
+const optionalStringArray = (value: unknown): string[] | undefined =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : undefined;
 
 function finiteNumber(value: unknown): number | null;
 function finiteNumber(value: unknown, fallback: number): number;
@@ -179,23 +201,25 @@ const shouldShowReviewPrompt = async () => {
       "recordingDegradedMode",
       "lastRecordingSalvaged",
     ]);
-    const state: LooseRecord = s.reviewPromptState || {};
+    const state = asLooseRecord(s.reviewPromptState);
     const now = Date.now();
 
     // Already reviewed, opted out, or routed to feedback: never ask again.
     if (state.done) return false;
     // Snoozed after a "maybe later".
-    if (state.snoozedUntil && now < state.snoozedUntil) return false;
+    const snoozedUntil = finiteNumber(state.snoozedUntil, 0);
+    if (snoozedUntil && now < snoozedUntil) return false;
     // Stop asking after maxShows un-acted reveals, widening the gap each time
     // (24h, then 7d), so a user who ignores it isn't asked repeatedly.
-    const shownCount = state.shownCount || 0;
+    const shownCount = finiteNumber(state.shownCount, 0);
     if (shownCount >= REVIEW_GATE.maxShows) return false;
-    if (state.lastShownAt) {
+    const lastShownAt = finiteNumber(state.lastShownAt, 0);
+    if (lastShownAt) {
       const cooldownDays =
         REVIEW_GATE.reshowCooldownDays[
           Math.min(shownCount, REVIEW_GATE.reshowCooldownDays.length) - 1
         ] || 0;
-      if (now - state.lastShownAt < cooldownDays * DAY_MS) return false;
+      if (now - lastShownAt < cooldownDays * DAY_MS) return false;
     }
 
     // Established install. Existing users were backfilled to 0 so they pass
@@ -217,8 +241,12 @@ const shouldShowReviewPrompt = async () => {
     // leave outcome "in-progress" (only tab/desktop set "ok"), so block on known
     // FAILURE outcomes rather than requiring "ok".
     const FAILURE_OUTCOMES = ["error", "stuck", "cancelled"];
-    const startFlowTrace: LooseRecord | null = s.startFlowTrace || null;
-    if (startFlowTrace && FAILURE_OUTCOMES.includes(startFlowTrace.outcome))
+    const startFlowTrace = asNullableLooseRecord(s.startFlowTrace);
+    if (
+      startFlowTrace &&
+      typeof startFlowTrace.outcome === "string" &&
+      FAILURE_OUTCOMES.includes(startFlowTrace.outcome)
+    )
       return false;
 
     // No hard failure or degraded-output marker on the most recent recording.
@@ -245,74 +273,10 @@ const shouldShowReviewPrompt = async () => {
 };
 
 const STOP_RECORDING_TAB_DEBOUNCE_MS = 1200;
-const LOCAL_PLAYBACK_MAX_BYTES = 250 * 1024 * 1024;
-const LOCAL_PLAYBACK_MAX_CHUNKS = 4000;
-const LOCAL_PLAYBACK_MIN_TTL_MS = 60 * 1000;
-const LOCAL_PLAYBACK_MAX_TTL_MS = 24 * 60 * 60 * 1000;
 let stopRecordingTabInFlight = false;
 let stopRecordingTabLastAt = 0;
 
-const clamp = (value: number, min: number, max: number): number =>
-  Math.max(min, Math.min(max, value));
-
-const normalizeLocalPlaybackOffer = (offer: LooseRecord = {}) => {
-  const now = Date.now();
-  const expiresAtRaw = Number(offer.expiresAt) || 0;
-  const ttl =
-    expiresAtRaw > now
-      ? clamp(
-          expiresAtRaw - now,
-          LOCAL_PLAYBACK_MIN_TTL_MS,
-          LOCAL_PLAYBACK_MAX_TTL_MS,
-        )
-      : LOCAL_PLAYBACK_MIN_TTL_MS;
-  const expiresAt = now + ttl;
-  const chunkCount = Math.max(
-    0,
-    Math.min(LOCAL_PLAYBACK_MAX_CHUNKS, Number(offer.chunkCount) || 0),
-  );
-  const estimatedBytes = Math.max(0, Number(offer.estimatedBytes) || 0);
-  const createdAt = Number(offer.createdAt) || now;
-
-  // storageBackend / opfsSessionId let the read-chunk + clear handlers route
-  // to the same backend the writer used. Older offers without these fields
-  // default to IDB to match pre-OPFS behaviour.
-  const storageBackend =
-    offer.storageBackend === "opfs" ? "opfs" : "idb";
-  const opfsSessionId =
-    storageBackend === "opfs" && offer.opfsSessionId
-      ? String(offer.opfsSessionId)
-      : null;
-  // Container is the mimeType the editor's <video> should use. Defaults
-  // to webm for back-compat; WebCodecs sessions overwrite to video/mp4.
-  const container =
-    offer.container === "video/mp4" ? "video/mp4" : "video/webm";
-  const encoderKind =
-    offer.encoderKind === "webcodecs" ? "webcodecs" : "mediarecorder";
-
-  return {
-    offerId: offer.offerId || crypto.randomUUID(),
-    projectId: offer.projectId || null,
-    sceneId: offer.sceneId || null,
-    recordingSessionId: offer.recordingSessionId || null,
-    trackType: "screen",
-    source: offer.source || "indexeddb-screen-chunks",
-    status: offer.status || "available",
-    chunkCount,
-    estimatedBytes,
-    mediaId: offer.mediaId || null,
-    bunnyVideoId: offer.bunnyVideoId || null,
-    storageBackend,
-    opfsSessionId,
-    container,
-    encoderKind,
-    createdAt,
-    expiresAt,
-    updatedAt: now,
-  };
-};
-
-const offerScreenStore = (offer: LooseRecord | null) => {
+const offerScreenStore = (offer: LocalPlaybackOffer | null) => {
   if (offer?.storageBackend === "opfs" && offer.opfsSessionId) {
     return openExistingChunksStore({
       sessionId: offer.opfsSessionId,
@@ -326,10 +290,12 @@ const offerScreenStore = (offer: LooseRecord | null) => {
   return chunksStore;
 };
 
-const isLocalPlaybackOfferExpired = (offer: LooseRecord | null): boolean =>
+const isLocalPlaybackOfferExpired = (offer: LocalPlaybackOffer | null): boolean =>
   !offer || Number(offer.expiresAt || 0) <= Date.now();
 
-const scheduleLocalPlaybackAlarm = async (offer: LooseRecord): Promise<void> => {
+const scheduleLocalPlaybackAlarm = async (
+  offer: LocalPlaybackOffer,
+): Promise<void> => {
   if (!offer?.expiresAt || !chrome.alarms?.create) return;
   try {
     await chrome.alarms.clear(LOCAL_PLAYBACK_ALARM);
@@ -341,9 +307,9 @@ const scheduleLocalPlaybackAlarm = async (offer: LooseRecord): Promise<void> => 
   }
 };
 
-const getStoredLocalPlaybackOffer = async (): Promise<LooseRecord | null> => {
+const getStoredLocalPlaybackOffer = async (): Promise<LocalPlaybackOffer | null> => {
   const result = await chrome.storage.local.get([LOCAL_PLAYBACK_KEY]);
-  return result?.[LOCAL_PLAYBACK_KEY] || null;
+  return parseStoredLocalPlaybackOffer(result?.[LOCAL_PLAYBACK_KEY]);
 };
 
 const clearStoredLocalPlaybackOffer = async ({
@@ -410,7 +376,7 @@ const getValidLocalPlaybackOffer = async ({
   offerId?: string | null;
   projectId?: string | null;
   sceneId?: string | null;
-} = {}): Promise<LooseRecord | null> => {
+} = {}): Promise<LocalPlaybackOffer | null> => {
   const offer = await getStoredLocalPlaybackOffer();
   if (!offer) return null;
 
@@ -578,7 +544,7 @@ const isActiveSessionAlive = async (session: LooseRecord): Promise<boolean> => {
     "recorderSession",
   ]);
   const flagsActive = Boolean(recording || pendingRecording || restarting);
-  const storedRecord: LooseRecord | null = storedSession || null;
+  const storedRecord = asNullableLooseRecord(storedSession);
   const storedMatches =
     storedRecord?.id === session.id && isSessionRecording(storedRecord);
   return ownerTabAlive && (storedMatches || flagsActive);
@@ -593,7 +559,7 @@ const resolveActiveSessionConflict = async (incomingSession: LooseRecord) => {
     const { recorderSession: storedSession } = await chrome.storage.local.get([
       "recorderSession",
     ]);
-    const storedRecord: LooseRecord | null = storedSession || null;
+    const storedRecord = asNullableLooseRecord(storedSession);
     if (storedRecord?.id && isSessionRecording(storedRecord)) {
       activeRecordingSession = {
         ...storedRecord,
@@ -721,7 +687,7 @@ export const setupHandlers = () => {
     ]);
     if (!recording) return { ok: true, ignored: true };
     const event = normalizeClickActivityEvent({
-      payload: message?.payload || {},
+      payload: asLooseRecord(message.payload),
       recordingStartTime,
       totalPausedMs,
       paused: Boolean(paused),
@@ -768,7 +734,11 @@ export const setupHandlers = () => {
     if (!DEBUG_FLOW) return { ok: true };
     const event = message?.event || "?";
     const data = message?.data || {};
-    const ts = message?.ts ? new Date(message.ts).toISOString().slice(11, 23) : "??:??:??";
+    const rawTimestamp = message.ts;
+    const ts =
+      typeof rawTimestamp === "string" || typeof rawTimestamp === "number"
+        ? new Date(rawTimestamp).toISOString().slice(11, 23)
+        : "??:??:??";
     console.warn(`[start-flow ${ts}] ${event}`, data);
     return { ok: true };
   });
@@ -822,18 +792,18 @@ export const setupHandlers = () => {
   registerMessage("offscreen-request-stream", async (message, sender) => {
     try {
       // anchor picker to user's tab, not the offscreen doc
-      let initiatingTabId = message.initiatingTabId || null;
+      let initiatingTabId = asTabId(message.initiatingTabId);
       if (!initiatingTabId) {
         const { recordingUiTabId } = await chrome.storage.local.get([
           "recordingUiTabId",
         ]);
-        initiatingTabId = recordingUiTabId || null;
+        initiatingTabId = asTabId(recordingUiTabId);
       }
       const result = await acquireStreamForOffscreen({
-        mode: message.mode,
-        sources: message.sources,
+        mode: stringOr(message.mode, "screen"),
+        sources: optionalStringArray(message.sources),
         initiatingTabId,
-        targetTabId: message.targetTabId,
+        targetTabId: asTabId(message.targetTabId),
       });
       return { ok: true, ...result };
     } catch (err) {
@@ -1270,10 +1240,10 @@ export const setupHandlers = () => {
   registerMessage("memory-limit-help", openLocalHelp);
   registerMessage("open-home", () => createTab("playground.html", true));
   registerMessage("report-bug", (message) =>
-    openLocalDiagnostics(message, message?.source || "settings"),
+    openLocalDiagnostics(message, stringOr(message.source, "settings")),
   );
   registerMessage("report-error", (message) =>
-    openLocalDiagnostics(message, message?.source || "error-modal"),
+    openLocalDiagnostics(message, stringOr(message.source, "error-modal")),
   );
   registerMessage("clear-recordings", () => clearAllRecordings());
   registerMessage("force-processing", () => forceProcessing());
@@ -1325,10 +1295,10 @@ export const setupHandlers = () => {
   );
 
   registerMessage("request-download", (message) =>
-    requestDownload(message.base64, message.title),
+    requestDownload(stringOr(message.base64, ""), optionalString(message.title)),
   );
   registerMessage("resize-window", (message) =>
-    resizeWindow(message.width, message.height),
+    resizeWindow(finiteNumber(message.width, 0), finiteNumber(message.height, 0)),
   );
   registerMessage("available-memory", async () => {
     return await checkAvailableMemory();
@@ -1465,17 +1435,17 @@ export const setupHandlers = () => {
   });
   registerMessage("local-playback-clear", async (message) => {
     const result = await clearStoredLocalPlaybackOffer({
-      reason: message?.reason || "explicit-clear",
+      reason: stringOr(message.reason, "explicit-clear"),
       clearChunks: message?.clearChunks !== false,
-      onlyIfOfferId: message?.offerId || null,
+      onlyIfOfferId: nullableString(message.offerId),
     });
     return result;
   });
   registerMessage("local-playback-get-offer", async (message) => {
     const offer = await getValidLocalPlaybackOffer({
-      offerId: message?.offerId || null,
-      projectId: message?.projectId || null,
-      sceneId: message?.sceneId || null,
+      offerId: nullableString(message.offerId),
+      projectId: nullableString(message.projectId),
+      sceneId: nullableString(message.sceneId),
     });
     if (!offer) {
       return { ok: false, error: "offer-unavailable" };
@@ -1484,9 +1454,9 @@ export const setupHandlers = () => {
   });
   registerMessage("local-playback-read-chunk", async (message) => {
     const offer = await getValidLocalPlaybackOffer({
-      offerId: message?.offerId || null,
-      projectId: message?.projectId || null,
-      sceneId: message?.sceneId || null,
+      offerId: nullableString(message.offerId),
+      projectId: nullableString(message.projectId),
+      sceneId: nullableString(message.sceneId),
     });
     if (!offer) {
       return { ok: false, error: "offer-unavailable" };
@@ -1509,10 +1479,21 @@ export const setupHandlers = () => {
     // the mimeType from the offer's recorded container so the editor's
     // <video> element knows whether it's MP4 or WebM.
     const containerMime = offer.container || "video/webm";
-    const blob =
-      item.chunk instanceof Blob && item.chunk.type
-        ? item.chunk
-        : new Blob([item.chunk], { type: containerMime });
+    const rawChunk = item.chunk;
+    let blob: Blob;
+    if (rawChunk instanceof Blob && rawChunk.type) {
+      blob = rawChunk;
+    } else if (rawChunk instanceof Blob || rawChunk instanceof ArrayBuffer) {
+      blob = new Blob([rawChunk], { type: containerMime });
+    } else if (ArrayBuffer.isView(rawChunk)) {
+      const copy = new Uint8Array(rawChunk.byteLength);
+      copy.set(
+        new Uint8Array(rawChunk.buffer, rawChunk.byteOffset, rawChunk.byteLength),
+      );
+      blob = new Blob([copy.buffer], { type: containerMime });
+    } else {
+      return { ok: false, error: "chunk-invalid", index };
+    }
     const arrayBuffer = await blob.arrayBuffer();
     const base64 = btoa(
       new Uint8Array(arrayBuffer).reduce(
@@ -1537,9 +1518,9 @@ export const setupHandlers = () => {
   });
   registerMessage("local-playback-mark-used", async (message) => {
     const offer = await getValidLocalPlaybackOffer({
-      offerId: message?.offerId || null,
-      projectId: message?.projectId || null,
-      sceneId: message?.sceneId || null,
+      offerId: nullableString(message.offerId),
+      projectId: nullableString(message.projectId),
+      sceneId: nullableString(message.sceneId),
     });
     if (!offer) {
       return { ok: false, error: "offer-unavailable" };
@@ -1570,9 +1551,9 @@ export const setupHandlers = () => {
   });
   registerMessage("local-playback-mark-fallback", async (message) => {
     const offer = await getValidLocalPlaybackOffer({
-      offerId: message?.offerId || null,
-      projectId: message?.projectId || null,
-      sceneId: message?.sceneId || null,
+      offerId: nullableString(message.offerId),
+      projectId: nullableString(message.projectId),
+      sceneId: nullableString(message.sceneId),
     });
     if (!offer) {
       return { ok: false, error: "offer-unavailable" };
@@ -1622,7 +1603,7 @@ export const setupHandlers = () => {
     const next: LooseRecord = { ...((reviewPromptState || {}) as LooseRecord) };
     if (action === "shown") {
       next.lastShownAt = Date.now();
-      next.shownCount = (next.shownCount || 0) + 1;
+      next.shownCount = finiteNumber(next.shownCount, 0) + 1;
     } else if (action === "later") {
       // Thumbs-up but not now, so snooze for a long while.
       next.snoozedUntil = Date.now() + REVIEW_GATE.snoozeDays * DAY_MS;
@@ -1725,7 +1706,10 @@ export const setupHandlers = () => {
   registerMessage(
     "register-recording-session",
     async (message, sender, sendResponse) => {
-      const incoming = normalizeIncomingSession(message.session || {}, sender);
+      const incoming = normalizeIncomingSession(
+        asLooseRecord(message.session),
+        sender,
+      );
       const resolution = await resolveActiveSessionConflict(incoming);
       if (!resolution.allow) {
         sendResponse({
@@ -1737,7 +1721,7 @@ export const setupHandlers = () => {
       }
 
       activeRecordingSession = incoming;
-      registerRecordingTabListener(incoming.recorderTabId);
+      registerRecordingTabListener(asTabId(incoming.recorderTabId));
       sendResponse({
         ok: true,
         session: activeRecordingSession,
@@ -1751,7 +1735,7 @@ export const setupHandlers = () => {
     "clear-recording-session",
     async (message, sender, sendResponse) => {
       await clearRecordingSessionSafe(
-        message?.reason || "clear-recording-session",
+        stringOr(message.reason, "clear-recording-session"),
       );
       sendResponse({ ok: true });
       return true;
@@ -1762,7 +1746,7 @@ export const setupHandlers = () => {
     "clear-recording-session-safe",
     async (message, sender, sendResponse) => {
       await clearRecordingSessionSafe(
-        message?.reason || "clear-recording-session-safe",
+        stringOr(message.reason, "clear-recording-session-safe"),
         {
           sourceTabId: sender?.tab?.id || null,
         },

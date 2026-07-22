@@ -6,10 +6,10 @@ import { ReactSVG } from "react-svg";
 
 const URL = chrome.runtime.getURL("assets/");
 
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 
 const CropUI = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
 
   const handleWidth = (e: ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);

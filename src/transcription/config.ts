@@ -15,7 +15,12 @@ export interface TranscriptionConfig {
   providerOptions: ProviderOptions;
 }
 
-export type TranscriptionConfigLayer = Partial<TranscriptionConfig>;
+export interface TranscriptionConfigLayer {
+  providerId?: string;
+  privacyMode?: boolean;
+  defaultLanguage?: string;
+  providerOptions?: ProviderOptions;
+}
 
 interface RuntimeWithGetUrl {
   runtime?: { getURL?: (path: string) => string };
@@ -31,7 +36,8 @@ interface TranscriptionChromeApi extends RuntimeWithGetUrl {
 }
 
 const getChromeApi = (): TranscriptionChromeApi | undefined =>
-  (globalThis as typeof globalThis & { chrome?: TranscriptionChromeApi }).chrome;
+  (globalThis as typeof globalThis & { chrome?: TranscriptionChromeApi })
+    .chrome;
 
 export const LOCAL_WHISPER_MODEL_ID = "onnx-community/whisper-base_timestamped";
 export const LOCAL_WHISPER_ASSET_ROOT = "assets/whisper/models/";
@@ -53,7 +59,7 @@ export const TRANSCRIPTION_LANGUAGES = [
 ];
 
 const SUPPORTED_LANGUAGE_VALUES = new Set(
-  TRANSCRIPTION_LANGUAGES.map((language) => language.value),
+  TRANSCRIPTION_LANGUAGES.map((language) => language.value)
 );
 
 const allowRemoteModelOverrides = (): boolean =>
@@ -62,10 +68,44 @@ const allowRemoteModelOverrides = (): boolean =>
 const isRemoteModelPath = (value: unknown): boolean =>
   /^https?:\/\//i.test(String(value || ""));
 const isBundledExtensionModelPath = (value: unknown): boolean =>
-  /^chrome-extension:\/\/[^/]+\/assets\/whisper\/models\/?$/i.test(String(value || ""));
+  /^chrome-extension:\/\/[^/]+\/assets\/whisper\/models\/?$/i.test(
+    String(value || "")
+  );
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value && typeof value === "object" && !Array.isArray(value));
+
+export const normalizeTranscriptionConfigLayer = (
+  value: unknown
+): TranscriptionConfigLayer => {
+  if (!isRecord(value)) return {};
+
+  const layer: TranscriptionConfigLayer = {};
+  if (typeof value.providerId === "string" && value.providerId.trim()) {
+    layer.providerId = value.providerId.trim();
+  }
+  if (typeof value.privacyMode === "boolean") {
+    layer.privacyMode = value.privacyMode;
+  }
+  if (typeof value.defaultLanguage === "string") {
+    layer.defaultLanguage = normalizeTranscriptionLanguage(
+      value.defaultLanguage
+    );
+  }
+  if (isRecord(value.providerOptions)) {
+    const providerOptions: ProviderOptions = {};
+    for (const [providerId, options] of Object.entries(value.providerOptions)) {
+      if (providerId && isRecord(options)) {
+        providerOptions[providerId] = { ...options };
+      }
+    }
+    layer.providerOptions = providerOptions;
+  }
+  return layer;
+};
 
 function enforceReleaseOfflineDefaults(
-  config: TranscriptionConfig,
+  config: TranscriptionConfig
 ): TranscriptionConfig {
   if (allowRemoteModelOverrides()) return config;
 
@@ -83,7 +123,9 @@ function enforceReleaseOfflineDefaults(
 }
 
 export const normalizeTranscriptionLanguage = (language: unknown): string => {
-  const value = String(language || "auto").trim().toLowerCase();
+  const value = String(language || "auto")
+    .trim()
+    .toLowerCase();
   return SUPPORTED_LANGUAGE_VALUES.has(value) ? value : "auto";
 };
 
@@ -105,46 +147,53 @@ export const DEFAULT_CONFIG: TranscriptionConfig = {
  * @param {...Partial<TranscriptionConfig>} layers
  * @returns {TranscriptionConfig}
  */
-function mergeConfigLayers(
-  ...layers: Array<TranscriptionConfigLayer | null | undefined>
-): TranscriptionConfig {
-  const out: Record<string, unknown> & { providerOptions: ProviderOptions } = {
-    providerOptions: {},
-  };
-  for (const layer of layers) {
-    if (!layer) continue;
-    for (const [k, v] of Object.entries(layer)) {
-      if (k === "providerOptions" && v && typeof v === "object") {
-        for (const [pid, opts] of Object.entries(v)) {
-          if (!opts || typeof opts !== "object" || Array.isArray(opts)) continue;
-          const current = out.providerOptions[pid] || {};
-          const next: Record<string, unknown> = { ...current, ...opts };
-          if (
-            pid === "local-whisper" &&
-            !allowRemoteModelOverrides() &&
-            isBundledExtensionModelPath(current.localModelPath) &&
-            isRemoteModelPath(next.localModelPath)
-          ) {
-            next.localModelPath = current.localModelPath;
-          }
-          out.providerOptions[pid] = next;
+function mergeConfigLayers(...layers: unknown[]): TranscriptionConfigLayer {
+  const out: TranscriptionConfigLayer = {};
+  const providerOptions: ProviderOptions = {};
+  let hasProviderOptions = false;
+
+  for (const value of layers) {
+    const layer = normalizeTranscriptionConfigLayer(value);
+    if (layer.providerId !== undefined) out.providerId = layer.providerId;
+    if (layer.privacyMode !== undefined) out.privacyMode = layer.privacyMode;
+    if (layer.defaultLanguage !== undefined) {
+      out.defaultLanguage = layer.defaultLanguage;
+    }
+    if (layer.providerOptions) {
+      hasProviderOptions = true;
+      for (const [providerId, options] of Object.entries(
+        layer.providerOptions
+      )) {
+        const current = providerOptions[providerId] || {};
+        const next = { ...current, ...options };
+        if (
+          providerId === "local-whisper" &&
+          !allowRemoteModelOverrides() &&
+          isBundledExtensionModelPath(current.localModelPath) &&
+          isRemoteModelPath(next.localModelPath)
+        ) {
+          next.localModelPath = current.localModelPath;
         }
-      } else if (v !== undefined) {
-        out[k] = k === "defaultLanguage" ? normalizeTranscriptionLanguage(v) : v;
+        providerOptions[providerId] = next;
       }
     }
   }
-  return out as unknown as TranscriptionConfig;
+  if (hasProviderOptions) out.providerOptions = providerOptions;
+  return out;
 }
 
-export function mergeConfig(
-  ...layers: Array<TranscriptionConfigLayer | null | undefined>
-): TranscriptionConfig {
-  return enforceReleaseOfflineDefaults(mergeConfigLayers(...layers));
+export function mergeConfig(...layers: unknown[]): TranscriptionConfig {
+  const merged = mergeConfigLayers(...layers);
+  return enforceReleaseOfflineDefaults({
+    providerId: merged.providerId || DEFAULT_CONFIG.providerId,
+    privacyMode: merged.privacyMode ?? DEFAULT_CONFIG.privacyMode,
+    defaultLanguage: merged.defaultLanguage ?? DEFAULT_CONFIG.defaultLanguage,
+    providerOptions: merged.providerOptions || {},
+  });
 }
 
 export function getBundledLocalWhisperOptions(
-  runtime: RuntimeWithGetUrl | undefined = getChromeApi(),
+  runtime: RuntimeWithGetUrl | undefined = getChromeApi()
 ): TranscriptionConfigLayer {
   const getURL = runtime?.runtime?.getURL;
   if (typeof getURL !== "function") return {};
@@ -168,7 +217,9 @@ export async function resolveConfig(): Promise<TranscriptionConfig> {
     const chromeApi = getChromeApi();
     if (chromeApi?.storage?.local) {
       const got = await chromeApi.storage.local.get(TRANSCRIPTION_STORAGE_KEY);
-      stored = got?.[TRANSCRIPTION_STORAGE_KEY] || {};
+      stored = normalizeTranscriptionConfigLayer(
+        got?.[TRANSCRIPTION_STORAGE_KEY]
+      );
     }
   } catch {
     // ignore — fall back to defaults+env
@@ -177,15 +228,23 @@ export async function resolveConfig(): Promise<TranscriptionConfig> {
 }
 
 export async function saveTranscriptionSettings(
-  patch: TranscriptionConfigLayer = {},
+  patch: TranscriptionConfigLayer = {}
 ): Promise<TranscriptionConfig> {
   const chromeApi = getChromeApi();
   if (!chromeApi?.storage?.local) {
     return mergeConfig(DEFAULT_CONFIG, patch);
   }
   const got = await chromeApi.storage.local.get(TRANSCRIPTION_STORAGE_KEY);
-  const stored = got?.[TRANSCRIPTION_STORAGE_KEY] || {};
+  const stored = normalizeTranscriptionConfigLayer(
+    got?.[TRANSCRIPTION_STORAGE_KEY]
+  );
   const nextStored = mergeConfigLayers(stored, patch);
-  await chromeApi.storage.local.set({ [TRANSCRIPTION_STORAGE_KEY]: nextStored });
-  return mergeConfig(DEFAULT_CONFIG, getBundledLocalWhisperOptions(), nextStored);
+  await chromeApi.storage.local.set({
+    [TRANSCRIPTION_STORAGE_KEY]: nextStored,
+  });
+  return mergeConfig(
+    DEFAULT_CONFIG,
+    getBundledLocalWhisperOptions(),
+    nextStored
+  );
 }

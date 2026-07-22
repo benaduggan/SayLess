@@ -8,11 +8,11 @@ const URL = chrome.runtime.getURL("assets/");
 
 import { ReactSVG } from "react-svg";
 
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 import Switch from "../../components/editor/Switch";
 
 const AudioUI = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
   const [audio, setAudio] = useState<File | null>(null);
   const prevBlob = useRef<Blob | null | undefined>(null);
   const inputRef = useRef<HTMLInputElement>(null);

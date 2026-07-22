@@ -2,11 +2,11 @@ import React, { useContext, useEffect } from "react";
 import EditorNav from "./EditorNav";
 import VideoPlayer from "../../components/editor/VideoPlayer";
 import TrimUI from "./TrimUI";
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 import TranscriptPanel from "../../components/editor/TranscriptPanel";
 
 const Editor = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
 
   const handleSeek = (time: number, updatePlayerTime: boolean) => {
     setContentState((previous) => ({

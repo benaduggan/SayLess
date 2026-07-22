@@ -6,6 +6,10 @@ import type {
 } from "./exportJobState";
 import type { GifExportOptions } from "../../Editor/utils/toGIF";
 
+export type EditorHistorySnapshot = Partial<
+  Omit<EditorContentState, "history" | "redoHistory">
+>;
+
 export interface EditorContentState {
   blob?: Blob | null;
   originalBlob?: Blob | null;
@@ -60,6 +64,8 @@ export interface EditorContentState {
   downloading: boolean;
   downloadingWEBM: boolean;
   downloadingGIF: boolean;
+  downloadInProgress?: boolean;
+  downloadError?: string | null;
   preferFilePicker: boolean;
   pendingCropEntry?: boolean;
   fromCropper?: boolean;
@@ -89,12 +95,12 @@ export interface EditorContentState {
           burnInCaptions?: boolean;
           renderZoomKeyframes?: boolean;
           signal?: AbortSignal;
-        },
+        }
       ) => Promise<Blob | null>)
     | null;
   timelineExportDuration?: number | null;
-  history: Array<Record<string, unknown>>;
-  redoHistory: Array<Record<string, unknown>>;
+  history: EditorHistorySnapshot[];
+  redoHistory: EditorHistorySnapshot[];
   lastDownloadInfo?: {
     path?: string;
     durationMs?: number;
@@ -124,8 +130,15 @@ export interface EditorContentState {
   restoreBackup?: () => void;
   clearBackup?: () => void;
   undo?: () => void;
+  redo?: () => void;
+  handleTrim?: (cut: boolean) => Promise<void>;
+  handleMute?: () => Promise<void>;
   openToast?:
-    | ((title: string, action?: (() => void) | null, durationMs?: number) => void)
+    | ((
+        title: string,
+        action?: (() => void) | null,
+        durationMs?: number
+      ) => void)
     | null;
   openModal?:
     | ((
@@ -140,17 +153,25 @@ export interface EditorContentState {
         learnMoreLink?: (() => void) | null,
         colorSafe?: boolean,
         sideButton?: string | false,
-        sideButtonAction?: (() => void) | null,
+        sideButtonAction?: (() => void) | null
       ) => void)
     | null;
-  handleCrop?: (left: number, top: number, width: number, height: number) => Promise<true | undefined>;
-  addAudio?: (videoBlob: Blob | null, audioBlob: Blob, volume: number) => Promise<void>;
+  handleCrop?: (
+    left: number,
+    top: number,
+    width: number,
+    height: number
+  ) => Promise<true | undefined>;
+  addAudio?: (
+    videoBlob: Blob | null,
+    audioBlob: Blob,
+    volume: number
+  ) => Promise<void>;
   handleReencode?: (topLevel?: boolean) => Promise<true | undefined>;
   waitForUpdatedBlob?: () => Promise<unknown>;
-  [key: string]: unknown;
 }
 
 export type EditorContentContextValue = [
   EditorContentState,
-  Dispatch<SetStateAction<EditorContentState>>,
+  Dispatch<SetStateAction<EditorContentState>>
 ];

@@ -8,6 +8,8 @@ import {
   LOCAL_WHISPER_MODEL_ID,
   mergeConfig,
   normalizeTranscriptionLanguage,
+  normalizeTranscriptionConfigLayer,
+  resolveConfig,
   saveTranscriptionSettings,
   TRANSCRIPTION_STORAGE_KEY,
 } from "../../src/transcription/config.ts";
@@ -21,7 +23,7 @@ test("bundled local whisper options resolve through chrome.runtime.getURL", () =
 
   assert.equal(
     cfg.providerOptions["local-whisper"].localModelPath,
-    `chrome-extension://test/${LOCAL_WHISPER_ASSET_ROOT}`,
+    `chrome-extension://test/${LOCAL_WHISPER_ASSET_ROOT}`
   );
 });
 
@@ -50,16 +52,19 @@ test("stored transcription options cannot disable release offline protections", 
           allowRemoteModels: true,
         },
       },
-    },
+    }
   );
 
   assert.equal(
     cfg.providerOptions["local-whisper"].localModelPath,
-    `chrome-extension://test/${LOCAL_WHISPER_ASSET_ROOT}`,
+    `chrome-extension://test/${LOCAL_WHISPER_ASSET_ROOT}`
   );
   assert.equal(cfg.privacyMode, true);
   assert.equal(cfg.providerOptions["local-whisper"].allowRemoteModels, false);
-  assert.equal(cfg.providerOptions["local-whisper"].model, LOCAL_WHISPER_MODEL_ID);
+  assert.equal(
+    cfg.providerOptions["local-whisper"].model,
+    LOCAL_WHISPER_MODEL_ID
+  );
 });
 
 test("dev mode can explicitly opt out of privacy mode and remote model protections", () => {
@@ -97,6 +102,63 @@ test("transcription language settings are normalized", () => {
   assert.equal(cfg.defaultLanguage, "es");
 });
 
+test("untrusted transcription config layers retain only valid boundary fields", () => {
+  assert.deepEqual(normalizeTranscriptionConfigLayer(null), {});
+  assert.deepEqual(
+    normalizeTranscriptionConfigLayer({
+      providerId: 42,
+      privacyMode: "false",
+      defaultLanguage: "KLINGON",
+      providerOptions: {
+        "local-whisper": "not-an-options-object",
+        valid: { model: "local", nested: { retained: true } },
+      },
+      injected: true,
+    }),
+    {
+      defaultLanguage: "auto",
+      providerOptions: {
+        valid: { model: "local", nested: { retained: true } },
+      },
+    }
+  );
+});
+
+test("malformed stored transcription settings fall back to safe defaults", async () => {
+  const previousChrome = globalThis.chrome;
+  globalThis.chrome = {
+    runtime: {
+      getURL: (assetPath) => `chrome-extension://test/${assetPath}`,
+    },
+    storage: {
+      local: {
+        async get(key) {
+          return {
+            [key]: {
+              providerId: { injected: true },
+              privacyMode: "false",
+              providerOptions: "invalid",
+            },
+          };
+        },
+        async set() {},
+      },
+    },
+  };
+
+  try {
+    const resolved = await resolveConfig();
+    assert.equal(resolved.providerId, "local-whisper");
+    assert.equal(resolved.privacyMode, true);
+    assert.equal(
+      resolved.providerOptions["local-whisper"].localModelPath,
+      `chrome-extension://test/${LOCAL_WHISPER_ASSET_ROOT}`
+    );
+  } finally {
+    globalThis.chrome = previousChrome;
+  }
+});
+
 test("saved transcription settings persist only user overrides", async () => {
   const previousChrome = globalThis.chrome;
   const stored = {};
@@ -125,12 +187,12 @@ test("saved transcription settings persist only user overrides", async () => {
     assert.equal(stored[TRANSCRIPTION_STORAGE_KEY].privacyMode, false);
     assert.equal(
       stored[TRANSCRIPTION_STORAGE_KEY].providerOptions?.["local-whisper"],
-      undefined,
+      undefined
     );
     assert.equal(resolved.privacyMode, true);
     assert.equal(
       resolved.providerOptions["local-whisper"].localModelPath,
-      `chrome-extension://test/${LOCAL_WHISPER_ASSET_ROOT}`,
+      `chrome-extension://test/${LOCAL_WHISPER_ASSET_ROOT}`
     );
   } finally {
     globalThis.chrome = previousChrome;

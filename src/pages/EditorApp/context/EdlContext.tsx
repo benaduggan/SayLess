@@ -19,7 +19,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { ContentStateContext } from "./ContentState";
+import { useEditorContent } from "./ContentState";
 
 import {
   createTimeline,
@@ -251,7 +251,7 @@ const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
 export const EdlProvider = ({ children }: PropsWithChildren) => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
 
   const [timeline, setTimeline] = useState<Timeline | null>(null);
   const [timelinePast, setTimelinePast] = useState<Timeline[]>([]);

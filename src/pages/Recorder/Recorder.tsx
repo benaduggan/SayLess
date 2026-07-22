@@ -94,6 +94,17 @@ const SL_KEY = "streamLifecycleLog";
 const SL_MAX = 40;
 const _slBuffer: Array<Record<string, unknown>> = [];
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value && typeof value === "object" && !Array.isArray(value));
+
+const fastRecorderProbeDetails = (
+  storage: Record<string, unknown>,
+): Record<string, unknown> | null => {
+  const probe = storage.fastRecorderProbe;
+  if (!isRecord(probe) || !isRecord(probe.details)) return null;
+  return probe.details;
+};
+
 function slLog(tag: string, extra: Record<string, unknown> = {}) {
   const entry = { t: Date.now(), tag, ...extra };
   if (DEBUG_RECORDER) {
@@ -3029,10 +3040,10 @@ const Recorder = () => {
           const selection = await chooseWriter({ preferOpfs: true });
           let prewarmExt: "mp4" | "webm" = "mp4";
           try {
-            const stored: any = await chrome.storage.local.get([
+            const stored = await chrome.storage.local.get([
               "fastRecorderProbe",
             ]);
-            if (stored?.fastRecorderProbe?.details?.containerKind === "webm") {
+            if (fastRecorderProbeDetails(stored)?.containerKind === "webm") {
               prewarmExt = "webm";
             }
           } catch {}
@@ -3102,7 +3113,7 @@ const Recorder = () => {
       if (!fastRecorderActiveRecordingId) return;
       const key = `freeFinalizeStatus:${fastRecorderActiveRecordingId}`;
       const existing = await chrome.storage.local.get([key]);
-      const current = existing[key] as any;
+      const current = isRecord(existing[key]) ? existing[key] : null;
       if (
         current &&
         (current.stage === "ready" || current.stage === "chunks_ready") &&
@@ -4182,14 +4193,19 @@ const Recorder = () => {
       const w = Number(settings.width) || 0;
       const h = Number(settings.height) || 0;
       if (w > 0 && h > 0) {
-        const probeData: any = await chrome.storage.local.get([
+        const probeData = await chrome.storage.local.get([
           "fastRecorderProbe",
         ]);
-        const probeConfig =
-          probeData?.fastRecorderProbe?.details?.selectedVideoConfig || null;
+        const probeDetails = fastRecorderProbeDetails(probeData);
+        const probeConfig = isRecord(probeDetails?.selectedVideoConfig)
+          ? probeDetails.selectedVideoConfig
+          : null;
         // Prefer the probe's codec; fall back to High L4.2 (Main is excluded
         // from the ladder for Windows MFT silent-no-output, see WCR).
-        const codec = probeConfig?.codec || "avc1.64002A";
+        const codec =
+          typeof probeConfig?.codec === "string"
+            ? probeConfig.codec
+            : "avc1.64002A";
         const bitrate = Number(probeConfig?.bitrate) || 4_000_000;
         const framerate =
           Number(settings.frameRate) || Number(probeConfig?.framerate) || 30;

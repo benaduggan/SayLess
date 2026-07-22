@@ -48,7 +48,8 @@ export const setupHandlers = ({
 
   let cameraSwitchTimeout: ReturnType<typeof setTimeout> | undefined;
   registerMessage("switch-camera", (message) => {
-    if (message.id !== "none") {
+    const cameraId = typeof message.id === "string" ? message.id : "none";
+    if (cameraId !== "none") {
       clearTimeout(cameraSwitchTimeout);
       // stopCameraStream requires (streamRef, videoRef); a no-arg call
       // warns and returns, leaking the prior MediaStream.
@@ -64,7 +65,7 @@ export const setupHandlers = ({
         } = getContextRefs();
 
         getCameraStream(
-          { video: { deviceId: { exact: message.id } } },
+          { video: { deviceId: { exact: cameraId } } },
           streamRef,
           videoRef,
           offScreenCanvasRef,
@@ -168,21 +169,22 @@ const safelyApplyFilter = (
 };
 
 const handleSetBackgroundEffect = async (
-  message: Record<string, any>,
+  message: Record<string, unknown>,
 ): Promise<void> => {
   const { blurRef, effectRef, offScreenCanvasContextRef } = getContextRefs();
+  const effect = typeof message.effect === "string" ? message.effect : "";
 
-  await chrome.storage.local.set({ backgroundEffect: message.effect });
+  await chrome.storage.local.set({ backgroundEffect: effect });
 
-  if (message.effect === "blur") {
+  if (effect === "blur") {
     blurRef.current = true;
     effectRef.current = null;
     safelyApplyFilter(offScreenCanvasContextRef, "blur(5px)");
-  } else if (message.effect) {
+  } else if (effect) {
     blurRef.current = false;
 
     try {
-      const effectImage = await loadEffect(message.effect);
+      const effectImage = await loadEffect(effect);
       effectRef.current = effectImage;
       safelyApplyFilter(offScreenCanvasContextRef, "none");
     } catch (err) {
@@ -195,9 +197,12 @@ const handleSetBackgroundEffect = async (
   }
 };
 
-const handleToggleBlur = async (message: Record<string, any>): Promise<void> => {
+const handleToggleBlur = async (
+  message: Record<string, unknown>,
+): Promise<void> => {
   const { blurRef, offScreenCanvasContextRef } = getContextRefs();
-  const enabled = message.enabled ?? !blurRef.current;
+  const enabled =
+    typeof message.enabled === "boolean" ? message.enabled : !blurRef.current;
 
   blurRef.current = enabled;
 
@@ -207,9 +212,11 @@ const handleToggleBlur = async (message: Record<string, any>): Promise<void> => 
 };
 
 const handleLoadCustomEffect = async (
-  message: Record<string, any>,
+  message: Record<string, unknown>,
 ): Promise<void> => {
-  if (!message.effectUrl) {
+  const effectUrl =
+    typeof message.effectUrl === "string" ? message.effectUrl : "";
+  if (!effectUrl) {
     console.warn("⚠️ No effect URL provided");
     return;
   }
@@ -217,11 +224,11 @@ const handleLoadCustomEffect = async (
   const { blurRef, effectRef, offScreenCanvasContextRef } = getContextRefs();
 
   try {
-    const effectImage = await loadEffect(message.effectUrl);
+    const effectImage = await loadEffect(effectUrl);
     blurRef.current = false;
     effectRef.current = effectImage;
 
-    await chrome.storage.local.set({ backgroundEffect: message.effectUrl });
+    await chrome.storage.local.set({ backgroundEffect: effectUrl });
 
     safelyApplyFilter(offScreenCanvasContextRef, "none");
   } catch (error) {

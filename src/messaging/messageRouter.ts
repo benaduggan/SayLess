@@ -2,19 +2,22 @@ export interface RoutedMessage {
   type: string;
   // Runtime messages are an open protocol shared by extension contexts.
   // Individual handlers validate fields they treat as untrusted.
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 type SendResponse = (response?: unknown) => void;
 type MessageHandler = (
   message: RoutedMessage,
   sender: chrome.runtime.MessageSender,
-  sendResponse: SendResponse,
+  sendResponse: SendResponse
 ) => unknown | Promise<unknown>;
 
 const handlers: Record<string, MessageHandler> = {};
 
-export const registerMessage = (type: string, handler: MessageHandler): void => {
+export const registerMessage = (
+  type: string,
+  handler: MessageHandler
+): void => {
   if (handlers[type]) {
     console.warn(
       `⚠️ Handler for ${type} already exists in this context. Skipping.`
@@ -27,11 +30,24 @@ export const registerMessage = (type: string, handler: MessageHandler): void => 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+export const isRoutedMessage = (message: unknown): message is RoutedMessage =>
+  Boolean(
+    message &&
+      typeof message === "object" &&
+      "type" in message &&
+      typeof message.type === "string" &&
+      message.type.trim()
+  );
+
 export const messageDispatcher = (
-  message: RoutedMessage,
+  message: unknown,
   sender: chrome.runtime.MessageSender,
-  sendResponse: SendResponse,
+  sendResponse: SendResponse
 ): true | void => {
+  if (!isRoutedMessage(message)) {
+    sendResponse({ error: "Invalid extension message." });
+    return;
+  }
   const handler = handlers[message.type];
 
   if (handler) {
@@ -58,21 +74,23 @@ export const messageDispatcher = (
 };
 
 export const messageRouter = (): void => {
-  const chromeApi = (globalThis as typeof globalThis & {
-    chrome: {
-      runtime: {
-        onMessage: {
-          addListener: (
-            listener: (
-              message: RoutedMessage,
-              sender: chrome.runtime.MessageSender,
-              sendResponse: SendResponse,
-            ) => boolean | void,
-          ) => void;
+  const chromeApi = (
+    globalThis as typeof globalThis & {
+      chrome: {
+        runtime: {
+          onMessage: {
+            addListener: (
+              listener: (
+                message: RoutedMessage,
+                sender: chrome.runtime.MessageSender,
+                sendResponse: SendResponse
+              ) => boolean | void
+            ) => void;
+          };
         };
       };
-    };
-  }).chrome;
+    }
+  ).chrome;
   chromeApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const result = messageDispatcher(message, sender, sendResponse);
 

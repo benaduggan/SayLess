@@ -91,6 +91,8 @@ const createRecordingAudioContext = () => {
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value && typeof value === "object" && !Array.isArray(value));
 
 function logRecordingSnapshot(label: string, data: unknown) {
   if (!DEBUG_RECORDER && !isRecordingDebugEnabled()) return;
@@ -588,7 +590,8 @@ const Recorder = () => {
       if (!recordingId) return;
       const key = `freeFinalizeStatus:${recordingId}`;
       const existing = await chrome.storage.local.get([key]);
-      const current = existing[key] as any;
+      const rawCurrent = existing[key];
+      const current = isRecord(rawCurrent) ? rawCurrent : null;
       if (
         current &&
         (current.stage === "ready" || current.stage === "chunks_ready") &&

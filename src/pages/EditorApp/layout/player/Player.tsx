@@ -13,10 +13,10 @@ import Content from "./Content";
 import styles from "../../styles/player/_Player.module.scss";
 
 // Context
-import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
+import { useEditorContent } from "../../context/ContentState";
 
 const Player = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext); // Access the ContentState context
+  const [contentState, setContentState] = useEditorContent();
 
   return (
     <div className={styles.layout}>

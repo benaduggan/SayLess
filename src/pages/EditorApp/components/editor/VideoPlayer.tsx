@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
-import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
+import { useEditorContent } from "../../context/ContentState";
 import { EdlContext } from "../../context/EdlContext";
 import { attachTimelinePreview } from "../../../../edl/timelinePreview";
 import {
@@ -13,7 +13,7 @@ interface VideoPlayerProps {
 }
 
 const VideoPlayer = (_props: VideoPlayerProps) => {
-  const [contentState, setContentState] = useContext(ContentStateContext); // Access the ContentState context
+  const [contentState, setContentState] = useEditorContent();
   const edlCtx = useContext(EdlContext); // null outside EdlProvider
   const tlRef = useRef<Timeline | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);

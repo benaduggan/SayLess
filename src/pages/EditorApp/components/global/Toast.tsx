@@ -8,10 +8,10 @@ import {
 
 import * as ToastEl from "@radix-ui/react-toast";
 
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 
 const Toast = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState(2200);

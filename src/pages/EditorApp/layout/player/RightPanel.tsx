@@ -37,7 +37,7 @@ const ASSET_URL = chrome.runtime.getURL("assets/");
 import CropUI from "../editor/CropUI";
 import AudioUI from "../editor/AudioUI";
 
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 import { EdlContext } from "../../context/EdlContext";
 import {
   normalizeExportSettings,
@@ -84,7 +84,7 @@ const clampNumber = (
 };
 
 const RightPanel = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
   const edlCtx = useContext(EdlContext);
   const contentStateRef = useRef(contentState);
   const consoleErrorRef = useRef<unknown[]>([]);

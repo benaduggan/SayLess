@@ -1,11 +1,11 @@
 import { useContext, useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 
 import Title from "./Title";
 
 const VideoPlayer = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
 
   const playerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);

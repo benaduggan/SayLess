@@ -5,7 +5,7 @@
 // timeline). "Apply edits" bakes the timeline into the editor blob for download.
 
 import React, { type CSSProperties, useContext, useState } from "react";
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 import { EdlContext } from "../../context/EdlContext";
 import { TRANSCRIPTION_LANGUAGES } from "../../../../transcription/config";
 import type { TimelineWord } from "../../../../edl/timeline";
@@ -21,7 +21,7 @@ interface WordSelection {
 }
 
 const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
   const edlCtx = useContext(EdlContext);
   const [sel, setSel] = useState<WordSelection | null>(null); // original word indices
   const [open, setOpen] = useState(false); // start closed; opens via the launcher

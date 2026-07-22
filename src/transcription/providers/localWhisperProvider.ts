@@ -18,6 +18,11 @@ import type {
   TranscriptionProviderOptions,
   Word,
 } from "../types.ts";
+import type {
+  AutomaticSpeechRecognitionPipelineType,
+  DataType,
+  DeviceType,
+} from "@huggingface/transformers";
 
 // Default model: the *_timestamped export, which includes the cross-attention
 // outputs + alignment-head config that word-level timestamps (return_timestamps:
@@ -26,12 +31,45 @@ import type {
 const DEFAULT_MODEL = "onnx-community/whisper-base_timestamped";
 
 type ProgressCallback = (progress: number) => void;
-type WhisperTranscriber = (
-  pcm: Float32Array,
-  options: Record<string, unknown>,
-) => Promise<unknown>;
+type WhisperTranscriber = AutomaticSpeechRecognitionPipelineType;
 
 let _pipelinePromise: Promise<WhisperTranscriber> | null = null;
+
+export const normalizeWhisperDevice = (value: unknown): DeviceType | null => {
+  switch (value) {
+    case "auto":
+    case "gpu":
+    case "cpu":
+    case "wasm":
+    case "webgpu":
+    case "cuda":
+    case "dml":
+    case "webnn":
+    case "webnn-npu":
+    case "webnn-gpu":
+    case "webnn-cpu":
+      return value;
+    default:
+      return null;
+  }
+};
+
+export const normalizeWhisperDataType = (value: unknown): DataType | null => {
+  switch (value) {
+    case "auto":
+    case "fp32":
+    case "fp16":
+    case "q8":
+    case "int8":
+    case "uint8":
+    case "q4":
+    case "bnb4":
+    case "q4f16":
+      return value;
+    default:
+      return null;
+  }
+};
 
 async function getTranscriber(
   opts: TranscriptionProviderOptions,
@@ -78,20 +116,12 @@ async function getTranscriber(
       /* env shape differences across versions — best effort */
     }
     const model = typeof opts.model === "string" ? opts.model : DEFAULT_MODEL;
-    const device = typeof opts.device === "string" ? opts.device : await pickDevice();
-    const createPipeline = pipeline as unknown as (
-      task: string,
-      model: string,
-      options: Record<string, unknown>,
-    ) => Promise<WhisperTranscriber>;
-    return createPipeline("automatic-speech-recognition", model, {
+    const device = normalizeWhisperDevice(opts.device) || (await pickDevice());
+    return pipeline("automatic-speech-recognition", model, {
       device,
       dtype:
-        typeof opts.dtype === "string"
-          ? opts.dtype
-          : device === "webgpu"
-            ? "fp16"
-            : "q8",
+        normalizeWhisperDataType(opts.dtype) ||
+        (device === "webgpu" ? "fp16" : "q8"),
       progress_callback: (p: unknown) => {
         // model-load progress (0..1) — surface as early progress
         const progress =
@@ -108,7 +138,7 @@ async function getTranscriber(
   return _pipelinePromise;
 }
 
-async function pickDevice(): Promise<string> {
+async function pickDevice(): Promise<DeviceType> {
   // Default to wasm: reliable inside the extension's CSP/non-isolated context.
   // WebGPU can be opted in via providerOptions["local-whisper"].device="webgpu"
   // once verified on the target machines.
@@ -120,7 +150,7 @@ async function pickDevice(): Promise<string> {
  *  - word mode: each chunk is a single word with [start, end].
  *  - segment fallback: each chunk is a phrase; split into words and linearly
  *    interpolate timings across the phrase (approximate but usable).
- * @param {any} output @param {"word"|"segment"} mode @returns {Transcript}
+ * @param {unknown} output @param {"word"|"segment"} mode @returns {Transcript}
  */
 function normalize(output: unknown, mode: "word" | "segment"): Transcript {
   const chunks =

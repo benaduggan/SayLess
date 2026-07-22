@@ -2,6 +2,13 @@ import {
   registerMessage,
   messageRouter,
 } from "../../../../messaging/messageRouter";
+import {
+  LOCAL_PLAYBACK_MAX_BYTES,
+  parseLocalPlaybackChunk,
+  parseStoredLocalPlaybackOffer,
+  type ActiveLocalPlaybackSource,
+  type LocalPlaybackOffer,
+} from "../../../../messaging/localPlaybackProtocol";
 import { setContentState, contentStateRef, setTimer } from "../ContentState";
 import { updateFromStorage } from "../utils/updateFromStorage";
 
@@ -11,19 +18,77 @@ import { triggerSupportDownload } from "../../../utils/triggerSupportDownload";
 
 const getState = () => contentStateRef.current;
 
+type UnknownRecord = Record<string, unknown>;
+const isRecord = (value: unknown): value is UnknownRecord =>
+  Boolean(value && typeof value === "object" && !Array.isArray(value));
+const nonEmptyString = (value: unknown): string | null =>
+  typeof value === "string" && value ? value : null;
+const senderId = (value: unknown): string | number | null =>
+  typeof value === "string" || typeof value === "number" ? value : null;
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
+interface LocalPlaybackSummary {
+  available: boolean;
+  trackType: "screen";
+  offerId: string;
+  projectId: string | null;
+  sceneId: string | null;
+  chunkCount: number;
+  estimatedBytes: number;
+  expiresAt: number | null;
+  source: string;
+}
+
+interface LocalPlaybackLookup {
+  offerId: string;
+  projectId: string | null;
+  sceneId: string | null;
+}
+
+interface PendingSceneCreate {
+  respond: (value: unknown) => void;
+  timeout: ReturnType<typeof setTimeout>;
+}
+
+const finiteNumber = (value: unknown, fallback = 0): number => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+};
+
+const parseLocalPlaybackSummary = (
+  value: unknown,
+): LocalPlaybackSummary | null => {
+  if (!isRecord(value)) return null;
+  const offerId = nonEmptyString(value.offerId);
+  if (value.available !== true || value.trackType !== "screen" || !offerId) {
+    return null;
+  }
+  return {
+    available: true,
+    trackType: "screen",
+    offerId,
+    projectId: nonEmptyString(value.projectId),
+    sceneId: nonEmptyString(value.sceneId),
+    chunkCount: Math.max(0, finiteNumber(value.chunkCount)),
+    estimatedBytes: Math.max(0, finiteNumber(value.estimatedBytes)),
+    expiresAt: finiteNumber(value.expiresAt) || null,
+    source: nonEmptyString(value.source) || "indexeddb-screen-chunks",
+  };
+};
+
 export const setupHandlers = () => {
   if (window.__screenitySetupHandlersRan) return;
   window.__screenitySetupHandlersRan = true;
   let lastToggleDrawingAt = 0;
   const TOGGLE_DRAWING_COOLDOWN_MS = 400;
   let projectReadySeq = 0;
-  const LOCAL_PLAYBACK_MAX_BYTES = 250 * 1024 * 1024;
-  let latestLocalPlaybackOffer: any = null;
-  let latestLocalPlaybackProjectId: any = null;
-  let latestLocalPlaybackSceneId: any = null;
-  let localPlaybackBuildPromise: Promise<any> | null = null;
-  let localPlaybackBuildOfferId: any = null;
-  let activeLocalPlaybackSource: any = null;
+  let latestLocalPlaybackOffer: LocalPlaybackSummary | null = null;
+  let latestLocalPlaybackProjectId: string | null = null;
+  let latestLocalPlaybackSceneId: string | null = null;
+  let localPlaybackBuildPromise: Promise<ActiveLocalPlaybackSource> | null = null;
+  let localPlaybackBuildOfferId: string | null = null;
+  let activeLocalPlaybackSource: ActiveLocalPlaybackSource | null = null;
   const TRUSTED_APP_ORIGIN = null;
 
   const getProjectMessageTargetOrigin = () => {
@@ -33,16 +98,16 @@ export const setupHandlers = () => {
       : null;
   };
 
-  const postProjectHandoff = (payload: any) => {
+  const postProjectHandoff = (payload: UnknownRecord) => {
     const targetOrigin = getProjectMessageTargetOrigin();
     if (!targetOrigin) {
       console.warn(
         "[SayLess][Content] Ignoring project handoff on untrusted origin",
         {
-          source: payload?.source || "unknown",
+          source: nonEmptyString(payload.source) || "unknown",
           pageOrigin: window.location.origin,
           trustedOrigin: TRUSTED_APP_ORIGIN,
-          projectId: payload?.projectId || null,
+          projectId: nonEmptyString(payload.projectId),
         }
       );
       return false;
@@ -79,7 +144,7 @@ export const setupHandlers = () => {
     projectId,
     sceneId,
     reason,
-  }: any) => {
+  }: LocalPlaybackLookup & { reason: string }) => {
     if (!offerId) return;
     try {
       await chrome.runtime.sendMessage({
@@ -96,18 +161,25 @@ export const setupHandlers = () => {
     offerId,
     projectId,
     sceneId,
-  }: any) => {
-    const offerRes = await chrome.runtime.sendMessage({
+  }: LocalPlaybackLookup): Promise<{
+    offer: LocalPlaybackOffer;
+    url: string;
+    size: number;
+    mimeType: string;
+    chunkCount: number;
+  }> => {
+    const rawOfferResponse: unknown = await chrome.runtime.sendMessage({
       type: "local-playback-get-offer",
       offerId,
       projectId,
       sceneId,
     });
-    if (!offerRes?.ok || !offerRes.offer) {
+    if (!isRecord(rawOfferResponse) || rawOfferResponse.ok !== true) {
       throw new Error("local-playback-offer-unavailable");
     }
-    const offer = offerRes.offer;
+    const offer = parseStoredLocalPlaybackOffer(rawOfferResponse.offer);
     if (
+      !offer ||
       !offer.chunkCount ||
       !offer.estimatedBytes ||
       offer.estimatedBytes > LOCAL_PLAYBACK_MAX_BYTES
@@ -118,22 +190,26 @@ export const setupHandlers = () => {
     const parts = [];
     for (let i = 0; i < offer.chunkCount; i += 1) {
       // eslint-disable-next-line no-await-in-loop
-      const chunkRes = await chrome.runtime.sendMessage({
+      const rawChunkResponse: unknown = await chrome.runtime.sendMessage({
         type: "local-playback-read-chunk",
         offerId: offer.offerId,
         projectId: offer.projectId,
         sceneId: offer.sceneId,
         index: i,
       });
-      if (!chunkRes?.ok || !chunkRes.chunk?.base64) {
+      const chunk =
+        isRecord(rawChunkResponse) && rawChunkResponse.ok === true
+          ? parseLocalPlaybackChunk(rawChunkResponse.chunk)
+          : null;
+      if (!chunk) {
         throw new Error(`local-playback-chunk-read-failed:${i}`);
       }
-      const binary = atob(chunkRes.chunk.base64);
+      const binary = atob(chunk.base64);
       const bytes = new Uint8Array(binary.length);
       for (let j = 0; j < binary.length; j += 1) {
         bytes[j] = binary.charCodeAt(j);
       }
-      const mimeType = chunkRes.chunk.mimeType || "video/webm";
+      const mimeType = chunk.mimeType;
       parts.push(new Blob([bytes], { type: mimeType }));
     }
 
@@ -154,7 +230,7 @@ export const setupHandlers = () => {
     projectId,
     sceneId,
     offer,
-  }: any) => {
+  }: { projectId: string; sceneId: string | null; offer: LocalPlaybackSummary }) => {
     if (!offer?.offerId) {
       throw new Error("local-playback-offer-missing");
     }
@@ -222,7 +298,14 @@ export const setupHandlers = () => {
     readySource = null,
     fallbackReason = null,
     forceRefresh = true,
-  }: any) =>
+  }: {
+    projectId: string | null;
+    sceneId: string | null;
+    offer: LocalPlaybackSummary | LocalPlaybackOffer | null;
+    readySource?: ActiveLocalPlaybackSource | null;
+    fallbackReason?: string | null;
+    forceRefresh?: boolean;
+  }) =>
     postProjectHandoff({
       source: "update-project-ready-local-playback",
       projectId: projectId || null,
@@ -247,17 +330,19 @@ export const setupHandlers = () => {
 
   // Pending scene-create handoffs awaiting reply from the editor page.
   // Keyed by requestId so concurrent multi-scene flows don't collide.
-  const pendingSceneCreates = new Map<string, any>();
+  const pendingSceneCreates = new Map<string, PendingSceneCreate>();
 
-  const onWindowProjectMessage = (event: MessageEvent<any>) => {
+  const onWindowProjectMessage = (event: MessageEvent<unknown>) => {
     if (event.source !== window) return;
     if (event.origin !== TRUSTED_APP_ORIGIN) return;
-    const data = event?.data || {};
+    const data = isRecord(event.data) ? event.data : {};
 
     if (data?.source === "create-scene-from-recording-result") {
-      const pending = pendingSceneCreates.get(data.requestId);
-      if (pending) {
-        pendingSceneCreates.delete(data.requestId);
+      const requestId = nonEmptyString(data.requestId);
+      if (requestId) {
+        const pending = pendingSceneCreates.get(requestId);
+        if (!pending) return;
+        pendingSceneCreates.delete(requestId);
         clearTimeout(pending.timeout);
         pending.respond({
           ok: !!data.ok,
@@ -271,9 +356,9 @@ export const setupHandlers = () => {
 
     if (data?.type !== "sayless-local-playback-request") return;
 
-    const requestedProjectId = data?.projectId || null;
-    const requestedSceneId = data?.sceneId || null;
-    const requestId = data?.requestId || null;
+    const requestedProjectId = nonEmptyString(data.projectId);
+    const requestedSceneId = nonEmptyString(data.sceneId);
+    const requestId = nonEmptyString(data.requestId);
     const offer = latestLocalPlaybackOffer;
 
     if (
@@ -380,8 +465,10 @@ export const setupHandlers = () => {
     if (window.location.origin !== TRUSTED_APP_ORIGIN) {
       return { ok: false, error: "untrusted-origin" };
     }
-    const { projectId, requestId, payload } = message || {};
-    if (!projectId || !requestId || !payload) {
+    const projectId = nonEmptyString(message.projectId);
+    const requestId = nonEmptyString(message.requestId);
+    const payload = message.payload;
+    if (!projectId || !requestId || !isRecord(payload)) {
       return { ok: false, error: "invalid-proxy-create-scene" };
     }
     return new Promise((resolve) => {
@@ -409,7 +496,7 @@ export const setupHandlers = () => {
         }
       }, 15_000);
       pendingSceneCreates.set(requestId, {
-        respond: (val: any) => {
+        respond: (val: unknown) => {
           clearInterval(repost);
           resolve(val);
         },
@@ -593,7 +680,7 @@ export const setupHandlers = () => {
 
     const isActuallyRecording =
       recording ||
-      (recorderSession && (recorderSession as any).status === "recording");
+      (isRecord(recorderSession) && recorderSession.status === "recording");
 
     if (isActuallyRecording || pendingRecording) {
       console.warn(
@@ -717,31 +804,27 @@ export const setupHandlers = () => {
   });
 
   registerMessage("commands", (message) => {
-    if (!message) return;
+    const commands = Array.isArray(message.commands)
+      ? message.commands.filter(isRecord)
+      : [];
+    const findCommand = (name: string) =>
+      commands.find((command) => command.name === name);
+    const shortcut = (command: UnknownRecord | undefined): string =>
+      typeof command?.shortcut === "string" ? command.shortcut : "";
 
-    const startRecordingCommand = message.commands.find(
-      (command: any) => command.name === "start-recording"
-    );
-    const cancelRecordingCommand = message.commands.find(
-      (command: any) => command.name === "cancel-recording"
-    );
-    const toggleDrawingModeCommand = message.commands.find(
-      (command: any) => command.name === "toggle-drawing-mode"
-    );
-    const toggleBlurModeCommand = message.commands.find(
-      (command: any) => command.name === "toggle-blur-mode"
-    );
-    const toggleCursorModeCommand = message.commands.find(
-      (command: any) => command.name === "toggle-cursor-mode"
-    );
+    const startRecordingCommand = findCommand("start-recording");
+    const cancelRecordingCommand = findCommand("cancel-recording");
+    const toggleDrawingModeCommand = findCommand("toggle-drawing-mode");
+    const toggleBlurModeCommand = findCommand("toggle-blur-mode");
+    const toggleCursorModeCommand = findCommand("toggle-cursor-mode");
 
     setContentState((prev) => ({
       ...prev,
-      recordingShortcut: startRecordingCommand.shortcut,
-      dismissRecordingShortcut: cancelRecordingCommand.shortcut,
-      toggleDrawingModeShortcut: toggleDrawingModeCommand?.shortcut || "",
-      toggleBlurModeShortcut: toggleBlurModeCommand?.shortcut || "",
-      toggleCursorModeShortcut: toggleCursorModeCommand?.shortcut || "",
+      recordingShortcut: shortcut(startRecordingCommand),
+      dismissRecordingShortcut: shortcut(cancelRecordingCommand),
+      toggleDrawingModeShortcut: shortcut(toggleDrawingModeCommand),
+      toggleBlurModeShortcut: shortcut(toggleBlurModeCommand),
+      toggleCursorModeShortcut: shortcut(toggleCursorModeCommand),
     }));
   });
 
@@ -1025,7 +1108,7 @@ export const setupHandlers = () => {
   registerMessage("reopen-popup-multi", async (message) => {
     // Read multi-state from storage before setContentState so the popup's
     // first paint is correct (a fire-and-forget read would race the render).
-    let storedMulti: any = {};
+    let storedMulti: UnknownRecord = {};
     try {
       storedMulti = await chrome.storage.local.get([
         "multiMode",
@@ -1073,7 +1156,7 @@ export const setupHandlers = () => {
       const elements = document.querySelectorAll(".screenity-blur");
       elements.forEach((el) => el.classList.remove("screenity-blur"));
     } catch {}
-    updateFromStorage(false, message.senderId);
+    updateFromStorage(false, senderId(message.senderId));
 
     // Toast on top; auto-dismisses in 5s.
     const state = getState();
@@ -1097,7 +1180,7 @@ export const setupHandlers = () => {
       activeSceneId: message.activeSceneId,
     }));
 
-    updateFromStorage(false, message.senderId);
+    updateFromStorage(false, senderId(message.senderId));
 
     setTimeout(() => {
       const state = getState();
@@ -1149,7 +1232,7 @@ export const setupHandlers = () => {
   });
 
   registerMessage("get-project-info", (message) => {
-    const payload: any = {
+    const payload: UnknownRecord = {
       source: "get-project-info",
       requestedAt: Date.now(),
     };
@@ -1192,7 +1275,7 @@ export const setupHandlers = () => {
     updateFromStorage(true, sender.id);
   });
   registerMessage("update-project-ready", (message, sender) => {
-    const projectId = message?.projectId || null;
+    const projectId = nonEmptyString(message.projectId);
     if (!projectId) {
       console.warn(
         "[SayLess][Content] Ignoring update-project-ready without projectId"
@@ -1203,14 +1286,11 @@ export const setupHandlers = () => {
     projectReadySeq += 1;
     const handoffAt = Date.now();
     const handoffId = `${projectId}:${handoffAt}:${projectReadySeq}`;
-    const localPlayback = message?.localPlayback || null;
-    latestLocalPlaybackOffer =
-      localPlayback?.available && localPlayback?.trackType === "screen"
-        ? localPlayback
-        : null;
+    const localPlayback = parseLocalPlaybackSummary(message.localPlayback);
+    latestLocalPlaybackOffer = localPlayback;
     latestLocalPlaybackProjectId = latestLocalPlaybackOffer ? projectId : null;
     latestLocalPlaybackSceneId = latestLocalPlaybackOffer
-      ? message.sceneId || null
+      ? nonEmptyString(message.sceneId)
       : null;
 
     const posted = postProjectHandoff({
@@ -1220,7 +1300,7 @@ export const setupHandlers = () => {
       sceneId: message.sceneId,
       projectId,
       localPlayback:
-        localPlayback?.available && localPlayback?.trackType === "screen"
+        localPlayback
           ? {
               ...localPlayback,
               ready:
@@ -1252,7 +1332,7 @@ export const setupHandlers = () => {
     if (posted) {
       window.__screenityLastProjectReady = {
         projectId,
-        sceneId: message.sceneId || null,
+        sceneId: nonEmptyString(message.sceneId),
         handoffAt,
         handoffId,
         localPlaybackOfferId: localPlayback?.offerId || null,
@@ -1262,7 +1342,7 @@ export const setupHandlers = () => {
 
     const capturedOffer = latestLocalPlaybackOffer;
     if (posted && capturedOffer?.offerId) {
-      const capturedSceneId = message.sceneId || null;
+      const capturedSceneId = nonEmptyString(message.sceneId);
       console.info("[SayLess][Content] Local screen playback offered", {
         projectId,
         sceneId: capturedSceneId,
@@ -1290,7 +1370,7 @@ export const setupHandlers = () => {
           });
         })
         .catch((err) => {
-          const reason = err?.message || "local-playback-build-failed";
+          const reason = errorMessage(err) || "local-playback-build-failed";
           console.warn("[SayLess][Content] Local screen playback fallback", {
             projectId,
             sceneId: capturedSceneId,
@@ -1313,7 +1393,7 @@ export const setupHandlers = () => {
     }
   });
   registerMessage("clear-project-recording", (message) => {
-    updateFromStorage(false, message.senderId);
+    updateFromStorage(false, senderId(message.senderId));
   });
   registerMessage("preparing-recording", () => {
     traceStep("preparingReceived");

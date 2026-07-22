@@ -9,10 +9,10 @@ const URL = chrome.runtime.getURL("assets/");
 import { ReactSVG } from "react-svg";
 
 // Context
-import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
+import { useEditorContent } from "../../context/ContentState";
 
 const Title = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext); // Access the ContentState context
+  const [contentState, setContentState] = useEditorContent();
   const inputRef = useRef<HTMLInputElement>(null);
   const contentTitle = String(contentState.title || "");
   // Show the video title, as a heading by default (multiline), on click show a text input to edit the title

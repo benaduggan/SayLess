@@ -3,10 +3,10 @@ import { Cropper } from "react-advanced-cropper";
 import type { CropperRef } from "react-advanced-cropper";
 import "react-advanced-cropper/dist/style.css";
 
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 
 const CropperWrap = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
   const [image, setImage] = useState<string | null>(null);
   const cropperRef = useRef<CropperRef>(null);
   // Guards against onChange firing during setCoordinates push: stale cropper

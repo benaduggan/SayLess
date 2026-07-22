@@ -6,7 +6,7 @@
 import React, { type CSSProperties, useContext } from "react";
 import styles from "../../styles/edit/_TrimUI.module.scss";
 import TimelineStrip from "../../components/editor/TimelineStrip";
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 import { EdlContext } from "../../context/EdlContext";
 
 const toTimeStamp = (time: number) => {
@@ -16,7 +16,7 @@ const toTimeStamp = (time: number) => {
 };
 
 const TrimUI = () => {
-  const [contentState] = useContext(ContentStateContext);
+  const [contentState] = useEditorContent();
   const edlCtx = useContext(EdlContext);
   if (!edlCtx) return null;
 

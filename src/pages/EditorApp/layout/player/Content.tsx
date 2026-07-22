@@ -12,10 +12,10 @@ const CropperWrap = lazy(() =>
 import HelpButton from "../../components/player/HelpButton";
 
 // Context
-import { ContentStateContext } from "../../context/ContentState"; // Import the ContentState context
+import { useEditorContent } from "../../context/ContentState";
 
 const Content = () => {
-  const [contentState] = useContext(ContentStateContext); // Access the ContentState context
+  const [contentState] = useEditorContent();
   return (
     <div className={styles.content}>
       <div className={styles.wrap}>

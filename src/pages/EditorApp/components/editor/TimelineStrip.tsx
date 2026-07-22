@@ -12,7 +12,7 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 import { EdlContext } from "../../context/EdlContext";
 import { outputToSource, sourceToOutput } from "../../../../edl/timeline";
 import type { ResolvedSegment } from "../../../../edl/timeline";
@@ -20,7 +20,7 @@ import type { ResolvedSegment } from "../../../../edl/timeline";
 const fmt = (seconds: number) => `${seconds.toFixed(1)}s`;
 
 const TimelineStrip = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
   const edlCtx = useContext(EdlContext);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const scrubbing = useRef(false);

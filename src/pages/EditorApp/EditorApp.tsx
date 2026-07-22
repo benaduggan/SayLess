@@ -11,7 +11,7 @@ import Toast from "./components/global/Toast";
 
 import HelpButton from "./components/player/HelpButton";
 
-import { ContentStateContext } from "./context/ContentState";
+import { useEditorContent } from "./context/ContentState";
 import { diagForward } from "../utils/diagForward";
 import { triggerSupportDownload } from "../utils/triggerSupportDownload";
 import GradientBackground from "../Components/GradientBackground";
@@ -19,7 +19,7 @@ import GradientBackground from "../Components/GradientBackground";
 const assetUrl = (path: string) => chrome.runtime.getURL(`assets/${path}`);
 
 const EditorApp = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
   const parentRef = useRef<HTMLDivElement | null>(null);
   const progress = useRef("");
 

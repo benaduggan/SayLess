@@ -1,11 +1,11 @@
 import { useContext } from "react";
 import styles from "../../styles/edit/_EditorNav.module.scss";
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 
 const URL = chrome.runtime.getURL("assets/");
 
 const CropNav = () => {
-  const [contentState, setContentState] = useContext(ContentStateContext);
+  const [contentState, setContentState] = useEditorContent();
 
   const handleCancel = () => {
     contentState.cancelEditOp?.();

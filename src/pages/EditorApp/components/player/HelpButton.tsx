@@ -1,12 +1,12 @@
 import { useContext, useState, useEffect } from "react";
 import styles from "../../styles/player/_HelpButton.module.scss";
 import { ReactSVG } from "react-svg";
-import { ContentStateContext } from "../../context/ContentState";
+import { useEditorContent } from "../../context/ContentState";
 
 const assetUrl = (path: string) => chrome.runtime.getURL(`assets/${path}`);
 
 const HelpButton = () => {
-  const [contentState] = useContext(ContentStateContext);
+  const [contentState] = useEditorContent();
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 1000
   );
