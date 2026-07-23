@@ -2219,11 +2219,17 @@ test("release build fails on unexpected webpack warnings", () => {
 test("TypeScript 7 is a required CI and release evidence gate", () => {
   assert.equal(packageJson.scripts.typecheck, "node scripts/typecheck.mjs");
   assert.equal(packageJson.scripts.lint, "npm run typecheck");
-  assert.match(typecheckScript, /spawnSync\("tsgo"/);
-  assert.match(typecheckScript, /"nix-shell"/);
+  assert.equal(
+    packageJson.devDependencies["@typescript/native"],
+    "npm:typescript@7.0.2"
+  );
+  assert.match(typecheckScript, /"@typescript"/);
+  assert.match(typecheckScript, /"native"/);
+  assert.match(typecheckScript, /"tsc"/);
+  assert.match(typecheckScript, /spawnSync\(process\.execPath/);
   assert.match(releaseQaAutomatedScript, /label: "typecheck"/);
   assert.match(releaseAuditScript, /node-version:\\s\*24/);
-  assert.match(releaseAuditScript, /determinate-nix-action@v3\\\.21\\\.8/);
+  assert.match(releaseAuditScript, /npm:typescript@7\.0\.2/);
   assert.match(releaseAuditScript, /npm run typecheck/);
 });
 

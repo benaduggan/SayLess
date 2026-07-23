@@ -2106,10 +2106,14 @@ if (
 if (
   packageJson.scripts?.typecheck !== "node scripts/typecheck.mjs" ||
   packageJson.scripts?.lint !== "npm run typecheck" ||
+  packageJson.devDependencies?.["@typescript/native"] !==
+    "npm:typescript@7.0.2" ||
+  packageLock.packages?.[""]?.devDependencies?.["@typescript/native"] !==
+    "npm:typescript@7.0.2" ||
   !existsSync(join(ROOT, "scripts", "typecheck.mjs"))
 ) {
   fail(
-    "typecheck and lint must use the canonical scripts/typecheck.mjs TypeScript 7 gate."
+    "typecheck and lint must use the canonical, lockfile-pinned TypeScript 7.0.2 gate."
   );
 }
 const ciNode24Count = (ciWorkflowText.match(/node-version:\s*24/g) || [])
@@ -2128,10 +2132,6 @@ if (
   ciCheckoutCount < 2 ||
   ciSetupNodeCount < 2 ||
   !/npm ci/.test(ciWorkflowText) ||
-  !/DeterminateSystems\/determinate-nix-action@v3\.21\.8/.test(
-    ciWorkflowText
-  ) ||
-  /\n\s+determinate:/.test(ciWorkflowText) ||
   !/Typecheck with TypeScript 7/.test(ciWorkflowText) ||
   !/npm run typecheck/.test(ciWorkflowText) ||
   !/actions\/cache@v5\.0\.5/.test(ciWorkflowText) ||
@@ -2158,7 +2158,7 @@ if (
   !/draft:\s*false/.test(ciWorkflowText)
 ) {
   fail(
-    "GitHub Actions CI must run release checks with Node 24, Nix, and TypeScript 7, upload evidence, build a verified downloadable extension bundle, and publish direct-download release assets only from tags or explicit manual tags."
+    "GitHub Actions CI must run release checks with Node 24 and the lockfile-pinned TypeScript 7 gate, upload evidence, build a verified downloadable extension bundle, and publish direct-download release assets only from tags or explicit manual tags."
   );
 }
 if (

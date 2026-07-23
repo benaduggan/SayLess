@@ -45,9 +45,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Nix
-        uses: DeterminateSystems/determinate-nix-action@v3.21.8
-
       - name: Typecheck with TypeScript 7
         run: npm run typecheck
 
