@@ -72,6 +72,8 @@ const makeFixture = ({ failCommand = null } = {}) => {
       "test:e2e:editor-layout":
         "node scripts/fixture-command.mjs editor-layout",
       "build:release": "node scripts/fixture-build.mjs",
+      "test:e2e:editor-editing-proof":
+        "node scripts/fixture-command.mjs editor-editing-proof",
       "test:e2e:built-extension-surface":
         "node scripts/fixture-command.mjs built-extension-surface",
       "verify:release": "node scripts/fixture-command.mjs verify-release",
@@ -85,9 +87,13 @@ const makeFixture = ({ failCommand = null } = {}) => {
   writeFileSync(
     join(dir, "scripts", "fixture-command.mjs"),
     [
-      "import { appendFileSync } from 'node:fs';",
+      "import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';",
       "const label = process.argv[2];",
       "appendFileSync('commands.log', `${label}\\n`);",
+      "if (label === 'built-extension-surface') {",
+      "  mkdirSync('release-artifacts', { recursive: true });",
+      "  writeFileSync('release-artifacts/built-extension-surface.json', JSON.stringify({ kind: 'sayless.builtExtensionSurfaceEvidence', status: 'passed', generatedAt: new Date().toISOString(), buildPath: 'build', cleanChromeProfile: true, extensionId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', summaryCount: 10 }));",
+      "}",
       failCommand
         ? `if (label === ${JSON.stringify(failCommand)}) process.exit(42);`
         : "",
@@ -162,6 +168,14 @@ test("automated release QA writes traceable build evidence atomically", () => {
       whisperFingerprint.fileCount
     );
     assert.equal(evidence.bundledWhisper.sha256, whisperFingerprint.sha256);
+    assert.deepEqual(evidence.builtExtension, {
+      id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      buildPath: "build",
+      cleanChromeProfile: true,
+      observedAt: evidence.builtExtension.observedAt,
+      summaryCount: 10,
+    });
+    assert.ok(!Number.isNaN(Date.parse(evidence.builtExtension.observedAt)));
     assert.deepEqual(evidence.releaseSurface, {
       permissions: [],
       optionalPermissions: [],
@@ -185,6 +199,7 @@ test("automated release QA writes traceable build evidence atomically", () => {
       "test:e2e:local-recordings",
       "test:e2e:editor-layout",
       "build:release",
+      "test:e2e:editor-editing-proof",
       "test:e2e:built-extension-surface",
       "verify:release",
     ]) {

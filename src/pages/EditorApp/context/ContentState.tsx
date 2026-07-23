@@ -29,8 +29,9 @@ import { diagForward } from "../../utils/diagForward";
 import { perfMark, perfSpan } from "../../utils/perfMarks";
 import { triggerSupportDownload } from "../../utils/triggerSupportDownload";
 import { saveBlobWithPicker } from "../../utils/localFileExport";
+import type { SaveBlobResult } from "../../utils/localFileExport";
 import { chooseReader } from "../recorderStorage/chooseReader";
-import { runEditorOp } from "../editorOps";
+import { cancelEditorExports, runEditorOp } from "../editorOps";
 import type { EditorOpMessage, Reply } from "../editorOps";
 import {
   beginExportJobState,
@@ -331,9 +332,6 @@ const ContentState = ({
     updatePlayerTime: false,
     start: 0,
     end: 1,
-    trimming: false,
-    cutting: false,
-    muting: false,
     editErrorType: null, // null | "too-long" | "timeout" | "failed" | "audio-too-large"
     history: [{}],
     redoHistory: [],
@@ -365,6 +363,7 @@ const ContentState = ({
     volume: 1,
     cropPreset: "none",
     replaceAudio: false,
+    loopAudio: false,
     title: null,
     ready: false,
     mp4ready: false,
@@ -384,12 +383,10 @@ const ContentState = ({
     bannerSupport: false,
     reviewPrompt: false,
     reviewEligible: false,
-    backupBlob: null,
     recordingMeta: null,
     localRecordingId: null,
     addToHistory: editorActionNotReady,
     loadFFmpeg: editorActionNotReady,
-    createBackup: editorActionNotReady,
     download: editorAsyncActionNotReady,
     downloadWEBM: editorAsyncActionNotReady,
     downloadGIF: editorAsyncActionNotReady,
@@ -882,31 +879,6 @@ const ContentState = ({
     }
   }, [contentState.saved]);
 
-  const createBackup = () => {
-    setContentState((prev) => ({
-      ...prev,
-      backupBlob: prev.blob,
-    }));
-  };
-
-  const restoreBackup = () => {
-    setContentState((prev) => ({
-      ...prev,
-      blob: prev.backupBlob || prev.blob,
-      mode: "player",
-      start: 0,
-      end: 1,
-      backupBlob: null,
-    }));
-  };
-
-  const clearBackup = () => {
-    setContentState((prev) => ({
-      ...prev,
-      backupBlob: null,
-    }));
-  };
-
   // each entry pins a blob (multi-GB on long recordings); cap to bound memory
   const MAX_HISTORY_DEPTH = 20;
   const addToHistory = useCallback(() => {
@@ -923,15 +895,9 @@ const ContentState = ({
     });
   }, [contentState]);
 
-  // mid-edit snapshots can carry isFfmpegRunning/edit flags; restoring one
-  // leaves redo and edit buttons disabled. nothing's in flight by undo/redo
-  // time, so reset on every restore.
+  // Restored history snapshots must never revive in-flight runtime work.
   const RESET_RUNTIME_FLAGS = {
     isFfmpegRunning: false,
-    trimming: false,
-    cutting: false,
-    muting: false,
-    cropping: false,
     reencoding: false,
   };
 
@@ -1036,26 +1002,6 @@ const ContentState = ({
     };
     video.src = URL.createObjectURL(contentState.blob);
   }, [contentState.blob]);
-
-  useEffect(() => {
-    if (!contentState.localRecordingId) return;
-    if (!contentState.hasBeenEdited) return;
-    if (!contentState.blob) return;
-    const recordingId = contentState.localRecordingId;
-    const blob = contentState.blob;
-    const timer = setTimeout(() => {
-      checkpointEditedLocalRecording(recordingId, blob)
-        .then(() => setContentState((prev) => ({ ...prev, saved: true })))
-        .catch((error) =>
-          console.warn("[SayLess] Failed to autosave local edit", error)
-        );
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [
-    contentState.localRecordingId,
-    contentState.hasBeenEdited,
-    contentState.blob,
-  ]);
 
   const reconstructVideo = async (withBlob: Blob | null): Promise<void> => {
     // callers always pass a reconstructed blob; bail on null (caller surfaces
@@ -1744,6 +1690,30 @@ const ContentState = ({
       ) {
         return false;
       }
+      const localRecordingId = new URLSearchParams(
+        window.location.search || ""
+      ).get("localRecordingId");
+      if (
+        localRecordingId &&
+        message.type &&
+        [
+          "chunk-count",
+          "make-video-tab",
+          "restore-recording",
+          "large-recording",
+          "viewer-recording",
+        ].includes(message.type)
+      ) {
+        diagForward("sandbox-poststop-message-ignored-for-local-recording", {
+          type: message.type,
+          localRecordingId,
+        });
+        sendResponse?.({
+          status: "ignored",
+          reason: "local-recording-route",
+        });
+        return false;
+      }
       if (message.type === "chunk-count") {
         if (DEBUG_POSTSTOP)
           console.debug("[SayLess][Sandbox] received chunk-count", {
@@ -2372,21 +2342,7 @@ const ContentState = ({
 
       const blob = base64ToUint8Array(base64);
 
-      const wasCropping = contentState.cropping;
       const isTopLevel = event.data.topLevel === true;
-      const isFromAudio = event.data.fromAudio === true;
-
-      if (isFromAudio && !event.data.skipReencode) {
-        // legacy ffmpeg path needs a follow-up reencode; webcodecs skips
-        sendMessage({
-          type: "reencode-video",
-          blob,
-          duration: contentState.duration,
-          topLevel: isTopLevel,
-          _opId: event.data._opId,
-        });
-        return;
-      }
 
       clearEditOp();
       checkpointCurrentLocalEdit(blob);
@@ -2406,16 +2362,10 @@ const ContentState = ({
             event.data.edited === false ? prev.hasBeenEdited : true,
           isFfmpegRunning: false,
           reencoding: false,
-          trimming: false,
-          cutting: false,
-          muting: false,
-          cropping: false,
           processingProgress: 0,
           editErrorType: null,
-          hasTempChanges: !isTopLevel,
 
           ...(prev.fromCropper && { mode: "player", fromCropper: false }),
-          ...(prev.fromAudio ? { mode: "player", fromAudio: false } : {}),
         };
       });
 
@@ -2428,11 +2378,6 @@ const ContentState = ({
             blobIsBlob: blob instanceof Blob,
             measuredDuration: video.duration,
             previousDuration: contentState.duration,
-            isFromAudio,
-            wasCropping,
-            wasCutting: contentState.cutting,
-            wasMuting: contentState.muting,
-            wasTrimming: contentState.trimming,
             videoWidth: video.videoWidth,
             videoHeight: video.videoHeight,
           });
@@ -2444,7 +2389,6 @@ const ContentState = ({
           height: video.videoHeight,
           start: 0,
           end: 1,
-          ...(wasCropping ? { top: 0, left: 0 } : {}),
         }));
 
         if (event.data.addToHistory) {
@@ -2468,27 +2412,28 @@ const ContentState = ({
 
       const blob = base64ToUint8Array(base64);
       const url = URL.createObjectURL(blob);
-      await requestDownload(url, ".mp4");
+      const delivery = await deliverLocalExport(url, ".mp4");
       setContentState((prevContentState) => ({
         ...prevContentState,
-        saved: true,
+        saved: delivery.status === "completed" ? true : prevContentState.saved,
         isFfmpegRunning: false,
         downloading: false,
       }));
-      finishExportJob({ status: "completed" });
+      finishExportJob(delivery);
     } else if (event.data.type === "download-gif") {
+      if (downloadCancelledRef.current) return;
       const base64 = event.data.base64;
       const blob = base64ToUint8Array(base64);
       const url = URL.createObjectURL(blob);
-      await requestDownload(url, ".gif");
+      const delivery = await deliverLocalExport(url, ".gif");
       setContentState((prevContentState) => ({
         ...prevContentState,
-        saved: true,
+        saved: delivery.status === "completed" ? true : prevContentState.saved,
         isFfmpegRunning: false,
         downloadingGIF: false,
         processingProgress: 0,
       }));
-      finishExportJob({ status: "completed" });
+      finishExportJob(delivery);
     } else if (event.data.type === "new-frame") {
       // crop entries leak blob URLs otherwise
       const prevFrame = contentStateRef.current?.frame;
@@ -2555,13 +2500,7 @@ const ContentState = ({
 
       // fall back to webm/rawBlob even if conversion fails
       setContentState((prev) => {
-        const wasEditing =
-          prev.isFfmpegRunning &&
-          (prev.cutting ||
-            prev.trimming ||
-            prev.muting ||
-            prev.cropping ||
-            prev.reencoding);
+        const wasEditing = prev.isFfmpegRunning && prev.reencoding;
         return {
           ...prev,
           noffmpeg: true,
@@ -2570,11 +2509,7 @@ const ContentState = ({
           downloading: false,
           downloadingWEBM: false,
           downloadingGIF: false,
-          muting: false,
-          cutting: false,
-          trimming: false,
           reencoding: false,
-          cropping: false,
           processingProgress: 0,
           editErrorType: wasEditing ? "failed" : prev.editErrorType,
           ...(prev.rawBlob || prev.webm
@@ -2584,50 +2519,16 @@ const ContentState = ({
       });
 
       chrome.runtime.sendMessage({ type: "recording-complete" });
-    } else if (event.data.type === "audio-too-large") {
-      clearEditOp();
-      setContentState((prev) => ({
-        ...prev,
-        isFfmpegRunning: false,
-        muting: false,
-        cutting: false,
-        trimming: false,
-        reencoding: false,
-        cropping: false,
-        processingProgress: 0,
-        editErrorType: "audio-too-large",
-      }));
     } else if (event.data.type === "edit-too-long") {
       // Too long for in-browser processing, reset so user can retry or trim.
       clearEditOp();
       setContentState((prev) => ({
         ...prev,
         isFfmpegRunning: false,
-        muting: false,
-        cutting: false,
-        trimming: false,
         reencoding: false,
-        cropping: false,
         processingProgress: 0,
         editErrorType: "too-long",
       }));
-    } else if (event.data.type === "crop-update") {
-      setContentState((prevContentState) => ({
-        ...prevContentState,
-        mode: "crop",
-        cropping: false,
-        isFfmpegRunning: false,
-        processingProgress: 0,
-        start: 0,
-        end: 1,
-        fromCropper: false,
-      }));
-
-      setTimeout(() => {
-        if (contentState.getFrame) {
-          contentState.getFrame();
-        }
-      }, 100);
     } else if (event.data.type === "ffmpeg-progress") {
       const pct = Math.min(100, Math.max(0, Math.round(event.data.progress)));
 
@@ -2637,20 +2538,21 @@ const ContentState = ({
         processingProgress: pct,
       }));
     } else if (event.data.type === "download-webm") {
+      if (downloadCancelledRef.current) return;
       const base64 = event.data.base64;
       const blob = base64ToUint8Array(base64);
 
       const url = URL.createObjectURL(blob);
-      await requestDownload(url, ".webm");
+      const delivery = await deliverLocalExport(url, ".webm");
 
       setContentState((prevState) => ({
         ...prevState,
-        saved: true,
+        saved: delivery.status === "completed" ? true : prevState.saved,
         isFfmpegRunning: false,
         downloadingWEBM: false,
         processingProgress: 0,
       }));
-      finishExportJob({ status: "completed" });
+      finishExportJob(delivery);
     }
   };
 
@@ -2836,11 +2738,7 @@ const ContentState = ({
       setContentState((prev) => ({
         ...prev,
         isFfmpegRunning: false,
-        muting: false,
-        cutting: false,
-        trimming: false,
         reencoding: false,
-        cropping: false,
         processingProgress: 0,
         editErrorType: "timeout",
       }));
@@ -2853,202 +2751,6 @@ const ContentState = ({
       clearTimeout(editWatchdogRef.current);
       editWatchdogRef.current = null;
     }
-  };
-
-  const cancelEditOp = () => {
-    opIdRef.current += 1;
-    clearEditOp();
-    setContentState((prev) => ({
-      ...prev,
-      isFfmpegRunning: false,
-      muting: false,
-      cutting: false,
-      trimming: false,
-      reencoding: false,
-      cropping: false,
-      processingProgress: 0,
-    }));
-  };
-
-  const addAudio = async (
-    videoBlob: Blob | null,
-    audioBlob: Blob,
-    volume: number
-  ): Promise<void> => {
-    if (contentState.isFfmpegRunning) return;
-    if (
-      contentState.duration > contentState.editLimit &&
-      !contentState.override
-    )
-      return;
-
-    const sourceBlob = videoBlob || contentState.blob || contentState.webm;
-    const opId = beginEditOp();
-
-    setContentState((prev) => ({
-      ...prev,
-      isFfmpegRunning: true,
-      processingProgress: 0,
-      editErrorType: null,
-    }));
-
-    sendMessage({
-      type: "add-audio-to-video",
-      blob: sourceBlob,
-      audio: audioBlob,
-      duration: contentState.duration,
-      volume: volume,
-      replaceAudio: contentState.replaceAudio,
-      topLevel: false,
-      _opId: opId,
-    });
-  };
-
-  const handleTrim = async (cut: boolean): Promise<void> => {
-    if (contentState.isFfmpegRunning) return;
-    if (
-      contentState.duration > contentState.editLimit &&
-      !contentState.override
-    )
-      return;
-    // undo/redo/keyboard/programmatic restore can leave start>=end; bail clearly
-    if (
-      !Number.isFinite(contentState.start) ||
-      !Number.isFinite(contentState.end) ||
-      contentState.start >= contentState.end
-    ) {
-      setContentState((prev) => ({
-        ...prev,
-        editErrorType: "invalid-trim-range",
-      }));
-      return;
-    }
-
-    const sourceBlob = contentState.blob;
-    if (!sourceBlob) return;
-    const opId = beginEditOp();
-
-    if (process.env.SAYLESS_DEV_MODE === "true") {
-      console.log("[SayLess][cut-debug] handleTrim dispatch", {
-        cut,
-        opId,
-        sourceBlobSize: sourceBlob?.size,
-        sourceBlobType: sourceBlob?.type,
-        duration: contentState.duration,
-        start: contentState.start,
-        end: contentState.end,
-        startTime: contentState.start * contentState.duration,
-        endTime: contentState.end * contentState.duration,
-        expectedOutputDuration: cut
-          ? contentState.duration -
-            (contentState.end * contentState.duration -
-              contentState.start * contentState.duration)
-          : contentState.end * contentState.duration -
-            contentState.start * contentState.duration,
-      });
-    }
-
-    setContentState((prev) => ({
-      ...prev,
-      isFfmpegRunning: true,
-      processingProgress: 0,
-      editErrorType: null,
-      [cut ? "cutting" : "trimming"]: true,
-    }));
-
-    sendMessage({
-      type: "cut-video",
-      blob: sourceBlob,
-      startTime: contentState.start * contentState.duration,
-      endTime: contentState.end * contentState.duration,
-      cut,
-      duration: contentState.duration,
-      encode: false,
-      topLevel: false,
-      _opId: opId,
-    });
-  };
-
-  const handleMute = async () => {
-    if (contentState.isFfmpegRunning) return;
-    if (
-      contentState.duration > contentState.editLimit &&
-      !contentState.override
-    )
-      return;
-    if (
-      !Number.isFinite(contentState.start) ||
-      !Number.isFinite(contentState.end) ||
-      contentState.start >= contentState.end
-    ) {
-      setContentState((prev) => ({
-        ...prev,
-        editErrorType: "invalid-trim-range",
-      }));
-      return;
-    }
-
-    const sourceBlob = contentState.blob;
-    if (!sourceBlob) return;
-    const opId = beginEditOp();
-
-    setContentState((prev) => ({
-      ...prev,
-      muting: true,
-      isFfmpegRunning: true,
-      processingProgress: 0,
-      editErrorType: null,
-    }));
-
-    sendMessage({
-      type: "mute-video",
-      blob: sourceBlob,
-      startTime: contentState.start * contentState.duration,
-      endTime: contentState.end * contentState.duration,
-      duration: contentState.duration,
-      topLevel: false,
-      _opId: opId,
-    });
-  };
-
-  const handleCrop = async (
-    x: number,
-    y: number,
-    width: number,
-    height: number
-  ): Promise<true | undefined> => {
-    if (contentState.isFfmpegRunning || contentState.cropping) return;
-    if (
-      contentState.duration > contentState.editLimit &&
-      !contentState.override
-    )
-      return;
-
-    const opId = beginEditOp();
-
-    setContentState((prevState) => ({
-      ...prevState,
-      cropping: true,
-      isFfmpegRunning: true,
-      processingProgress: 0,
-      editErrorType: null,
-    }));
-
-    const sourceBlob = contentState.blob;
-    if (!sourceBlob) return;
-
-    sendMessage({
-      type: "crop-video",
-      blob: sourceBlob,
-      x,
-      y,
-      width,
-      height,
-      topLevel: false,
-      _opId: opId,
-    });
-
-    return true;
   };
 
   const handleReencode = async (topLevel = false) => {
@@ -3096,12 +2798,12 @@ const ContentState = ({
   const requestDownload = async (
     url: string,
     ext: string
-  ): Promise<number | null | undefined> => {
+  ): Promise<SaveBlobResult> => {
     const exportUrl = assertLocalExportObjectUrl(url);
     // rapid double-click would otherwise create two downloads + double-revoke
     if (contentStateRef.current?.downloadInProgress) {
       console.warn("[SayLess] download already in progress, ignoring");
-      return;
+      throw new Error("A local export delivery is already in progress.");
     }
     setContentState((prev) => ({
       ...prev,
@@ -3131,9 +2833,13 @@ const ContentState = ({
       const blob = await resp.blob();
       try {
         const pickerResult = await saveBlobWithPicker(blob, filename);
-        if (pickerResult.saved || pickerResult.reason === "cancelled") {
+        if (pickerResult.saved) {
           revoke();
-          return null;
+          return pickerResult;
+        }
+        if (pickerResult.reason === "cancelled") {
+          revoke();
+          return pickerResult;
         }
       } catch (err) {
         console.warn(
@@ -3163,36 +2869,51 @@ const ContentState = ({
         };
         reader.readAsDataURL(blob);
       });
-      return;
+      return { saved: true, fileName: filename };
     }
 
-    const downloadId = await new Promise<number | null>((resolve, reject) => {
-      chrome.downloads.download(
-        { url: assertLocalExportObjectUrl(exportUrl), filename, saveAs: true },
-        (id) => {
-          const lastErr = chrome.runtime.lastError;
-          // user cancelled Save-As; don't show "Download failed"
-          const errMsg = String(lastErr?.message || "");
-          if (errMsg.includes("USER_CANCELED") || errMsg.includes("canceled")) {
-            revoke();
-            resolve(null);
-            return;
+    let downloadId: number | null;
+    try {
+      downloadId = await new Promise<number | null>((resolve, reject) => {
+        chrome.downloads.download(
+          {
+            url: assertLocalExportObjectUrl(exportUrl),
+            filename,
+            saveAs: true,
+          },
+          (id) => {
+            const lastErr = chrome.runtime.lastError;
+            // user cancelled Save-As; don't show "Download failed"
+            const errMsg = String(lastErr?.message || "");
+            if (
+              errMsg.includes("USER_CANCELED") ||
+              errMsg.includes("canceled")
+            ) {
+              revoke();
+              resolve(null);
+              return;
+            }
+            if (lastErr || !id) {
+              reject(lastErr || new Error("Download failed"));
+            } else {
+              resolve(id);
+            }
           }
-          if (lastErr || !id) {
-            reject(lastErr || new Error("Download failed"));
-          } else {
-            resolve(id);
-          }
-        }
-      );
-    });
-    if (downloadId == null) return null;
+        );
+      });
+    } catch (error) {
+      revoke();
+      throw error;
+    }
+    if (downloadId == null) {
+      return { saved: false, reason: "cancelled" };
+    }
     setContentState((prev) => ({
       ...prev,
       lastExportDownloadId: downloadId,
     }));
 
-    await new Promise<void>((resolve) => {
+    const downloadCompleted = await new Promise<boolean>((resolve, reject) => {
       let settled = false;
       const timeoutMs = 10 * 60 * 1000;
       const timeoutId = setTimeout(() => {
@@ -3214,25 +2935,27 @@ const ContentState = ({
             downloadInProgress: false,
           }));
         } catch {}
-        resolve();
+        reject(new Error(`Local export delivery timed out for ${filename}.`));
       }, timeoutMs);
 
       const handler = async (delta: chrome.downloads.DownloadDelta) => {
         if (delta.id !== downloadId || !delta.state) return;
 
-        const done = () => {
+        const done = (completed = true) => {
           if (settled) return;
           settled = true;
           clearTimeout(timeoutId);
           chrome.downloads.onChanged.removeListener(handler);
           revoke();
-          resolve();
+          resolve(completed);
         };
 
         if (
           delta.state.current === "interrupted" &&
-          delta.error?.current !== "USER_CANCELED"
+          delta.error?.current === "USER_CANCELED"
         ) {
+          done(false);
+        } else if (delta.state.current === "interrupted") {
           try {
             const resp = await fetch(assertLocalExportObjectUrl(exportUrl));
             const blob = await resp.blob();
@@ -3282,7 +3005,24 @@ const ContentState = ({
 
       chrome.downloads.onChanged.addListener(handler);
     });
-    return downloadId;
+    return downloadCompleted
+      ? { saved: true, fileName: filename, downloadId }
+      : { saved: false, reason: "cancelled" };
+  };
+
+  const deliverLocalExport = async (
+    url: string,
+    ext: string
+  ): Promise<{
+    status: Exclude<ExportJobStatus, "running">;
+    error?: string;
+  }> => {
+    try {
+      const result = await requestDownload(url, ext);
+      return result.saved ? { status: "completed" } : { status: "cancelled" };
+    } catch (error) {
+      return { status: "failed", error: errorMessage(error) };
+    }
   };
 
   // fMP4 -> standard MP4 container copy (QuickTime/editors need fastStart).
@@ -3533,6 +3273,7 @@ const ContentState = ({
     downloadCancelledRef.current = true;
     exportAbortControllerRef.current?.abort?.();
     exportAbortControllerRef.current = null;
+    cancelEditorExports();
     chrome.runtime.sendMessage({ type: "cancel-remux" }).catch(() => {});
     const now = Date.now();
     setContentState((prev) => cancelExportJobState(prev, now));
@@ -3808,8 +3549,15 @@ const ContentState = ({
     try {
       if (remuxedBlob) {
         const url = URL.createObjectURL(remuxedBlob);
-        await requestDownload(url, ".mp4");
+        const delivery = await deliverLocalExport(url, ".mp4");
         URL.revokeObjectURL(url);
+        if (delivery.status === "cancelled") {
+          finishExportJob(delivery);
+          return;
+        }
+        if (delivery.status === "failed") {
+          throw new Error(delivery.error || "MP4 export delivery failed.");
+        }
         setContentState((prev) => ({ ...prev, saved: true }));
         finishExportJob({ status: "completed" });
         diagForward("remux-delivered", {
@@ -3825,8 +3573,12 @@ const ContentState = ({
       // tier 3: serve fMP4 as-is so the user doesn't lose the recording
       try {
         const url = URL.createObjectURL(exportBlob);
-        await requestDownload(url, ".mp4");
+        const delivery = await deliverLocalExport(url, ".mp4");
         URL.revokeObjectURL(url);
+        if (delivery.status !== "completed") {
+          finishExportJob(delivery);
+          return;
+        }
         setContentState((prev) => ({ ...prev, saved: true }));
         finishExportJob({ status: "completed" });
       } catch (fallbackErr) {
@@ -3869,29 +3621,29 @@ const ContentState = ({
 
     if (!hasTimelineExport && (!hasFFmpeg || isAlreadyWebm)) {
       const url = URL.createObjectURL(sourceBlob);
-      await requestDownload(url, ".webm");
+      const delivery = await deliverLocalExport(url, ".webm");
 
       setContentState((prevState) => ({
         ...prevState,
         downloadingWEBM: false,
         isFfmpegRunning: false,
-        saved: true,
+        saved: delivery.status === "completed" ? true : prevState.saved,
       }));
-      finishExportJob({ status: "completed" });
+      finishExportJob(delivery);
       return;
     }
 
     if (!hasTimelineExport && !latest.hasBeenEdited && latest.webm) {
       const url = URL.createObjectURL(latest.webm);
-      await requestDownload(url, ".webm");
+      const delivery = await deliverLocalExport(url, ".webm");
 
       setContentState((prev) => ({
         ...prev,
         downloadingWEBM: false,
         isFfmpegRunning: false,
-        saved: true,
+        saved: delivery.status === "completed" ? true : prev.saved,
       }));
-      finishExportJob({ status: "completed" });
+      finishExportJob(delivery);
       return;
     }
 
@@ -3952,20 +3704,16 @@ const ContentState = ({
     }
 
     if (!hasFFmpeg && exportBlob.type === "video/mp4") {
-      try {
-        const url = URL.createObjectURL(exportBlob);
-        await requestDownload(url, ".mp4");
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error("[SayLess] webm fallback download failed", err);
-      }
+      const url = URL.createObjectURL(exportBlob);
+      const delivery = await deliverLocalExport(url, ".mp4");
+      URL.revokeObjectURL(url);
       setContentState((prevState) => ({
         ...prevState,
         downloadingWEBM: false,
         isFfmpegRunning: false,
-        saved: true,
+        saved: delivery.status === "completed" ? true : prevState.saved,
       }));
-      finishExportJob({ status: "completed" });
+      finishExportJob(delivery);
       return;
     }
 
@@ -4002,25 +3750,21 @@ const ContentState = ({
       }
       const blobToSave = webmBlob || exportBlob;
       const ext = blobToSave.type === "video/webm" ? ".webm" : ".mp4";
-      try {
-        const url = URL.createObjectURL(blobToSave);
-        await requestDownload(url, ext);
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error("[SayLess] webm download failed", err);
-      }
+      const url = URL.createObjectURL(blobToSave);
+      const delivery = await deliverLocalExport(url, ext);
+      URL.revokeObjectURL(url);
       setContentState((prevState) => ({
         ...prevState,
         downloadingWEBM: false,
         isFfmpegRunning: false,
-        saved: true,
+        saved: delivery.status === "completed" ? true : prevState.saved,
         lastDownloadInfo: {
           ...(prevState.lastDownloadInfo || {}),
           timelineExport: exportedFromTimeline,
           at: Date.now(),
         },
       }));
-      finishExportJob({ status: "completed" });
+      finishExportJob(delivery);
       return;
     }
 
@@ -4069,20 +3813,16 @@ const ContentState = ({
       // Stalled or failed: deliver the source as-is so the user isn't stuck.
       // It's already a finalized, playable file; use its real extension.
       const ext = exportBlob.type === "video/webm" ? ".webm" : ".mp4";
-      try {
-        const url = URL.createObjectURL(exportBlob);
-        await requestDownload(url, ext);
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error("[SayLess] webm fallback download failed", err);
-      }
+      const url = URL.createObjectURL(exportBlob);
+      const delivery = await deliverLocalExport(url, ext);
+      URL.revokeObjectURL(url);
       setContentState((prevState) => ({
         ...prevState,
         downloadingWEBM: false,
         isFfmpegRunning: false,
-        saved: true,
+        saved: delivery.status === "completed" ? true : prevState.saved,
       }));
-      finishExportJob({ status: "completed" });
+      finishExportJob(delivery);
     }
     // On success the "download-webm" handler delivered the file and cleared the
     // downloading flags, so there is nothing more to do here.
@@ -4095,6 +3835,7 @@ const ContentState = ({
     if (latest.downloadingGIF || latest.downloading) {
       return;
     }
+    downloadCancelledRef.current = false;
     beginExportJob({ kind: "gif", label: "GIF export" });
     const gifDuration = Number(options.durationSeconds);
     const durationForLimit =
@@ -4180,26 +3921,18 @@ const ContentState = ({
   contentState.undo = undo;
   contentState.redo = redo;
   contentState.addToHistory = addToHistory;
-  contentState.handleTrim = handleTrim;
-  contentState.handleMute = handleMute;
   contentState.download = download;
   contentState.cancelDownload = cancelDownload;
   contentState.beginExportJob = beginExportJob;
   contentState.updateExportJobProgress = updateExportJobProgress;
   contentState.finishExportJob = finishExportJob;
   contentState.dismissExportJob = dismissExportJob;
-  contentState.handleCrop = handleCrop;
   contentState.handleReencode = handleReencode;
   contentState.getFrame = getImage;
   contentState.downloadGIF = downloadGIF;
   contentState.downloadWEBM = downloadWEBM;
-  contentState.addAudio = addAudio;
   contentState.loadFFmpeg = loadFFmpeg;
   contentState.waitForUpdatedBlob = waitForUpdatedBlob;
-  contentState.createBackup = createBackup;
-  contentState.restoreBackup = restoreBackup;
-  contentState.clearBackup = clearBackup;
-  contentState.cancelEditOp = cancelEditOp;
 
   return (
     <ContentStateContext.Provider value={[contentState, setContentState]}>

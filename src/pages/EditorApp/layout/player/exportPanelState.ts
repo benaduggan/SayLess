@@ -17,7 +17,9 @@ type ExportSettingsInput = Partial<
 
 type ExportJobView = Pick<ExportJob, "label" | "status" | "error" | "progress">;
 
-export const buildExportJobTitle = (exportJob: ExportJobView | null): string => {
+export const buildExportJobTitle = (
+  exportJob: ExportJobView | null
+): string => {
   if (!exportJob) return "Export";
   const label = exportJob.label || "Export";
   if (exportJob.status === "completed") return `${label} complete`;
@@ -28,7 +30,7 @@ export const buildExportJobTitle = (exportJob: ExportJobView | null): string => 
 
 export const buildExportJobDescription = (
   exportJob: ExportJobView | null,
-  processingProgress = 0,
+  processingProgress = 0
 ): string => {
   if (!exportJob) return "";
   if (exportJob.status === "completed") return "Export finished.";
@@ -41,14 +43,30 @@ export const buildExportJobDescription = (
 export const canRetryExportJob = (exportJob: ExportJobView | null): boolean =>
   exportJob?.status === "failed" || exportJob?.status === "cancelled";
 
+const isDownloadId = (value: unknown): value is number =>
+  typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+
 export const canRevealExportJob = (
   exportJob: ExportJobView | null,
-  lastExportDownloadId: unknown,
+  lastExportDownloadId: unknown
 ): boolean =>
-  exportJob?.status === "completed" && Boolean(lastExportDownloadId);
+  exportJob?.status === "completed" && isDownloadId(lastExportDownloadId);
+
+export const revealExportDownload = (
+  downloadId: unknown,
+  downloadsApi?: { show: (id: number) => unknown }
+): boolean => {
+  if (!isDownloadId(downloadId) || !downloadsApi) return false;
+  try {
+    downloadsApi.show(downloadId);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 export const buildExportCompletionFromSaveResult = (
-  saveResult: SaveBlobResult | null,
+  saveResult: SaveBlobResult | null
 ): {
   status: "cancelled" | "completed" | "failed";
   downloadId?: number | null;
@@ -58,14 +76,14 @@ export const buildExportCompletionFromSaveResult = (
     return { status: "cancelled" };
   }
   if (saveResult?.saved) {
-    return { status: "completed", downloadId: saveResult.downloadId || null };
+    return { status: "completed", downloadId: saveResult.downloadId ?? null };
   }
   return { status: "failed", error: "Export could not be saved." };
 };
 
 export const buildExportRetrySnapshot = (
   settings: ExportSettingsInput = {},
-  overrides: ExportSettingsInput = {},
+  overrides: ExportSettingsInput = {}
 ): ExportRetrySettings => {
   const merged = { ...(settings || {}), ...(overrides || {}) };
   return {
@@ -83,7 +101,7 @@ export const buildExportRetrySnapshot = (
 
 export const buildRetryExportSettings = (
   lastExport: ExportRetrySettings | null,
-  exportJob: ExportJobView | null,
+  exportJob: ExportJobView | null
 ): ExportRetrySettings | null => {
   if (!lastExport || exportJob?.status === "running") return null;
   return buildExportRetrySnapshot(lastExport);

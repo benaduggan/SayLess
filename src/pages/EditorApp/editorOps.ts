@@ -9,60 +9,101 @@ export type Reply = (message: Record<string, unknown>) => void;
 type OpId = string | number;
 export type EditorOpMessage =
   | { type: "load-ffmpeg"; _opId?: OpId }
-  | { type: "fix-webm-duration"; blob: Blob; durationMs: number; id?: unknown; _opId?: OpId }
-  | { type: "add-audio-to-video"; blob: unknown; audio: unknown; duration: number; volume?: number; replaceAudio?: boolean; topLevel?: boolean; _opId?: OpId }
+  | {
+      type: "fix-webm-duration";
+      blob: Blob;
+      durationMs: number;
+      id?: unknown;
+      _opId?: OpId;
+    }
   | { type: "base64-to-blob"; base64: string; topLevel?: boolean; _opId?: OpId }
-  | { type: "crop-video"; blob: Blob; x: number; y: number; width: number; height: number; topLevel?: boolean; _opId?: OpId }
-  | { type: "cut-video"; blob: Blob; startTime: number; endTime: number; cut: boolean; duration?: number | null; encode?: unknown; topLevel?: boolean; _opId?: OpId }
   | { type: "get-frame"; blob: Blob; time: number; _opId?: OpId }
-  | { type: "mute-video"; blob: Blob; startTime: number; endTime: number; duration: number; topLevel?: boolean; _opId?: OpId }
-  | { type: "reencode-video"; blob: Blob; duration: number; topLevel?: boolean; _opId?: OpId }
+  | {
+      type: "reencode-video";
+      blob: Blob;
+      duration: number;
+      topLevel?: boolean;
+      _opId?: OpId;
+    }
   | { type: "to-gif"; blob: Blob; options?: GifExportOptions; _opId?: OpId }
   | { type: "to-webm"; blob: Blob; duration?: number; _opId?: OpId };
 
-const lazyUtil = <Args extends unknown[], Result>(
-  importFn: () => Promise<{
-    default: (...args: Args) => Promise<Result>;
-  }>,
-) =>
+const lazyUtil =
+  <Args extends unknown[], Result>(
+    importFn: () => Promise<{
+      default: (...args: Args) => Promise<Result>;
+    }>
+  ) =>
   (...args: Args): Promise<Result> =>
     importFn().then((m) => m.default(...args));
-const addAudioToVideo = lazyUtil(() => import("../Editor/utils/addAudioToVideo"));
-const convertWebmToMp4 = lazyUtil(() => import("../Editor/utils/convertWebmToMp4"));
-const cropVideo = lazyUtil(() => import("../Editor/utils/cropVideo"));
-const cutVideo = lazyUtil(() => import("../Editor/utils/cutVideo"));
-const muteVideo = lazyUtil(() => import("../Editor/utils/muteVideo"));
+const convertWebmToMp4 = lazyUtil(
+  () => import("../Editor/utils/convertWebmToMp4")
+);
 const reencodeVideo = lazyUtil(() => import("../Editor/utils/reencodeVideo"));
 const toGIF = lazyUtil(() => import("../Editor/utils/toGIF"));
 const getFrame = lazyUtil(() => import("../Editor/utils/getFrame"));
-const convertMp4ToWebm = lazyUtil(() => import("../Editor/utils/convertMp4ToWebm"));
+const convertMp4ToWebm = lazyUtil(
+  () => import("../Editor/utils/convertMp4ToWebm")
+);
+const activeExportControllers = new Set<AbortController>();
 
-const toBase64 = (blob: Blob): Promise<string> =>
+const runCancellableExport = async <T>(
+  run: (signal: AbortSignal) => Promise<T>
+): Promise<T> => {
+  const controller = new AbortController();
+  activeExportControllers.add(controller);
+  try {
+    return await run(controller.signal);
+  } finally {
+    activeExportControllers.delete(controller);
+  }
+};
+
+export const cancelEditorExports = (): void => {
+  for (const controller of activeExportControllers) controller.abort();
+  activeExportControllers.clear();
+};
+
+const toBase64 = (blob: Blob, signal?: AbortSignal): Promise<string> =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
+    const cleanup = () => signal?.removeEventListener("abort", handleAbort);
+    const handleAbort = () => {
+      try {
+        reader.abort();
+      } catch {}
+      cleanup();
+      reject(createAbortError());
+    };
+    signal?.addEventListener("abort", handleAbort, { once: true });
+    if (signal?.aborted) {
+      handleAbort();
+      return;
+    }
     reader.readAsDataURL(blob);
     reader.onloadend = () => {
-      if (typeof reader.result === "string") resolve(reader.result);
+      cleanup();
+      if (signal?.aborted) reject(createAbortError());
+      else if (typeof reader.result === "string") resolve(reader.result);
       else reject(new Error("Failed to encode blob as a data URL"));
     };
-    reader.onerror = reject;
+    reader.onerror = () => {
+      cleanup();
+      reject(reader.error || new Error("Failed to encode blob as a data URL"));
+    };
   });
 
 // Viewer mode (editor.html?view=1): playback only, edit ops rejected. WebM
 // duration fix still runs (metadata repair, not an edit) for seekability.
 const VIEWER_REJECTED_OPS = new Set<EditorOpMessage["type"]>([
-  "add-audio-to-video",
   "base64-to-blob",
-  "crop-video",
-  "cut-video",
-  "mute-video",
   "reencode-video",
   "to-gif",
 ]);
 
 const runViewerOp = async (
   message: EditorOpMessage,
-  reply: Reply,
+  reply: Reply
 ): Promise<void> => {
   if (message.type === "load-ffmpeg") {
     reply({ type: "ffmpeg-load-error", fallback: true });
@@ -72,7 +113,7 @@ const runViewerOp = async (
     try {
       const fixed = await fixWebmDurationOffThread(
         message.blob,
-        message.durationMs,
+        message.durationMs
       );
       reply({ type: "fix-webm-duration-result", id: message.id, blob: fixed });
     } catch (error) {
@@ -90,7 +131,11 @@ const runViewerOp = async (
       const blob = await getFrame(null, message.blob, message.time);
       reply({ type: "new-frame", frame: blob });
     } catch (error) {
-      reply({ type: "ffmpeg-error", error: String(error), _opId: message._opId });
+      reply({
+        type: "ffmpeg-error",
+        error: String(error),
+        _opId: message._opId,
+      });
     }
     return;
   }
@@ -109,7 +154,7 @@ const runViewerOp = async (
 export async function runEditorOp(
   message: EditorOpMessage,
   reply: Reply,
-  { viewer = false }: { viewer?: boolean } = {},
+  { viewer = false }: { viewer?: boolean } = {}
 ): Promise<void> {
   if (viewer) return runViewerOp(message, reply);
   try {
@@ -122,7 +167,7 @@ export async function runEditorOp(
         try {
           const fixed = await fixWebmDurationOffThread(
             message.blob,
-            message.durationMs,
+            message.durationMs
           );
           reply({
             type: "fix-webm-duration-result",
@@ -136,32 +181,6 @@ export async function runEditorOp(
             error: String(error),
           });
         }
-        break;
-      }
-
-      case "add-audio-to-video": {
-        const blob = await addAudioToVideo(
-          null,
-          message.blob,
-          message.audio,
-          message.duration,
-          message.volume,
-          message.replaceAudio,
-          (progress) =>
-            reply({
-              type: "ffmpeg-progress",
-              progress: Math.round(progress * 100),
-            }),
-        );
-        const base64 = await toBase64(blob);
-        reply({
-          type: "updated-blob",
-          base64,
-          topLevel: true,
-          fromAudio: true,
-          skipReencode: true,
-          _opId: message._opId,
-        });
         break;
       }
 
@@ -192,7 +211,7 @@ export async function runEditorOp(
           reply({
             type: "ffmpeg-progress",
             progress: Math.round(progress * 100),
-          }),
+          })
         );
 
         const base64 = await toBase64(mp4Blob);
@@ -200,73 +219,9 @@ export async function runEditorOp(
         break;
       }
 
-      case "crop-video": {
-        const blob = await cropVideo(
-          null,
-          message.blob,
-          {
-            x: message.x,
-            y: message.y,
-            width: message.width,
-            height: message.height,
-          },
-          (progress) => reply({ type: "ffmpeg-progress", progress }),
-        );
-        const base64 = await toBase64(blob);
-        reply({
-          type: "updated-blob",
-          base64,
-          topLevel: true,
-          _opId: message._opId,
-        });
-        break;
-      }
-
-      case "cut-video": {
-        const blob = await cutVideo(
-          null,
-          message.blob,
-          message.startTime,
-          message.endTime,
-          message.cut,
-          message.duration,
-          message.encode,
-          (progress) => reply({ type: "ffmpeg-progress", progress }),
-        );
-        const base64 = await toBase64(blob);
-        reply({
-          type: "updated-blob",
-          base64,
-          addToHistory: true,
-          topLevel: true,
-          _opId: message._opId,
-        });
-        break;
-      }
-
       case "get-frame": {
         const blob = await getFrame(null, message.blob, message.time);
         reply({ type: "new-frame", frame: blob });
-        break;
-      }
-
-      case "mute-video": {
-        const blob = await muteVideo(
-          null,
-          message.blob,
-          message.startTime,
-          message.endTime,
-          message.duration,
-          (progress) => reply({ type: "ffmpeg-progress", progress }),
-        );
-        const base64 = await toBase64(blob);
-        reply({
-          type: "updated-blob",
-          base64,
-          addToHistory: true,
-          topLevel: true,
-          _opId: message._opId,
-        });
         break;
       }
 
@@ -279,7 +234,7 @@ export async function runEditorOp(
             reply({
               type: "ffmpeg-progress",
               progress: Math.round(progress * 100),
-            }),
+            })
         );
         const base64 = await toBase64(blob);
         reply({
@@ -292,28 +247,46 @@ export async function runEditorOp(
       }
 
       case "to-gif": {
-        const blob = await toGIF(null, message.blob, undefined, message.options);
-        const base64 = await toBase64(blob);
-        reply({ type: "download-gif", base64 });
+        await runCancellableExport(async (signal) => {
+          const blob = await toGIF(
+            null,
+            message.blob,
+            (progress) =>
+              reply({
+                type: "ffmpeg-progress",
+                progress: Math.round(progress * 100),
+                _opId: message._opId,
+              }),
+            message.options,
+            signal
+          );
+          const base64 = await toBase64(blob, signal);
+          if (signal.aborted) return;
+          reply({ type: "download-gif", base64, _opId: message._opId });
+        });
         break;
       }
 
       case "to-webm": {
-        if (message.blob?.type === "video/webm") {
-          const base64 = await toBase64(message.blob);
-          reply({ type: "download-webm", base64 });
-          break;
-        }
+        await runCancellableExport(async (signal) => {
+          const result =
+            message.blob?.type === "video/webm"
+              ? message.blob
+              : await convertMp4ToWebm(
+                  message.blob,
+                  (progress) =>
+                    reply({
+                      type: "ffmpeg-progress",
+                      progress: Math.round(progress * 100),
+                      _opId: message._opId,
+                    }),
+                  signal
+                );
 
-        const result = await convertMp4ToWebm(message.blob, (progress) =>
-          reply({
-            type: "ffmpeg-progress",
-            progress: Math.round(progress * 100),
-          }),
-        );
-
-        const base64 = await toBase64(result);
-        reply({ type: "download-webm", base64 });
+          const base64 = await toBase64(result, signal);
+          if (signal.aborted) return;
+          reply({ type: "download-webm", base64, _opId: message._opId });
+        });
         break;
       }
 
@@ -321,6 +294,12 @@ export async function runEditorOp(
         break;
     }
   } catch (error) {
+    if (
+      (message.type === "to-gif" || message.type === "to-webm") &&
+      isAbortError(error)
+    ) {
+      return;
+    }
     const errMsg = error instanceof Error ? error.message : String(error);
     const errStack = error instanceof Error ? error.stack : null;
     // Error props are non-enumerable; JSON.stringify drops them.
@@ -332,8 +311,6 @@ export async function runEditorOp(
     });
     if (errMsg.includes("too long")) {
       reply({ type: "edit-too-long", _opId: message._opId });
-    } else if (errMsg.includes("background-audio-too-large")) {
-      reply({ type: "audio-too-large", _opId: message._opId });
     } else {
       reply({
         type: "ffmpeg-error",
@@ -344,5 +321,23 @@ export async function runEditorOp(
         _opId: message._opId,
       });
     }
+  }
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof DOMException && error.name === "AbortError") ||
+    (error instanceof Error && error.name === "AbortError") ||
+    /abort|cancel/i.test(String(error))
+  );
+}
+
+function createAbortError(): Error {
+  try {
+    return new DOMException("Export cancelled.", "AbortError");
+  } catch {
+    const error = new Error("Export cancelled.");
+    error.name = "AbortError";
+    return error;
   }
 }

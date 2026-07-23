@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useRef } from "react";
+import { useState, useContext, useRef } from "react";
 import type { ChangeEvent } from "react";
 import styles from "../../styles/player/_RightPanel.module.scss";
 
@@ -10,28 +10,18 @@ import { ReactSVG } from "react-svg";
 
 import { useEditorContent } from "../../context/ContentState";
 import Switch from "../../components/editor/Switch";
+import { EdlContext } from "../../context/EdlContext";
 
 const AudioUI = () => {
   const [contentState, setContentState] = useEditorContent();
+  const edlCtx = useContext(EdlContext);
   const [audio, setAudio] = useState<File | null>(null);
-  const prevBlob = useRef<Blob | null | undefined>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (contentState.blob !== prevBlob.current) {
-      prevBlob.current = contentState.blob;
-      setAudio(null);
-      setContentState((prevContentState) => ({
-        ...prevContentState,
-        volume: 1,
-      }));
-    }
-  }, []);
 
   const handleAudio = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.includes("audio") || file.size === 0) {
+    if (file.size === 0) {
       return;
     }
 
@@ -39,6 +29,8 @@ const AudioUI = () => {
     setContentState((prev) => ({
       ...prev,
       pendingAudio: file,
+      removeProjectAudio: false,
+      editErrorType: null,
     }));
   };
 
@@ -62,17 +54,22 @@ const AudioUI = () => {
 
   return (
     <div>
-      {contentState.editErrorType === "audio-too-large" && (
+      {(contentState.editErrorType === "audio-too-large" ||
+        contentState.editErrorType === "audio-unsupported") && (
         <div className={styles.alert}>
           <div className={styles.buttonLeft}>
             <ReactSVG src={URL + "editor/icons/alert.svg"} />
           </div>
           <div className={styles.buttonMiddle}>
             <div className={styles.buttonTitle}>
-              {chrome.i18n.getMessage("editAudioTooLargeTitle")}
+              {contentState.editErrorType === "audio-too-large"
+                ? chrome.i18n.getMessage("editAudioTooLargeTitle")
+                : "Audio file could not be decoded"}
             </div>
             <div className={styles.buttonDescription}>
-              {chrome.i18n.getMessage("editAudioTooLargeDescription")}
+              {contentState.editErrorType === "audio-too-large"
+                ? chrome.i18n.getMessage("editAudioTooLargeDescription")
+                : "Choose a valid WAV, M4A, MP3, or other audio file supported by this browser."}
             </div>
           </div>
           <div
@@ -85,16 +82,33 @@ const AudioUI = () => {
           </div>
         </div>
       )}
+      {edlCtx?.audioAssetStatus === "missing" && (
+        <div className={styles.alert}>
+          <div className={styles.buttonLeft}>
+            <ReactSVG src={URL + "editor/icons/alert.svg"} />
+          </div>
+          <div className={styles.buttonMiddle}>
+            <div className={styles.buttonTitle}>Project audio needs relinking</div>
+            <div className={styles.buttonDescription}>
+              Choose the original audio file again. Its portable project reference was preserved.
+            </div>
+          </div>
+        </div>
+      )}
       <div className={styles.section}>
         <div className={styles.sectionTitle}>Audio upload</div>
         <input
+          data-testid="project-audio-file-input"
           type="file"
           accept="audio/*"
           onChange={handleAudio}
           style={{ display: "none" }}
           ref={inputRef}
         />
-        {!audio && (
+        {!audio &&
+          (!edlCtx?.audioTrack ||
+            contentState.removeProjectAudio ||
+            edlCtx.audioAssetStatus === "missing") && (
           <div
             className={styles.uploadArea}
             onClick={() => inputRef.current?.click()}
@@ -110,13 +124,13 @@ const AudioUI = () => {
             </div>
           </div>
         )}
-        {audio && (
-          <div className={styles.audioDetails}>
+        {(audio || edlCtx?.audioTrack) && !contentState.removeProjectAudio && (
+          <div className={styles.audioDetails} data-testid="project-audio-details">
             <div className={styles.audioDetailsLeft}>
               <ReactSVG src={URL + "editor/icons/attachment.svg"} />
             </div>
             <div className={styles.audioDetailsMiddle}>
-              <span>{audio.name}</span>
+              <span>{audio?.name || edlCtx?.audioTrack?.fileName}</span>
             </div>
             <div className={styles.audioDetailsRight}>
               <ReactSVG
@@ -125,8 +139,8 @@ const AudioUI = () => {
                   setAudio(null);
                   setContentState((prevContentState) => ({
                     ...prevContentState,
-                    blob: prevBlob.current,
                     pendingAudio: null,
+                    removeProjectAudio: true,
                   }));
                   if (inputRef.current) inputRef.current.value = "";
                 }}

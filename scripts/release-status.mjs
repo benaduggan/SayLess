@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { analyzeManualTemplateSync } from "./manual-qa-template-sync.mjs";
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = process.env.SAYLESS_RELEASE_STATUS_ROOT
@@ -19,6 +20,11 @@ const MANUAL_EVIDENCE_PATH = join(
   ROOT,
   "release-artifacts",
   "manual-qa-evidence.json"
+);
+const MANUAL_SESSION_PATH = join(
+  ROOT,
+  "release-artifacts",
+  "manual-qa-session.json"
 );
 const PACKAGE_EVIDENCE_PATH = join(
   ROOT,
@@ -37,6 +43,11 @@ const MANUAL_QA_VERIFIER_PATH = join(
   "scripts",
   "verify-manual-qa-evidence.mjs"
 );
+const MANUAL_QA_PROFILE_PATH = join(
+  DEFAULT_ROOT,
+  "scripts",
+  "manual-qa-profile.mjs"
+);
 const RELEASE_PACKAGE_VERIFIER_PATH = join(
   DEFAULT_ROOT,
   "scripts",
@@ -54,6 +65,8 @@ const READY_NEXT_ACTIONS = [
   "npm run release:cws:publish",
   "attach release-artifacts/release-qa-automated.json",
   "attach release-artifacts/manual-qa-evidence.json",
+  "attach release-artifacts/manual-qa-media-probe.json",
+  "attach release-artifacts/manual-qa-sidecar-probe.json",
   "attach release-artifacts/package-release.json",
   "attach release-artifacts/cws-package.json",
   "attach docs/STORE_LISTING.md",
@@ -62,7 +75,12 @@ const READY_NEXT_ACTIONS = [
 ];
 const COMPLETE_MANUAL_QA_ACTION =
   "complete docs/RELEASE_QA.md, fill release-artifacts/manual-qa-evidence.json, then run npm run qa:release:manual";
-const START_MANUAL_QA_PROFILE_ACTION = "npm run qa:release:manual:profile";
+const OPEN_MANUAL_QA_PROFILE_ACTION =
+  "npm run qa:release:manual:profile -- --launch";
+const SYNC_MANUAL_QA_PROFILE_ACTION =
+  "npm run qa:release:manual:profile -- --sync-template --launch";
+const REVIEW_MANUAL_QA_PROGRESS_ACTION = "npm run qa:release:manual:progress";
+const MANUAL_SESSION_KIND = "sayless.manualQaSession";
 const REQUIRED_AUTOMATED_COMMANDS = [
   "typecheck",
   "test:unit",
@@ -71,6 +89,7 @@ const REQUIRED_AUTOMATED_COMMANDS = [
   "test:e2e:local-recordings",
   "test:e2e:editor-layout",
   "build:release",
+  "test:e2e:editor-editing-proof",
   "test:e2e:built-extension-surface",
   "verify:release",
 ];
@@ -100,6 +119,118 @@ const isIsoDate = (value) =>
 const timestampMs = (value) => (isIsoDate(value) ? Date.parse(value) : null);
 const nonEmptyString = (value) =>
   typeof value === "string" && value.trim().length > 0;
+const quoteShellArg = (value) => {
+  if (/^[A-Za-z0-9_/:=.,@%+-]+$/.test(value)) return value;
+  return `'${value.replace(/'/g, "'\\''")}'`;
+};
+
+const discoverActiveManualQaSession = () => {
+  const relativePath = "release-artifacts/manual-qa-session.json";
+  if (!existsSync(MANUAL_SESSION_PATH)) {
+    return {
+      path: relativePath,
+      exists: false,
+      usable: false,
+      reason: "no launched manual QA session has been recorded",
+    };
+  }
+  const session = readJson(MANUAL_SESSION_PATH);
+  if (session.error) {
+    return {
+      path: relativePath,
+      exists: true,
+      usable: false,
+      reason: `active session JSON is invalid: ${session.error}`,
+    };
+  }
+  if (
+    session.kind !== MANUAL_SESSION_KIND ||
+    session.status !== "active" ||
+    !isIsoDate(session.updatedAt) ||
+    !nonEmptyString(session.profileDir)
+  ) {
+    return {
+      path: relativePath,
+      exists: true,
+      usable: false,
+      reason: "active session metadata is malformed",
+    };
+  }
+  const validation = spawnSync(
+    process.execPath,
+    [
+      MANUAL_QA_PROFILE_PATH,
+      "--json",
+      "--resume-profile",
+      `--profile-dir=${session.profileDir}`,
+    ],
+    {
+      cwd: ROOT,
+      env: {
+        ...process.env,
+        SAYLESS_MANUAL_QA_PROFILE_ROOT: ROOT,
+      },
+      encoding: "utf8",
+    }
+  );
+  if (validation.status !== 0) {
+    let reason = validation.stderr.trim() || validation.stdout.trim();
+    try {
+      reason = JSON.parse(reason).error || reason;
+    } catch {}
+    return {
+      path: relativePath,
+      exists: true,
+      usable: false,
+      profileDir: session.profileDir,
+      reason: `recorded session cannot be resumed: ${reason}`,
+    };
+  }
+  let profile;
+  try {
+    profile = JSON.parse(validation.stdout);
+  } catch (error) {
+    return {
+      path: relativePath,
+      exists: true,
+      usable: false,
+      profileDir: session.profileDir,
+      reason: `resume validation returned invalid JSON: ${error.message}`,
+    };
+  }
+  const fieldsMatch =
+    profile.profileMode === "resumed" &&
+    profile.profileDir === session.profileDir &&
+    profile.profileMarkerPath === session.profileMarkerPath &&
+    profile.profileCreatedAt === session.profileCreatedAt &&
+    profile.buildManifestVersion === session.releaseVersion &&
+    profile.automatedEvidenceGeneratedAt ===
+      session.automatedEvidenceGeneratedAt &&
+    profile.buildSha256 === session.buildSha256 &&
+    profile.browserObservedExtensionId === session.unpackedExtensionId &&
+    profile.detectedEnvironment?.os === session.operatingSystem &&
+    profile.browserCommand === session.browserCommand &&
+    profile.detectedEnvironment?.chromeVersion === session.browserVersion;
+  if (!fieldsMatch || !Array.isArray(profile.resumeCommand)) {
+    return {
+      path: relativePath,
+      exists: true,
+      usable: false,
+      profileDir: session.profileDir,
+      reason:
+        "active session metadata does not match its strictly validated profile marker",
+    };
+  }
+  return {
+    path: relativePath,
+    exists: true,
+    usable: true,
+    updatedAt: session.updatedAt,
+    profileDir: session.profileDir,
+    profileCreatedAt: session.profileCreatedAt,
+    resumeAction: profile.resumeCommand.map(quoteShellArg).join(" "),
+  };
+};
 const commandMatchesExpected = (actual, expected) =>
   actual === expected || actual === expected.replace(/^npm\b/, "npm.cmd");
 
@@ -406,6 +537,46 @@ const validateAutomatedEvidence = (state) => {
       "automated QA evidence buildManifestVersion must match build/manifest.json."
     );
   }
+  if (!/^[a-p]{32}$/.test(evidence?.builtExtension?.id || "")) {
+    errors.push(
+      "automated QA evidence builtExtension.id must be a browser-observed 32-character Chrome extension id."
+    );
+  }
+  if (evidence?.builtExtension?.buildPath !== "build") {
+    errors.push(
+      "automated QA evidence builtExtension.buildPath must match build."
+    );
+  }
+  if (evidence?.builtExtension?.cleanChromeProfile !== true) {
+    errors.push(
+      "automated QA evidence builtExtension.cleanChromeProfile must be true."
+    );
+  }
+  const builtExtensionObservedAtMs = timestampMs(
+    evidence?.builtExtension?.observedAt
+  );
+  if (builtExtensionObservedAtMs === null) {
+    errors.push(
+      "automated QA evidence builtExtension.observedAt must be an ISO UTC timestamp."
+    );
+  } else if (
+    (automatedStartedAtMs !== null &&
+      builtExtensionObservedAtMs < automatedStartedAtMs) ||
+    (automatedGeneratedAtMs !== null &&
+      builtExtensionObservedAtMs > automatedGeneratedAtMs)
+  ) {
+    errors.push(
+      "automated QA evidence builtExtension.observedAt must fall within the automated QA run window."
+    );
+  }
+  if (
+    !Number.isInteger(evidence?.builtExtension?.summaryCount) ||
+    evidence.builtExtension.summaryCount <= 0
+  ) {
+    errors.push(
+      "automated QA evidence builtExtension.summaryCount must be a positive integer."
+    );
+  }
 
   const commandLabels = new Set();
   let commandDurationTotal = 0;
@@ -576,6 +747,53 @@ const runVerifier = (scriptPath, env = {}) => {
   };
 };
 
+const manualTemplateSyncState = (state, automatedPassed) => {
+  if (!state.exists || state.status !== "template") {
+    return { required: false, reasons: [] };
+  }
+  if (!automatedPassed) {
+    return {
+      required: true,
+      reasons: [
+        "current automated QA must pass before template freshness can be established",
+      ],
+    };
+  }
+  const evidence = readJson(MANUAL_EVIDENCE_PATH);
+  if (evidence.error) {
+    return { required: true, reasons: ["template is not valid JSON"] };
+  }
+  const templateResult = spawnSync(
+    process.execPath,
+    [MANUAL_QA_VERIFIER_PATH, "--print-template"],
+    {
+      cwd: ROOT,
+      env: { ...process.env, SAYLESS_MANUAL_QA_ROOT: ROOT },
+      encoding: "utf8",
+    }
+  );
+  if (templateResult.status !== 0) {
+    return {
+      required: true,
+      reasons: ["canonical template could not be generated"],
+    };
+  }
+  let canonicalTemplate;
+  try {
+    canonicalTemplate = JSON.parse(templateResult.stdout);
+  } catch {
+    return {
+      required: true,
+      reasons: ["canonical template output is not valid JSON"],
+    };
+  }
+  return analyzeManualTemplateSync({
+    canonicalTemplate,
+    evidence,
+    automatedEvidence: readJson(AUTOMATED_EVIDENCE_PATH),
+  });
+};
+
 const evidenceState = (path, expectedKind) => {
   const rel = relative(ROOT, path);
   if (!existsSync(path)) {
@@ -647,23 +865,37 @@ const summarizeVerifier = (state, verifier) => ({
   ...summarizeVerifierOutput(verifier.output),
 });
 
-const manualQaTodo = (state, verifier) => {
+const manualQaTodo = (
+  state,
+  verifier,
+  templateSyncRequired,
+  currentProfileAction
+) => {
   if (!state.exists) {
     return [
       "Generate release-artifacts/manual-qa-evidence.json with npm run qa:release:manual:template.",
-      "Run npm run qa:release:manual:profile, then use the printed clean Chrome profile command against the current build.",
-      "Fill release-specific manual observations, then run npm run qa:release:manual.",
+      `Run ${SYNC_MANUAL_QA_PROFILE_ACTION} to synchronize the worksheet and launch the current build in a clean Chrome profile.`,
+      `Fill release-specific manual observations, use ${REVIEW_MANUAL_QA_PROGRESS_ACTION} to review remaining sections, then run npm run qa:release:manual.`,
     ];
   }
   if (state.status === "template") {
+    const profileAction = templateSyncRequired
+      ? SYNC_MANUAL_QA_PROFILE_ACTION
+      : currentProfileAction;
     return [
-      "Run npm run qa:release:manual:profile, then use the printed clean Chrome profile command against the current build.",
+      `Run ${profileAction} to launch the current build in a clean Chrome profile.`,
       "Replace tester, environment, testedAt, and unpacked extension id template values.",
-      "Record at least two real recordings covering MP4/WebM, tab or region capture, desktop/screen/window capture, a 180s+ recording, and two speaker profiles.",
-      "Fill export evidence for MP4, WebM, GIF, WAV, M4A, WebVTT, transcript JSON, .sayless-project.json, caption burn-in, cancel/retry, reveal, Save to file, and save-dialog cancellation.",
+      "Record at least two real recordings, then run npm run qa:release:manual:media -- --json --require-complete --output=release-artifacts/manual-qa-media-probe.json <files...> for exact byte counts, durations, dimensions, containers, codecs, hashes, and a durable ignored report; cover MP4/WebM, tab/browser/region and desktop/screen/window capture, microphone and noise descriptions, two speaker profiles, and one recording that is both 180 seconds or longer and at least 25 MiB.",
+      "Fill export evidence for MP4, WebM, GIF, WAV, M4A, WebVTT, transcript JSON, and .sayless-project.json; run npm run qa:release:manual:sidecars -- --json --require-complete --output=release-artifacts/manual-qa-sidecar-probe.json <files...> so one filename-matched three-format set with agreeing JSON recording IDs is required and its structural report is retained, then record the required open/import observations, caption burn-in, cancel/retry, reveal, Save to file, and save-dialog cancellation.",
+      "After both strict probe reports pass and worksheet filenames identify their tester-confirmed roles, run npm run qa:release:manual:measurements -- --json --write to atomically copy only exact filename-matched hashes, sizes, durations, dimensions, containers, and audio metadata; all perceptual and workflow observations remain manual.",
       "Fill offline transcription evidence with bundled-model-ready UI status, disabled network method, failed external HTTP(S) probe from the same profile, transcript quality, cache, regenerate, and delete observations.",
-      "Fill silence, zoom, local library recovery, and checklist evidence with concrete artifacts and observations.",
+      "Fill silence evidence on distinct-noise MP4/WebM recordings with observed quiet ranges and an ignored noisy range.",
+      "Fill per-recording zoom evidence on two click-capable sources with distinct dimensions/aspect ratios, including keep/remove, preview, reopen, and inspected MP4 framing.",
+      "Fill per-recording crop evidence on two varied sources, including edge-touching normalized bounds, native controls, unchanged source media, reopen, and inspected MP4 aspect agreement.",
+      "Fill project-audio evidence using real WAV, M4A, and MP3 inputs with decode metadata and audible previews, plus long-recording sync, perceptual mix/replace/loop gain, cancel/retry, reopen, duplicate/delete isolation, missing-asset relink, and Apply-edits cleanup.",
+      "Fill local library recovery and checklist evidence with concrete artifacts and observations.",
       "Fill publication-surface evidence for release notes, screenshots, and docs/STORE_LISTING.md store text, including paid/subscription, premium/trial/license/upgrade, plan/membership/locked-feature, locked-behind/pay-to-unlock/upgrade-required, account-tier/license-key/activation/contact-sales, account/sign-in, and cloud/remote search terms.",
+      `Use ${REVIEW_MANUAL_QA_PROGRESS_ACTION} during the session to review incomplete sections without treating progress as a passing gate.`,
       "Set manual evidence status to passed only after every required observation is real, then run npm run qa:release:manual.",
     ];
   }
@@ -707,9 +939,29 @@ const status = {
   ),
 };
 
-status.manualQa.todo = manualQaTodo(status.manualQa, manualVerifier);
-
 const automatedPassed = status.automatedQa.verifierPassed;
+const templateSync = manualTemplateSyncState(status.manualQa, automatedPassed);
+const activeSession = automatedPassed
+  ? discoverActiveManualQaSession()
+  : {
+      path: "release-artifacts/manual-qa-session.json",
+      exists: existsSync(MANUAL_SESSION_PATH),
+      usable: false,
+      reason: "automated QA must pass before a session can be resumed",
+    };
+const currentManualQaProfileAction =
+  !templateSync.required && activeSession.usable
+    ? activeSession.resumeAction
+    : OPEN_MANUAL_QA_PROFILE_ACTION;
+status.manualQa.templateSyncRequired = templateSync.required;
+status.manualQa.templateSyncReasons = templateSync.reasons;
+status.manualQa.activeSession = activeSession;
+status.manualQa.todo = manualQaTodo(
+  status.manualQa,
+  manualVerifier,
+  templateSync.required,
+  currentManualQaProfileAction
+);
 const manualQaNeedsCompletion =
   status.manualQa.exists && status.manualQa.status === "template";
 
@@ -722,15 +974,18 @@ if (!automatedPassed) {
   nextAction = "npm run qa:release:manual:template";
   nextActions = [
     "npm run qa:release:manual:template",
-    START_MANUAL_QA_PROFILE_ACTION,
+    SYNC_MANUAL_QA_PROFILE_ACTION,
+    REVIEW_MANUAL_QA_PROGRESS_ACTION,
     COMPLETE_MANUAL_QA_ACTION,
   ];
 } else if (!status.manualQa.verifierPassed) {
   nextAction = manualQaNeedsCompletion
-    ? START_MANUAL_QA_PROFILE_ACTION
+    ? templateSync.required
+      ? SYNC_MANUAL_QA_PROFILE_ACTION
+      : currentManualQaProfileAction
     : "npm run qa:release:manual";
   nextActions = manualQaNeedsCompletion
-    ? [START_MANUAL_QA_PROFILE_ACTION, COMPLETE_MANUAL_QA_ACTION]
+    ? [nextAction, REVIEW_MANUAL_QA_PROGRESS_ACTION, COMPLETE_MANUAL_QA_ACTION]
     : [
         "fix release-artifacts/manual-qa-evidence.json",
         "npm run qa:release:manual",
@@ -785,8 +1040,17 @@ if (process.argv.includes("--json")) {
       );
     }
     if (label === "manualQa" && item.todo?.length) {
+      if (item.activeSession) {
+        console.log(
+          `  Active clean-profile session: ${
+            item.activeSession.usable
+              ? `resumable (${item.activeSession.profileDir})`
+              : item.activeSession.reason
+          }`
+        );
+      }
       console.log("  Manual QA todo:");
-      for (const todo of item.todo.slice(0, 8)) {
+      for (const todo of item.todo) {
         console.log(`    - ${todo}`);
       }
     }

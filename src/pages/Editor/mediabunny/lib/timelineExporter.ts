@@ -24,116 +24,162 @@ import {
 import { videoConverter } from "./videoConverter";
 import { CAPTION_STYLE_PRESET_DETAILS } from "../../../../edl/captions";
 import { computeZoomViewportTransform } from "../../../../edl/zoomViewport";
+import { cropRelativePoint } from "../../../../edl/crop";
 
 export class TimelineExporter {
   /**
    * @param {Blob} sourceBlob
    * @param {{clips: {sourceStart:number, sourceEnd:number, muted?:boolean}[], onProgress?:Function, captions?: {start:number,end:number,text:string}[], captionStyle?: {preset?:string}, zoomKeyframes?: {time:number,durationSeconds:number,scale:number,xRatio:number,yRatio:number}[], signal?: AbortSignal}} opts
    */
-  async export(sourceBlob, { clips, onProgress, captions = [], captionStyle = {}, zoomKeyframes = [], signal }) {
+  async export(
+    sourceBlob,
+    {
+      clips,
+      onProgress,
+      captions = [],
+      captionStyle = {},
+      zoomKeyframes = [],
+      crop = null,
+      signal,
+    }
+  ) {
     throwIfAborted(signal);
-    const input = new Input({ source: new BlobSource(sourceBlob), formats: ALL_FORMATS });
+    const input = new Input({
+      source: new BlobSource(sourceBlob),
+      formats: ALL_FORMATS,
+    });
 
     const outputTarget = new BufferTarget();
     const output = new Output({
       format: new Mp4OutputFormat({ fastStart: "in-memory" }),
       target: outputTarget,
     });
+    let outputStarted = false;
+    let outputFinalized = false;
 
-    const videoTrack = await input.getPrimaryVideoTrack();
-    const audioTrack = await input.getPrimaryAudioTrack().catch(() => null);
-    const audioDecodable = audioTrack ? await audioTrack.canDecode().catch(() => false) : false;
+    try {
+      const videoTrack = await input.getPrimaryVideoTrack();
+      const audioTrack = await input.getPrimaryAudioTrack().catch(() => null);
+      const audioDecodable = audioTrack
+        ? await audioTrack.canDecode().catch(() => false)
+        : false;
 
-    const codecInfo = await videoConverter.detectBestCodec("mp4");
-    const videoSource = new VideoSampleSource({
-      codec: codecInfo?.codec ?? "avc",
-      bitrate: QUALITY_HIGH,
-      sizeChangeBehavior: "passThrough",
-    });
-    output.addVideoTrack(videoSource);
+      const codecInfo = await videoConverter.detectBestCodec("mp4");
+      const videoSource = new VideoSampleSource({
+        codec: codecInfo?.codec ?? "avc",
+        bitrate: QUALITY_HIGH,
+        sizeChangeBehavior: "passThrough",
+      });
+      output.addVideoTrack(videoSource);
 
-    let audioSource = null;
-    if (audioTrack && audioDecodable) {
-      audioSource = new AudioSampleSource({ codec: "aac", bitrate: QUALITY_HIGH });
-      output.addAudioTrack(audioSource);
-    }
-
-    await output.start();
-
-    const totalDur = clips.reduce((a, c) => a + Math.max(0, c.sourceEnd - c.sourceStart), 0) || 1;
-    let outPts = 0; // microseconds
-    let processed = 0;
-    const frameRenderer = createFrameRenderer({
-      captions,
-      captionStyle,
-      zoomKeyframes,
-    });
-
-    for (const clip of clips) {
-      throwIfAborted(signal);
-      const start = clip.sourceStart;
-      const end = clip.sourceEnd;
-      const base = outPts / 1_000_000;
-
-      const videoSink = new VideoSampleSink(videoTrack);
-      for await (const sample of videoSink.samples(start, end)) {
-        throwIfAborted(signal);
-        const timestamp = Math.max(0, base + (sample.timestamp - start));
-        sample.setTimestamp(timestamp);
-        const outSample = frameRenderer
-          ? frameRenderer.render(sample, timestamp)
-          : sample;
-        await videoSource.add(outSample);
-        if (outSample !== sample) outSample.close();
-        sample.close();
-        processed += sample.duration ?? 1 / 30;
-        onProgress?.(Math.min(1, processed / totalDur));
-        throwIfAborted(signal);
+      let audioSource = null;
+      if (audioTrack && audioDecodable) {
+        audioSource = new AudioSampleSource({
+          codec: "aac",
+          bitrate: QUALITY_HIGH,
+        });
+        output.addAudioTrack(audioSource);
       }
 
-      if (audioTrack && audioSource) {
-        const audioSink = new AudioSampleSink(audioTrack);
-        let clipAudioPts = base;
-        for await (const sample of audioSink.samples(start, end)) {
-          throwIfAborted(signal);
-          const adjusted = Math.max(0, clipAudioPts);
-          const sampleDuration =
-            sample.duration || sample.numberOfFrames / sample.sampleRate || 0;
-          clipAudioPts += sampleDuration;
-          if (clip.muted) {
-            // Replace with a silent sample of the same shape (true silence).
-            const nch = sample.numberOfChannels;
-            const frames = sample.numberOfFrames;
-            const silent = new AudioSample({
-              data: new Float32Array(frames * nch),
-              format: "f32-planar",
-              numberOfChannels: nch,
-              sampleRate: sample.sampleRate,
-              timestamp: adjusted,
-              duration: sampleDuration || frames / sample.sampleRate,
-            });
-            await audioSource.add(silent);
-            silent.close();
-            sample.close();
-          } else {
-            sample.setTimestamp(adjusted);
-            await audioSource.add(sample);
+      outputStarted = true;
+      await output.start();
+
+      const totalDur =
+        clips.reduce(
+          (a, c) => a + Math.max(0, c.sourceEnd - c.sourceStart),
+          0
+        ) || 1;
+      let outPts = 0; // microseconds
+      let processed = 0;
+      const frameRenderer = createFrameRenderer({
+        captions,
+        captionStyle,
+        zoomKeyframes,
+        crop,
+      });
+
+      for (const clip of clips) {
+        throwIfAborted(signal);
+        const start = clip.sourceStart;
+        const end = clip.sourceEnd;
+        const base = outPts / 1_000_000;
+
+        const videoSink = new VideoSampleSink(videoTrack);
+        for await (const sample of videoSink.samples(start, end)) {
+          let outSample = null;
+          try {
+            throwIfAborted(signal);
+            const timestamp = Math.max(0, base + (sample.timestamp - start));
+            const sampleDuration = sample.duration ?? 1 / 30;
+            sample.setTimestamp(timestamp);
+            outSample = frameRenderer
+              ? frameRenderer.render(sample, timestamp)
+              : sample;
+            await videoSource.add(outSample);
+            processed += sampleDuration;
+            onProgress?.(Math.min(1, processed / totalDur));
+            throwIfAborted(signal);
+          } finally {
+            if (outSample && outSample !== sample) outSample.close();
             sample.close();
           }
-          processed += sampleDuration;
-          onProgress?.(Math.min(1, processed / totalDur));
-          throwIfAborted(signal);
         }
+
+        if (audioTrack && audioSource) {
+          const audioSink = new AudioSampleSink(audioTrack);
+          let clipAudioPts = base;
+          for await (const sample of audioSink.samples(start, end)) {
+            let silent = null;
+            try {
+              throwIfAborted(signal);
+              const adjusted = Math.max(0, clipAudioPts);
+              const sampleDuration =
+                sample.duration ||
+                sample.numberOfFrames / sample.sampleRate ||
+                0;
+              clipAudioPts += sampleDuration;
+              if (clip.muted) {
+                // Replace with a silent sample of the same shape (true silence).
+                const nch = sample.numberOfChannels;
+                const frames = sample.numberOfFrames;
+                silent = new AudioSample({
+                  data: new Float32Array(frames * nch),
+                  format: "f32-planar",
+                  numberOfChannels: nch,
+                  sampleRate: sample.sampleRate,
+                  timestamp: adjusted,
+                  duration: sampleDuration || frames / sample.sampleRate,
+                });
+                await audioSource.add(silent);
+              } else {
+                sample.setTimestamp(adjusted);
+                await audioSource.add(sample);
+              }
+              processed += sampleDuration;
+              onProgress?.(Math.min(1, processed / totalDur));
+              throwIfAborted(signal);
+            } finally {
+              silent?.close();
+              sample.close();
+            }
+          }
+        }
+
+        outPts += (end - start) * 1_000_000;
       }
 
-      outPts += (end - start) * 1_000_000;
+      throwIfAborted(signal);
+      await output.finalize();
+      outputFinalized = true;
+      throwIfAborted(signal);
+      onProgress?.(1);
+      return new Blob([outputTarget.buffer], { type: "video/mp4" });
+    } finally {
+      if (outputStarted && !outputFinalized) {
+        await output.cancel().catch(() => {});
+      }
+      input.dispose();
     }
-
-    throwIfAborted(signal);
-    await output.finalize();
-    throwIfAborted(signal);
-    onProgress?.(1);
-    return new Blob([outputTarget.buffer], { type: "video/mp4" });
   }
 
   /**
@@ -142,9 +188,14 @@ export class TimelineExporter {
    */
   async exportAudio(sourceBlob, { clips, format = "wav", onProgress, signal }) {
     throwIfAborted(signal);
-    const input = new Input({ source: new BlobSource(sourceBlob), formats: ALL_FORMATS });
+    const input = new Input({
+      source: new BlobSource(sourceBlob),
+      formats: ALL_FORMATS,
+    });
     const audioTrack = await input.getPrimaryAudioTrack().catch(() => null);
-    const audioDecodable = audioTrack ? await audioTrack.canDecode().catch(() => false) : false;
+    const audioDecodable = audioTrack
+      ? await audioTrack.canDecode().catch(() => false)
+      : false;
     if (!audioTrack || !audioDecodable) {
       throw new Error("audio-export-track-unavailable");
     }
@@ -158,64 +209,83 @@ export class TimelineExporter {
       format: outputFormat,
       target: outputTarget,
     });
-    const audioSource = new AudioSampleSource({
-      codec: format === "m4a" ? "aac" : "pcm-f32",
-      bitrate: QUALITY_HIGH,
-    });
-    output.addAudioTrack(audioSource);
+    let outputStarted = false;
+    let outputFinalized = false;
 
-    await output.start();
+    try {
+      const audioSource = new AudioSampleSource({
+        codec: format === "m4a" ? "aac" : "pcm-f32",
+        bitrate: QUALITY_HIGH,
+      });
+      output.addAudioTrack(audioSource);
 
-    const totalDur = clips.reduce((a, c) => a + Math.max(0, c.sourceEnd - c.sourceStart), 0) || 1;
-    let outPts = 0;
-    let processed = 0;
+      outputStarted = true;
+      await output.start();
 
-    for (const clip of clips) {
-      throwIfAborted(signal);
-      const start = clip.sourceStart;
-      const end = clip.sourceEnd;
-      const base = outPts / 1_000_000;
-      const audioSink = new AudioSampleSink(audioTrack);
-      let clipAudioPts = base;
-      for await (const sample of audioSink.samples(start, end)) {
+      const totalDur =
+        clips.reduce(
+          (a, c) => a + Math.max(0, c.sourceEnd - c.sourceStart),
+          0
+        ) || 1;
+      let outPts = 0;
+      let processed = 0;
+
+      for (const clip of clips) {
         throwIfAborted(signal);
-        const adjusted = Math.max(0, clipAudioPts);
-        const sampleDuration =
-          sample.duration || sample.numberOfFrames / sample.sampleRate || 0;
-        clipAudioPts += sampleDuration;
-        if (clip.muted) {
-          const nch = sample.numberOfChannels;
-          const frames = sample.numberOfFrames;
-          const silent = new AudioSample({
-            data: new Float32Array(frames * nch),
-            format: "f32-planar",
-            numberOfChannels: nch,
-            sampleRate: sample.sampleRate,
-            timestamp: adjusted,
-            duration: sampleDuration || frames / sample.sampleRate,
-          });
-          await audioSource.add(silent);
-          silent.close();
-          sample.close();
-        } else {
-          sample.setTimestamp(adjusted);
-          await audioSource.add(sample);
-          sample.close();
+        const start = clip.sourceStart;
+        const end = clip.sourceEnd;
+        const base = outPts / 1_000_000;
+        const audioSink = new AudioSampleSink(audioTrack);
+        let clipAudioPts = base;
+        for await (const sample of audioSink.samples(start, end)) {
+          let silent = null;
+          try {
+            throwIfAborted(signal);
+            const adjusted = Math.max(0, clipAudioPts);
+            const sampleDuration =
+              sample.duration || sample.numberOfFrames / sample.sampleRate || 0;
+            clipAudioPts += sampleDuration;
+            if (clip.muted) {
+              const nch = sample.numberOfChannels;
+              const frames = sample.numberOfFrames;
+              silent = new AudioSample({
+                data: new Float32Array(frames * nch),
+                format: "f32-planar",
+                numberOfChannels: nch,
+                sampleRate: sample.sampleRate,
+                timestamp: adjusted,
+                duration: sampleDuration || frames / sample.sampleRate,
+              });
+              await audioSource.add(silent);
+            } else {
+              sample.setTimestamp(adjusted);
+              await audioSource.add(sample);
+            }
+            processed += sampleDuration;
+            onProgress?.(Math.min(1, processed / totalDur));
+            throwIfAborted(signal);
+          } finally {
+            silent?.close();
+            sample.close();
+          }
         }
-        processed += sampleDuration;
-        onProgress?.(Math.min(1, processed / totalDur));
-        throwIfAborted(signal);
+        outPts += (end - start) * 1_000_000;
       }
-      outPts += (end - start) * 1_000_000;
-    }
 
-    throwIfAborted(signal);
-    await output.finalize();
-    throwIfAborted(signal);
-    onProgress?.(1);
-    return new Blob([outputTarget.buffer], {
-      type: format === "m4a" ? "audio/mp4" : "audio/wav",
-    });
+      throwIfAborted(signal);
+      await output.finalize();
+      outputFinalized = true;
+      throwIfAborted(signal);
+      onProgress?.(1);
+      return new Blob([outputTarget.buffer], {
+        type: format === "m4a" ? "audio/mp4" : "audio/wav",
+      });
+    } finally {
+      if (outputStarted && !outputFinalized) {
+        await output.cancel().catch(() => {});
+      }
+      input.dispose();
+    }
   }
 }
 
@@ -234,14 +304,20 @@ function throwIfAborted(signal) {
   throw signal.reason || createAbortError();
 }
 
-function createFrameRenderer({ captions, captionStyle, zoomKeyframes }) {
+function createFrameRenderer({ captions, captionStyle, zoomKeyframes, crop }) {
   const cues = (captions || [])
     .map((cue) => ({
       start: Number(cue.start),
       end: Number(cue.end),
       text: String(cue.text || "").trim(),
     }))
-    .filter((cue) => cue.text && Number.isFinite(cue.start) && Number.isFinite(cue.end) && cue.end > cue.start);
+    .filter(
+      (cue) =>
+        cue.text &&
+        Number.isFinite(cue.start) &&
+        Number.isFinite(cue.end) &&
+        cue.end > cue.start
+    );
   const zooms = (zoomKeyframes || [])
     .map((keyframe) => ({
       time: Number(keyframe.time),
@@ -258,21 +334,66 @@ function createFrameRenderer({ captions, captionStyle, zoomKeyframes }) {
         Number.isFinite(keyframe.scale) &&
         keyframe.scale > 1 &&
         Number.isFinite(keyframe.xRatio) &&
-        Number.isFinite(keyframe.yRatio),
+        Number.isFinite(keyframe.yRatio)
     );
-  if (!cues.length && !zooms.length) return null;
+  const normalizedCrop =
+    crop && Number(crop.widthRatio) > 0 && Number(crop.heightRatio) > 0
+      ? crop
+      : null;
+  if (!cues.length && !zooms.length && !normalizedCrop) return null;
 
   const preset =
     CAPTION_STYLE_PRESET_DETAILS[captionStyle?.preset] ||
     CAPTION_STYLE_PRESET_DETAILS.clean;
   let canvas = null;
   let context = null;
+  let cropCanvas = null;
+  let cropContext = null;
 
   const ensureCanvas = (sample) => {
-    const width = Math.max(1, Math.round(sample.displayWidth || sample.codedWidth || 1));
-    const height = Math.max(1, Math.round(sample.displayHeight || sample.codedHeight || 1));
+    const sourceWidth = Math.max(
+      1,
+      Math.round(sample.displayWidth || sample.codedWidth || 1)
+    );
+    const sourceHeight = Math.max(
+      1,
+      Math.round(sample.displayHeight || sample.codedHeight || 1)
+    );
+    const cropX = normalizedCrop
+      ? Math.round(normalizedCrop.xRatio * sourceWidth)
+      : 0;
+    const cropY = normalizedCrop
+      ? Math.round(normalizedCrop.yRatio * sourceHeight)
+      : 0;
+    const width = normalizedCrop
+      ? Math.max(
+          1,
+          Math.min(
+            sourceWidth - cropX,
+            Math.round(normalizedCrop.widthRatio * sourceWidth)
+          )
+        )
+      : sourceWidth;
+    const height = normalizedCrop
+      ? Math.max(
+          1,
+          Math.min(
+            sourceHeight - cropY,
+            Math.round(normalizedCrop.heightRatio * sourceHeight)
+          )
+        )
+      : sourceHeight;
     if (canvas && canvas.width === width && canvas.height === height) {
-      return { canvas, context, width, height };
+      return {
+        canvas,
+        context,
+        width,
+        height,
+        sourceWidth,
+        sourceHeight,
+        cropX,
+        cropY,
+      };
     }
     canvas =
       typeof OffscreenCanvas !== "undefined"
@@ -282,20 +403,86 @@ function createFrameRenderer({ captions, captionStyle, zoomKeyframes }) {
     canvas.height = height;
     context = canvas.getContext("2d", { alpha: false });
     if (!context) throw new Error("caption-canvas-unavailable");
-    return { canvas, context, width, height };
+    return {
+      canvas,
+      context,
+      width,
+      height,
+      sourceWidth,
+      sourceHeight,
+      cropX,
+      cropY,
+    };
+  };
+
+  const ensureCropCanvas = (width, height) => {
+    if (
+      cropCanvas &&
+      cropCanvas.width === width &&
+      cropCanvas.height === height
+    ) {
+      return { canvas: cropCanvas, context: cropContext };
+    }
+    cropCanvas =
+      typeof OffscreenCanvas !== "undefined"
+        ? new OffscreenCanvas(width, height)
+        : document.createElement("canvas");
+    cropCanvas.width = width;
+    cropCanvas.height = height;
+    cropContext = cropCanvas.getContext("2d", { alpha: false });
+    if (!cropContext) throw new Error("crop-canvas-unavailable");
+    return { canvas: cropCanvas, context: cropContext };
   };
 
   return {
     render(sample, timestamp) {
-      const active = cues.find((cue) => timestamp >= cue.start && timestamp < cue.end);
-      const activeZoom = zooms.find(
-        (keyframe) => timestamp >= keyframe.time && timestamp < keyframe.end,
+      const active = cues.find(
+        (cue) => timestamp >= cue.start && timestamp < cue.end
       );
-      if (!active && !activeZoom) return sample;
+      const activeZoom = zooms.find(
+        (keyframe) => timestamp >= keyframe.time && timestamp < keyframe.end
+      );
+      if (!active && !activeZoom && !normalizedCrop) return sample;
       const target = ensureCanvas(sample);
-      drawVideoFrame(sample, target.context, target.width, target.height, activeZoom);
+      let frame = sample;
+      if (normalizedCrop) {
+        const cropped = ensureCropCanvas(target.width, target.height);
+        cropped.context.clearRect(0, 0, target.width, target.height);
+        sample.draw(
+          cropped.context,
+          -target.cropX,
+          -target.cropY,
+          target.sourceWidth,
+          target.sourceHeight
+        );
+        frame = cropped.canvas;
+      }
+      const viewportZoom =
+        activeZoom && normalizedCrop
+          ? {
+              ...activeZoom,
+              ...cropRelativePoint(
+                normalizedCrop,
+                activeZoom.xRatio,
+                activeZoom.yRatio
+              ),
+            }
+          : activeZoom;
+      drawVideoFrame(
+        frame,
+        target.context,
+        target.width,
+        target.height,
+        viewportZoom
+      );
       if (active) {
-        drawCaptionOverlay(target.context, target.width, target.height, active.text, preset);
+        drawCaptionOverlay(
+          target.context,
+          target.width,
+          target.height,
+          active.text,
+          preset
+        );
       }
       return new VideoSample(target.canvas, {
         timestamp,
@@ -307,19 +494,20 @@ function createFrameRenderer({ captions, captionStyle, zoomKeyframes }) {
 
 function drawVideoFrame(sample, context, width, height, zoom) {
   context.clearRect(0, 0, width, height);
+  const draw = (dx, dy, drawWidth, drawHeight) => {
+    if (typeof sample.draw === "function") {
+      sample.draw(context, dx, dy, drawWidth, drawHeight);
+    } else {
+      context.drawImage(sample, dx, dy, drawWidth, drawHeight);
+    }
+  };
   if (!zoom) {
-    sample.draw(context, 0, 0, width, height);
+    draw(0, 0, width, height);
     return;
   }
 
   const transform = computeZoomViewportTransform(zoom, width, height);
-  sample.draw(
-    context,
-    transform.dx,
-    transform.dy,
-    transform.drawWidth,
-    transform.drawHeight,
-  );
+  draw(transform.dx, transform.dy, transform.drawWidth, transform.drawHeight);
 }
 
 function drawCaptionOverlay(context, width, height, text, preset) {
@@ -328,12 +516,15 @@ function drawCaptionOverlay(context, width, height, text, preset) {
   const horizontalPadding = Math.round(fontSize * 0.7);
   const verticalPadding = Math.round(fontSize * 0.42);
   const maxTextWidth = Math.round(width * 0.78);
-  const lines = wrapCaptionText(context, text, maxTextWidth, fontSize).slice(0, 3);
+  const lines = wrapCaptionText(context, text, maxTextWidth, fontSize).slice(
+    0,
+    3
+  );
   if (!lines.length) return;
 
   const textWidth = Math.min(
     maxTextWidth,
-    Math.max(...lines.map((line) => context.measureText(line).width)),
+    Math.max(...lines.map((line) => context.measureText(line).width))
   );
   const boxWidth = Math.ceil(textWidth + horizontalPadding * 2);
   const boxHeight = Math.ceil(lines.length * lineHeight + verticalPadding * 2);
@@ -343,7 +534,14 @@ function drawCaptionOverlay(context, width, height, text, preset) {
   context.save();
   context.globalAlpha = preset.boxAlpha;
   context.fillStyle = preset.boxColor;
-  roundedRect(context, x, y, boxWidth, boxHeight, Math.max(6, Math.round(fontSize * 0.25)));
+  roundedRect(
+    context,
+    x,
+    y,
+    boxWidth,
+    boxHeight,
+    Math.max(6, Math.round(fontSize * 0.25))
+  );
   context.fill();
   context.globalAlpha = 1;
   context.font = `700 ${fontSize}px Inter, Arial, sans-serif`;
@@ -363,7 +561,9 @@ function drawCaptionOverlay(context, width, height, text, preset) {
 
 function wrapCaptionText(context, text, maxWidth, fontSize) {
   context.font = `700 ${fontSize}px Inter, Arial, sans-serif`;
-  const words = String(text || "").split(/\s+/).filter(Boolean);
+  const words = String(text || "")
+    .split(/\s+/)
+    .filter(Boolean);
   const lines = [];
   let current = "";
   for (const word of words) {

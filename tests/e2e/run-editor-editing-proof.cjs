@@ -13,6 +13,13 @@ const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const BUILD_DIR = path.join(ROOT, "build");
+const PROJECT_AUDIO_MP3_PATH = path.join(
+  ROOT,
+  "src",
+  "assets",
+  "sounds",
+  "beep.mp3"
+);
 const OUT_DIR =
   process.env.SAYLESS_EDITOR_PROOF_DIR ||
   path.join(ROOT, "test-artifacts", "editor-editing-proof");
@@ -251,8 +258,22 @@ const seedRecording = async (page) => {
         recordingMeta: {
           source: "editor-proof",
           activityEvents: [
-            { type: "click", time: 0.4, x: 180, y: 140 },
-            { type: "click", time: 2.2, x: 410, y: 210 },
+            {
+              type: "click",
+              time: 0.4,
+              x: 180,
+              y: 140,
+              xRatio: 0.28125,
+              yRatio: 0.38889,
+            },
+            {
+              type: "click",
+              time: 2.2,
+              x: 410,
+              y: 210,
+              xRatio: 0.640625,
+              yRatio: 0.58333,
+            },
           ],
         },
         project: {
@@ -315,6 +336,40 @@ const seedRecording = async (page) => {
     activePage = page;
     collectConsole(page, "editor", consoleErrors);
     await page.setViewportSize({ width: 1440, height: 980 });
+    await page.addInitScript(() => {
+      globalThis.__saylessSavePickerMode = "save";
+      globalThis.__saylessSavePickerWrites = [];
+      Object.defineProperty(window, "showSaveFilePicker", {
+        configurable: true,
+        value: async (options) => {
+          if (globalThis.__saylessSavePickerMode === "cancel") {
+            throw new DOMException(
+              "Save picker cancelled by proof",
+              "AbortError"
+            );
+          }
+          const record = {
+            suggestedName: options?.suggestedName || "",
+            types: options?.types || [],
+            byteSize: 0,
+            mimeType: "",
+            closed: false,
+          };
+          globalThis.__saylessSavePickerWrites.push(record);
+          return {
+            createWritable: async () => ({
+              write: async (blob) => {
+                record.byteSize = Number(blob?.size) || 0;
+                record.mimeType = String(blob?.type || "");
+              },
+              close: async () => {
+                record.closed = true;
+              },
+            }),
+          };
+        },
+      });
+    });
     await page.goto(
       `chrome-extension://${extensionId}/editor.html?localRecordingId=${encodeURIComponent(
         seed.recordingId
@@ -391,6 +446,13 @@ const seedRecording = async (page) => {
       page.getByTestId("transcript-word").first(),
       "transcript word"
     );
+    const zoomKeepButtons = page.getByTestId("zoom-suggestion-keep");
+    await visibleBox(zoomKeepButtons.last(), "zoom suggestion keep");
+    await zoomKeepButtons.last().click();
+    await page.getByTestId("zoom-keyframe-remove").waitFor({
+      state: "visible",
+      timeout: 10000,
+    });
     await screenshot(page, "02-editor-timeline-and-transcript-visible.png");
 
     const firstClip = page.getByTestId("timeline-clip").first();
@@ -460,6 +522,243 @@ const seedRecording = async (page) => {
     );
     await screenshot(page, "07-player-export-after-edit-visible.png");
 
+    await page.getByTestId("player-crop-action").click();
+    const cropWidthInput = page.getByTestId("project-crop-width");
+    await cropWidthInput.waitFor({ state: "visible", timeout: 20000 });
+    const cropInputs = {
+      width: cropWidthInput,
+      height: page.getByTestId("project-crop-height"),
+      left: page.getByTestId("project-crop-left"),
+      top: page.getByTestId("project-crop-top"),
+    };
+    const desiredCropInputs = {
+      width: "512",
+      height: "288",
+      left: "64",
+      top: "36",
+    };
+    let confirmedCropInputs = null;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await cropInputs.width.fill(desiredCropInputs.width);
+      await cropInputs.height.fill(desiredCropInputs.height);
+      // The cropper may asynchronously constrain position after a size change.
+      // Let that settle before applying the explicit position values.
+      await page.waitForTimeout(200);
+      await cropInputs.left.fill(desiredCropInputs.left);
+      await cropInputs.top.fill(desiredCropInputs.top);
+      await page.waitForTimeout(300);
+      confirmedCropInputs = Object.fromEntries(
+        await Promise.all(
+          Object.entries(cropInputs).map(async ([key, input]) => [
+            key,
+            await input.inputValue(),
+          ])
+        )
+      );
+      if (
+        Object.entries(desiredCropInputs).every(
+          ([key, value]) => confirmedCropInputs[key] === value
+        )
+      ) {
+        break;
+      }
+    }
+    assert(
+      confirmedCropInputs &&
+        Object.entries(desiredCropInputs).every(
+          ([key, value]) => confirmedCropInputs[key] === value
+        ),
+      "crop inputs did not settle on the requested pixel bounds",
+      { desiredCropInputs, confirmedCropInputs }
+    );
+    await screenshot(page, "08-project-crop-selected.png");
+    await page.getByTestId("project-crop-save").click();
+    await visibleBox(
+      page.getByTestId("player-crop-action"),
+      "player crop action after save"
+    );
+    await page.waitForFunction(
+      (recordingId) =>
+        chrome.storage.local
+          .get(["localRecordingLibraryIndex"])
+          .then(({ localRecordingLibraryIndex }) =>
+            Boolean(localRecordingLibraryIndex?.[recordingId]?.project?.crop)
+          ),
+      seed.recordingId,
+      { timeout: 10000 }
+    );
+    await page.waitForTimeout(750);
+    const cropSummary = await page.evaluate(async (recordingId) => {
+      const { localRecordingLibraryIndex } = await chrome.storage.local.get([
+        "localRecordingLibraryIndex",
+      ]);
+      const entry = localRecordingLibraryIndex?.[recordingId];
+      return {
+        crop: entry?.project?.crop || null,
+        zoomKeyframes: entry?.project?.zoomKeyframes || [],
+        editedBlobKey: entry?.editedBlobKey || null,
+      };
+    }, seed.recordingId);
+    assert(
+      cropSummary.crop &&
+        Math.abs(cropSummary.crop.xRatio - 0.1) < 0.02 &&
+        Math.abs(cropSummary.crop.yRatio - 0.1) < 0.02 &&
+        Math.abs(cropSummary.crop.widthRatio - 0.8) < 0.02 &&
+        Math.abs(cropSummary.crop.heightRatio - 0.8) < 0.02 &&
+        cropSummary.zoomKeyframes.length === 1 &&
+        cropSummary.zoomKeyframes[0].source === "click" &&
+        cropSummary.editedBlobKey === null,
+      "crop was not saved as non-destructive normalized project state",
+      cropSummary
+    );
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await visibleBox(
+      page.getByTestId("player-crop-action"),
+      "player crop action after reopen"
+    );
+    await page.waitForFunction(
+      () =>
+        document.body?.innerText?.includes("Crop") &&
+        document.body?.innerText?.includes("Yes"),
+      null,
+      { timeout: 10000 }
+    );
+    await screenshot(page, "09-project-crop-persisted-after-reopen.png");
+
+    await page.getByTestId("player-audio-action").click();
+    const audioInput = page.getByTestId("project-audio-file-input");
+    await audioInput.waitFor({ state: "attached", timeout: 10000 });
+    await audioInput.setInputFiles({
+      name: "Broken project audio.mp3",
+      mimeType: "audio/mpeg",
+      buffer: Buffer.from("not encoded audio"),
+    });
+    await page.getByTestId("project-audio-save").click();
+    await page.waitForFunction(
+      () =>
+        document.body?.innerText?.includes("Audio file could not be decoded"),
+      null,
+      { timeout: 10000 }
+    );
+    const corruptAudioTrack = await page.evaluate(async (recordingId) => {
+      const { localRecordingLibraryIndex } = await chrome.storage.local.get([
+        "localRecordingLibraryIndex",
+      ]);
+      return (
+        localRecordingLibraryIndex?.[recordingId]?.project?.audioTrack || null
+      );
+    }, seed.recordingId);
+    assert(
+      corruptAudioTrack === null,
+      "corrupt encoded project audio was persisted",
+      corruptAudioTrack
+    );
+    await screenshot(page, "10a-corrupt-project-audio-rejected.png");
+    const projectAudioMp3 = fs.readFileSync(PROJECT_AUDIO_MP3_PATH);
+    await audioInput.setInputFiles({
+      name: "SayLess project audio.mp3",
+      mimeType: "audio/mpeg",
+      buffer: projectAudioMp3,
+    });
+    await page.getByTestId("project-audio-loop").click();
+    await visibleBox(
+      page.getByTestId("project-audio-details"),
+      "project audio details"
+    );
+    await screenshot(page, "10-project-audio-selected.png");
+    await page.getByTestId("project-audio-save").click();
+    await visibleBox(
+      page.getByTestId("player-audio-action"),
+      "player audio action after save"
+    );
+    await page.waitForFunction(
+      (recordingId) => {
+        const raw = localStorage.getItem("unused");
+        void raw;
+        return chrome.storage.local
+          .get(["localRecordingLibraryIndex"])
+          .then(({ localRecordingLibraryIndex }) =>
+            Boolean(
+              localRecordingLibraryIndex?.[recordingId]?.project?.audioTrack
+                ?.assetId
+            )
+          );
+      },
+      seed.recordingId,
+      { timeout: 10000 }
+    );
+    const projectAudioSummary = await page.evaluate(async (recordingId) => {
+      const { localRecordingLibraryIndex } = await chrome.storage.local.get([
+        "localRecordingLibraryIndex",
+      ]);
+      const entry = localRecordingLibraryIndex?.[recordingId];
+      const track = entry?.project?.audioTrack;
+      const key = track
+        ? `project-audio:${recordingId}:${track.assetId}`
+        : null;
+      const audioBlob = key
+        ? await new Promise((resolve, reject) => {
+            const request = indexedDB.open("local-recordings", 1);
+            request.onsuccess = () => {
+              const db = request.result;
+              const tx = db.transaction("blobs", "readonly");
+              const get = tx.objectStore("blobs").get(key);
+              get.onsuccess = () => {
+                db.close();
+                resolve(get.result || null);
+              };
+              get.onerror = () => reject(get.error);
+            };
+            request.onerror = () => reject(request.error);
+          })
+        : null;
+      return {
+        track,
+        audioBytes: audioBlob?.size || 0,
+        originalBytes: entry?.byteSize || 0,
+        editedBlobKey: entry?.editedBlobKey || null,
+      };
+    }, seed.recordingId);
+    assert(
+      projectAudioSummary.track?.fileName === "SayLess project audio.mp3" &&
+        projectAudioSummary.track?.mimeType === "audio/mpeg" &&
+        projectAudioSummary.track?.byteSize === projectAudioMp3.length &&
+        projectAudioSummary.track?.mode === "mix" &&
+        projectAudioSummary.track?.loop === true &&
+        projectAudioSummary.audioBytes === projectAudioMp3.length &&
+        projectAudioSummary.editedBlobKey === null,
+      "project audio was not saved non-destructively",
+      projectAudioSummary
+    );
+    await page.waitForTimeout(750);
+    const audioOnlyProjectCheckpoint = await page.evaluate(
+      async (recordingId) => {
+        const { localRecordingLibraryIndex } = await chrome.storage.local.get([
+          "localRecordingLibraryIndex",
+        ]);
+        return localRecordingLibraryIndex?.[recordingId]?.editedBlobKey || null;
+      },
+      seed.recordingId
+    );
+    assert(
+      audioOnlyProjectCheckpoint === null,
+      "project-only edit created an implicit edited-media checkpoint",
+      { editedBlobKey: audioOnlyProjectCheckpoint }
+    );
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await visibleBox(
+      page.getByTestId("player-audio-action"),
+      "player audio action after reopen"
+    );
+    await page.waitForFunction(
+      () =>
+        document.body?.innerText?.includes("Audio") &&
+        document.body?.innerText?.includes("Added"),
+      null,
+      { timeout: 10000 }
+    );
+    await screenshot(page, "11-project-audio-persisted-after-reopen.png");
+
     const playerSummary = await page.evaluate(() => ({
       bodyText: document.body.innerText,
       hasEditAction: Boolean(
@@ -469,6 +768,284 @@ const seedRecording = async (page) => {
         document.querySelector('[data-testid="export-selected-action"]')
       ),
     }));
+
+    await page.waitForFunction(
+      () => {
+        const action = document.querySelector(
+          '[data-testid="player-edit-action"]'
+        );
+        return (
+          action &&
+          action.getAttribute("aria-disabled") !== "true" &&
+          action.getAttribute("data-disabled") !== "true"
+        );
+      },
+      null,
+      { timeout: 60000 }
+    );
+    await page.getByTestId("player-edit-action").click();
+    await visibleBox(
+      page.getByTestId("timeline-apply-edits"),
+      "apply edits before durable bake"
+    );
+    await screenshot(page, "12-apply-edits-before-durable-bake.png");
+    await page.getByTestId("timeline-apply-edits").click();
+    await page.waitForFunction(
+      (recordingId) =>
+        chrome.storage.local
+          .get(["localRecordingLibraryIndex"])
+          .then(({ localRecordingLibraryIndex }) => {
+            const entry = localRecordingLibraryIndex?.[recordingId];
+            const clips = entry?.project?.timeline?.clips;
+            return Boolean(
+              entry?.editedBlobKey === `edited:${recordingId}` &&
+                Array.isArray(clips) &&
+                clips.length === 1 &&
+                entry.project?.transcript == null &&
+                entry.project?.audioTrack == null
+            );
+          }),
+      seed.recordingId,
+      { timeout: 20000 }
+    );
+    await page.getByTestId("timeline-apply-edits").waitFor({
+      state: "detached",
+      timeout: 20000,
+    });
+    await page.getByTestId("editor-save").click();
+    await visibleBox(
+      page.getByTestId("player-edit-action"),
+      "player after durable apply"
+    );
+
+    const appliedSummary = await page.evaluate(
+      async ({ recordingId, audioAssetId }) => {
+        const { localRecordingLibraryIndex } = await chrome.storage.local.get([
+          "localRecordingLibraryIndex",
+        ]);
+        const entry = localRecordingLibraryIndex?.[recordingId];
+        const readBlob = (key) =>
+          key
+            ? new Promise((resolve, reject) => {
+                const request = indexedDB.open("local-recordings", 1);
+                request.onsuccess = () => {
+                  const db = request.result;
+                  const tx = db.transaction("blobs", "readonly");
+                  const get = tx.objectStore("blobs").get(key);
+                  get.onsuccess = () => {
+                    db.close();
+                    resolve(get.result || null);
+                  };
+                  get.onerror = () => reject(get.error);
+                };
+                request.onerror = () => reject(request.error);
+              })
+            : Promise.resolve(null);
+        const [originalBlob, editedBlob, oldAudioBlob] = await Promise.all([
+          readBlob(entry?.blobKey),
+          readBlob(entry?.editedBlobKey),
+          readBlob(
+            audioAssetId ? `project-audio:${recordingId}:${audioAssetId}` : null
+          ),
+        ]);
+        const storedBlobBytes = (value) => {
+          if (!value) return 0;
+          if (Number(value.size) > 0) return Number(value.size);
+          if (Number(value.byteLength) > 0) return Number(value.byteLength);
+          if (
+            value.__local_forage_encoded_blob === true &&
+            typeof value.data === "string"
+          ) {
+            return atob(value.data).length;
+          }
+          return 0;
+        };
+        return {
+          editedBlobKey: entry?.editedBlobKey || null,
+          originalBytes: originalBlob?.size || 0,
+          editedBytes: storedBlobBytes(editedBlob),
+          editedStoredAsEncodedBlob:
+            editedBlob?.__local_forage_encoded_blob === true,
+          indexedBytes: entry?.byteSize || 0,
+          project: entry?.project || null,
+          oldAudioBytes: oldAudioBlob?.size || 0,
+        };
+      },
+      {
+        recordingId: seed.recordingId,
+        audioAssetId: projectAudioSummary.track?.assetId || null,
+      }
+    );
+    const appliedClip = appliedSummary.project?.timeline?.clips?.[0];
+    assert(
+      appliedSummary.editedBlobKey === `edited:${seed.recordingId}` &&
+        appliedSummary.originalBytes === seed.bytes &&
+        appliedSummary.editedBytes > 0 &&
+        appliedSummary.indexedBytes === appliedSummary.editedBytes &&
+        appliedSummary.project?.transcript == null &&
+        appliedSummary.project?.audioTrack == null &&
+        appliedSummary.project?.crop == null &&
+        appliedSummary.project?.zoomKeyframes?.length === 0 &&
+        appliedSummary.project?.source?.width < 640 &&
+        appliedSummary.project?.source?.height < 360 &&
+        appliedSummary.project?.timeline?.clips?.length === 1 &&
+        appliedClip?.sourceStart === 0 &&
+        appliedClip?.sourceEnd < seed.duration &&
+        appliedSummary.oldAudioBytes === 0,
+      "Apply edits did not durably checkpoint the baked media and reset project",
+      appliedSummary
+    );
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await visibleBox(
+      page.getByTestId("player-edit-action"),
+      "player after applied project reopen"
+    );
+    await page.waitForFunction(
+      () =>
+        document.body?.innerText?.includes("Clips") &&
+        document.body?.innerText?.includes("1") &&
+        !document.body?.innerText?.includes("Audio\nAdded"),
+      null,
+      { timeout: 10000 }
+    );
+    await screenshot(page, "13-applied-project-persisted-after-reopen.png");
+
+    const projectSidecarToggle = page.getByTestId("export-project-sidecar");
+    await projectSidecarToggle.waitFor({ state: "visible", timeout: 10000 });
+    if (await projectSidecarToggle.isChecked()) {
+      await projectSidecarToggle.uncheck();
+    }
+    const saveToFileToggle = page.getByTestId("export-save-to-file");
+    await saveToFileToggle.waitFor({ state: "visible", timeout: 10000 });
+    await saveToFileToggle.check();
+    await page.evaluate(() => {
+      globalThis.__saylessSavePickerMode = "cancel";
+      globalThis.__saylessSavePickerWrites = [];
+    });
+    await page.getByTestId("export-selected-action").click();
+    await visibleBox(
+      page.getByTestId("export-retry-action"),
+      "retry after save picker cancellation"
+    );
+    await page.waitForFunction(
+      () => document.body?.innerText?.includes("MP4 export cancelled"),
+      null,
+      { timeout: 60000 }
+    );
+    const cancelledSaveSummary = await page.evaluate(() => ({
+      writes: globalThis.__saylessSavePickerWrites,
+      bodyText: document.body?.innerText || "",
+    }));
+    assert(
+      cancelledSaveSummary.writes.length === 0 &&
+        cancelledSaveSummary.bodyText.includes("MP4 export cancelled") &&
+        (await page.getByTestId("export-reveal-action").count()) === 0,
+      "save picker cancellation was misreported as a completed export",
+      cancelledSaveSummary
+    );
+    await screenshot(page, "14-save-picker-cancelled-retry-visible.png");
+
+    await page.evaluate(() => {
+      globalThis.__saylessSavePickerMode = "save";
+    });
+    await page.getByTestId("export-retry-action").click();
+    await page.waitForFunction(
+      () => document.body?.innerText?.includes("MP4 export complete"),
+      null,
+      { timeout: 60000 }
+    );
+    await page.getByTestId("export-retry-action").waitFor({
+      state: "detached",
+      timeout: 10000,
+    });
+    const savePickerSummary = await page.evaluate(() => ({
+      writes: globalThis.__saylessSavePickerWrites,
+      bodyText: document.body?.innerText || "",
+    }));
+    assert(
+      savePickerSummary.writes.length === 1 &&
+        /\.mp4$/i.test(savePickerSummary.writes[0].suggestedName) &&
+        savePickerSummary.writes[0].byteSize > 0 &&
+        savePickerSummary.writes[0].mimeType === "video/mp4" &&
+        savePickerSummary.writes[0].closed === true &&
+        savePickerSummary.bodyText.includes("MP4 export complete") &&
+        (await page.getByTestId("export-reveal-action").count()) === 0,
+      "retry did not save the packaged MP4 through the File System Access path",
+      savePickerSummary
+    );
+    await screenshot(page, "15-save-picker-retry-complete.png");
+
+    await page.getByTestId("export-dismiss-action").click();
+    await page.getByTestId("export-dismiss-action").waitFor({
+      state: "detached",
+      timeout: 10000,
+    });
+    await saveToFileToggle.uncheck();
+    const chromeDownloadIdsBefore = await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          chrome.downloads.search({}, (items) =>
+            resolve(items.map((item) => item.id))
+          )
+        )
+    );
+    const browserDownloadPromise = page.waitForEvent("download", {
+      timeout: 60000,
+    });
+    await page.getByTestId("export-selected-action").click();
+    const browserDownload = await browserDownloadPromise;
+    await visibleBox(
+      page.getByTestId("export-reveal-action"),
+      "reveal action after Chrome download"
+    );
+    await page.waitForFunction(
+      () => document.body?.innerText?.includes("MP4 export complete"),
+      null,
+      { timeout: 60000 }
+    );
+    const browserDownloadPath = await browserDownload.path();
+    const browserDownloadBytes = browserDownloadPath
+      ? fs.statSync(browserDownloadPath).size
+      : 0;
+    const chromeDownloadSummary = await page.evaluate(
+      (idsBefore) =>
+        new Promise((resolve) =>
+          chrome.downloads.search({}, (items) =>
+            resolve(
+              items
+                .filter((item) => !idsBefore.includes(item.id))
+                .map((item) => ({
+                  id: item.id,
+                  filename: item.filename,
+                  state: item.state,
+                  bytesReceived: item.bytesReceived,
+                  totalBytes: item.totalBytes,
+                  exists: item.exists,
+                }))
+            )
+          )
+        ),
+      chromeDownloadIdsBefore
+    );
+    assert(
+      chromeDownloadSummary.length === 1 &&
+        Number.isSafeInteger(chromeDownloadSummary[0].id) &&
+        chromeDownloadSummary[0].id >= 0 &&
+        chromeDownloadSummary[0].state === "complete" &&
+        chromeDownloadSummary[0].exists === true &&
+        chromeDownloadSummary[0].bytesReceived > 0 &&
+        chromeDownloadSummary[0].totalBytes > 0 &&
+        browserDownloadBytes > 0 &&
+        /\.mp4$/i.test(browserDownload.suggestedFilename()),
+      "packaged editor export did not expose reveal for its completed Chrome download",
+      {
+        chromeDownloadSummary,
+        browserDownloadBytes,
+        suggestedFilename: browserDownload.suggestedFilename(),
+      }
+    );
+    await screenshot(page, "16-chrome-download-reveal-visible.png");
+    await browserDownload.delete();
 
     fs.writeFileSync(
       path.join(OUT_DIR, "summary.json"),
@@ -482,7 +1059,14 @@ const seedRecording = async (page) => {
             .filter((name) => name.endsWith(".png"))
             .sort(),
           editorSummary,
+          cropSummary,
+          projectAudioSummary,
           playerSummary,
+          appliedSummary,
+          cancelledSaveSummary,
+          savePickerSummary,
+          chromeDownloadSummary,
+          browserDownloadBytes,
           consoleErrors,
         },
         null,

@@ -14,6 +14,8 @@ test("project summary reports local project counts and export sidecars", () => {
     transcript: { words: [{ text: "hello" }, { text: "offline" }] },
     chapterMarkers: [{ id: "ch-1" }],
     zoomKeyframes: [{ id: "zoom-1" }, { id: "zoom-2" }],
+    crop: { xRatio: 0.1, yRatio: 0.1, widthRatio: 0.8, heightRatio: 0.8 },
+    audioTrack: { assetId: "audio-1" },
     exportSettings: {
       format: "gif",
       includeProjectSidecar: true,
@@ -31,6 +33,8 @@ test("project summary reports local project counts and export sidecars", () => {
       ["Words", 2],
       ["Chapters", 1],
       ["Zooms", 2],
+      ["Crop", "Yes"],
+      ["Audio", "Added"],
     ],
   );
   assert.equal(summary.exportLabel, "GIF export");

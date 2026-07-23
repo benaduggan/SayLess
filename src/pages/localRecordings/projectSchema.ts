@@ -1,7 +1,11 @@
 import { normalizeChapterMarkers } from "../../edl/chapters.ts";
 import { normalizeZoomKeyframes } from "../../edl/zoom.ts";
+import { normalizeCropRegion } from "../../edl/crop.ts";
+import type { CropRegion } from "../../edl/crop.ts";
+import { normalizeProjectAudioTrack } from "../../edl/projectAudio.ts";
+import type { ProjectAudioTrack } from "../../edl/projectAudio.ts";
 
-export const PROJECT_SCHEMA_VERSION = 2;
+export const PROJECT_SCHEMA_VERSION = 4;
 
 export const EXPORT_FORMATS = new Set<ExportFormat>(["mp4", "webm", "gif", "audio"]);
 export const EXPORT_QUALITY_PRESETS = new Set<ExportQualityPreset>(["original", "compressed"]);
@@ -146,6 +150,8 @@ export interface NormalizedProject extends UnknownRecord {
   source: UnknownRecord;
   chapterMarkers: ReturnType<typeof normalizeChapterMarkers>;
   zoomKeyframes: ReturnType<typeof normalizeZoomKeyframes>;
+  crop: CropRegion | null;
+  audioTrack: ProjectAudioTrack | null;
   exportSettings: ExportSettings;
 }
 
@@ -169,6 +175,8 @@ export function normalizeProjectSchema(
       {
       duration: Number(source.duration),
     }),
+    crop: normalizeCropRegion(project.crop),
+    audioTrack: normalizeProjectAudioTrack(project.audioTrack),
     exportSettings: normalizeExportSettings(project.exportSettings, source),
   };
 }

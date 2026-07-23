@@ -1,5 +1,6 @@
 import { TimelineExporter } from "../mediabunny/lib/timelineExporter.ts";
 import type { ZoomKeyframe } from "../../../edl/zoom";
+import type { CropRegion } from "../../../edl/crop";
 
 export interface TimelineClip {
   sourceStart: number;
@@ -17,6 +18,7 @@ export interface RenderTimelineOptions {
   captions?: TimelineCaption[];
   captionStyle?: Record<string, unknown>;
   zoomKeyframes?: ZoomKeyframe[];
+  crop?: CropRegion | null;
   signal?: AbortSignal;
 }
 

@@ -1,11 +1,19 @@
-import { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useEditorContent } from "../../context/ContentState";
+import { EdlContext } from "../../context/EdlContext";
+import { cropPreviewLayout, cropRelativePoint } from "../../../../edl/crop";
+import {
+  computeZoomViewportTransform,
+  zoomTransformToCss,
+} from "../../../../edl/zoomViewport";
+import { useProjectAudioPreview } from "../editor/useProjectAudioPreview";
 
 import Title from "./Title";
 
 const VideoPlayer = () => {
   const [contentState, setContentState] = useEditorContent();
+  const edlCtx = useContext(EdlContext);
 
   const playerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -13,6 +21,42 @@ const VideoPlayer = () => {
   const [overlayHost, setOverlayHost] = useState<HTMLElement | null>(null);
   const contentStateRef = useRef(contentState);
   const bannerRef = useRef<HTMLDivElement | null>(null);
+  const activeZoom = useMemo(() => {
+    const time = Number(contentState.time) || 0;
+    return (edlCtx?.zoomKeyframes || []).find(
+      (keyframe) =>
+        time >= Number(keyframe.time) &&
+        time < Number(keyframe.time) + Number(keyframe.durationSeconds || 0),
+    );
+  }, [contentState.time, edlCtx?.zoomKeyframes]);
+  const activeZoomStyle = useMemo(() => {
+    if (!activeZoom) return undefined;
+    const viewportZoom = {
+      ...activeZoom,
+      ...cropRelativePoint(
+        edlCtx?.crop,
+        activeZoom.xRatio,
+        activeZoom.yRatio,
+      ),
+    };
+    return zoomTransformToCss(
+      computeZoomViewportTransform(viewportZoom, 100, 100),
+    );
+  }, [activeZoom, edlCtx?.crop]);
+  const cropLayout = useMemo(
+    () => cropPreviewLayout(
+      edlCtx?.crop,
+      contentState.prevWidth || contentState.width,
+      contentState.prevHeight || contentState.height,
+    ),
+    [contentState.height, contentState.prevHeight, contentState.prevWidth, contentState.width, edlCtx?.crop],
+  );
+  useProjectAudioPreview(
+    videoRef,
+    edlCtx?.audioAsset,
+    edlCtx?.audioTrack,
+    edlCtx?.timeline,
+  );
 
   useEffect(() => {
     contentStateRef.current = contentState;
@@ -199,16 +243,33 @@ const VideoPlayer = () => {
           <div
             ref={playerRef}
             className="plyr plyr--video sayless-native-player-shell"
+            style={{
+              aspectRatio: cropLayout?.aspectRatio,
+              position: "relative",
+              overflow: "hidden",
+            }}
           >
-            <video
-              ref={videoRef}
-              id="plyr-player"
-              className="sayless-native-player"
-              src={url}
-              controls
-              playsInline
-              preload="metadata"
-            />
+            <div
+              style={{ position: "absolute", inset: 0, overflow: "hidden", ...activeZoomStyle }}
+            >
+              <video
+                ref={videoRef}
+                id="plyr-player"
+                className="sayless-native-player"
+                src={url}
+                controls
+                playsInline
+                preload="metadata"
+                style={cropLayout ? {
+                  position: "absolute",
+                  maxWidth: "none",
+                  left: `${cropLayout.leftPercent}%`,
+                  top: `${cropLayout.topPercent}%`,
+                  width: `${cropLayout.widthPercent}%`,
+                  height: `${cropLayout.heightPercent}%`,
+                } : undefined}
+              />
+            </div>
           </div>
         )}
         {Boolean(contentState.playerLoading || contentState.finalizingRecording) &&

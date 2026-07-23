@@ -1,70 +1,87 @@
 import { useContext } from "react";
 import styles from "../../styles/edit/_EditorNav.module.scss";
 import { useEditorContent } from "../../context/ContentState";
+import { EdlContext } from "../../context/EdlContext";
 
 const URL = chrome.runtime.getURL("assets/");
 
 const AudioNav = () => {
   const [contentState, setContentState] = useEditorContent();
+  const edlCtx = useContext(EdlContext);
 
   const handleCancel = () => {
-    contentState.cancelEditOp?.();
     setContentState((prev) => ({
       ...prev,
       mode: "player",
       start: 0,
       end: 1,
       pendingAudio: null,
+      removeProjectAudio: false,
     }));
-    contentState.restoreBackup?.();
   };
 
   const handleRevert = () => {
-    const prevSnap = {
-      blob: contentState.blob,
-      start: contentState.start,
-      end: contentState.end,
-      pendingAudio: contentState.pendingAudio,
-    };
+    void edlCtx?.removeProjectAudio();
     setContentState((prev) => ({
       ...prev,
-      blob: contentState.originalBlob,
       start: 0,
       end: 1,
       pendingAudio: null,
+      removeProjectAudio: false,
     }));
-    contentState.openToast?.(
-      chrome.i18n.getMessage("sandboxToastReverted"),
-      () => {
-        setContentState((p) => ({ ...p, ...prevSnap }));
-      },
-    );
+    contentState.openToast?.(chrome.i18n.getMessage("sandboxToastReverted"));
   };
 
   const saveChanges = async () => {
-    const { pendingAudio, volume } = contentState;
-    const source = contentState.blob;
+    const { pendingAudio, volume, loopAudio, removeProjectAudio } = contentState;
 
     setContentState((prev) => ({
       ...prev,
       isFfmpegRunning: true,
       processingProgress: 0,
-      fromAudio: true,
     }));
 
-    if (pendingAudio) {
-      contentState.addAudio?.(source ?? null, pendingAudio, volume);
-    } else {
-      contentState.handleReencode?.(true);
+    try {
+      if (removeProjectAudio) {
+        await edlCtx?.removeProjectAudio();
+      } else if (pendingAudio) {
+        await edlCtx?.saveProjectAudio(pendingAudio, {
+          fileName: pendingAudio instanceof File ? pendingAudio.name : "Project audio",
+          volume,
+          mode: contentState.replaceAudio ? "replace" : "mix",
+          loop: loopAudio,
+        });
+      } else if (edlCtx?.audioTrack) {
+        edlCtx.updateProjectAudio({
+          volume,
+          mode: contentState.replaceAudio ? "replace" : "mix",
+          loop: loopAudio,
+        });
+      }
+      setContentState((prev) => ({
+        ...prev,
+        mode: "player",
+        pendingAudio: null,
+        removeProjectAudio: false,
+        isFfmpegRunning: false,
+        processingProgress: 0,
+        hasBeenEdited: true,
+      }));
+    } catch (error) {
+      console.warn("[SayLess] Failed to save project audio", error);
+      setContentState((prev) => ({
+        ...prev,
+        isFfmpegRunning: false,
+        editErrorType: String(error).includes("too-large")
+          ? "audio-too-large"
+          : String(error).includes("project-audio-decode") ||
+              String(error).includes("project-audio-invalid")
+            ? "audio-unsupported"
+            : "failed",
+      }));
+      return;
     }
-
-    await contentState.waitForUpdatedBlob?.();
-
-    contentState.clearBackup?.();
-    contentState.openToast?.(
-      chrome.i18n.getMessage("sandboxToastSaved"),
-      () => contentState.undo?.(),
-    );
+    contentState.openToast?.(chrome.i18n.getMessage("sandboxToastSaved"));
   };
 
   return (
@@ -86,6 +103,7 @@ const AudioNav = () => {
 
         <div className={styles.editorNavRight}>
           <button
+            data-testid="project-audio-cancel"
             className="button simpleButton blackButton"
             onClick={handleCancel}
           >
@@ -93,6 +111,7 @@ const AudioNav = () => {
           </button>
 
           <button
+            data-testid="project-audio-revert"
             className="button secondaryButton"
             onClick={handleRevert}
             disabled={Boolean(contentState.isFfmpegRunning)}
@@ -101,6 +120,7 @@ const AudioNav = () => {
           </button>
 
           <button
+            data-testid="project-audio-save"
             className="button primaryButton"
             onClick={saveChanges}
             disabled={Boolean(contentState.isFfmpegRunning)}

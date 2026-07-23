@@ -222,6 +222,28 @@ const FORBIDDEN_LEGACY_ENV_FILES = [
 ];
 const FORBIDDEN_LEGACY_ENV_PATTERN =
   /\bSCREENITY_(?:SKIP_ENV|USE_LOCAL_ENV|BS_BUILD|E2E_HEADLESS|E2E_CHROME_CHANNEL|DEV_MODE|DEBUG_RECORDER|VERBOSE_LOGS|FAST_REC_DEBUG|FORCE_MEDIARECORDER)\b|__SCREENITY_KEEPALIVE|\bscreenity-(?:recorder-)?keepalive\b|\bSAYLESS_BS_BUILD\b|\bbrowserstack\b/i;
+const FORBIDDEN_DESTRUCTIVE_EDITOR_FILES = [
+  "src/pages/Editor/utils/addAudioToVideo.ts",
+  "src/pages/Editor/utils/cropVideo.ts",
+  "src/pages/Editor/utils/cutVideo.ts",
+  "src/pages/Editor/utils/muteVideo.ts",
+];
+const FORBIDDEN_DESTRUCTIVE_EDITOR_PROTOCOLS = [
+  {
+    file: "src/pages/EditorApp/context/ContentState.tsx",
+    pattern:
+      /\b(?:handleTrim|handleMute|handleCrop|addAudio)\b|["'](?:add-audio-to-video|crop-video|cut-video|mute-video)["']|if\s*\(\s*!contentState\.hasBeenEdited\s*\)\s*return/,
+  },
+  {
+    file: "src/pages/EditorApp/context/contentStateTypes.ts",
+    pattern: /\b(?:handleTrim|handleMute|handleCrop|addAudio)\b/,
+  },
+  {
+    file: "src/pages/EditorApp/editorOps.ts",
+    pattern:
+      /["'](?:add-audio-to-video|crop-video|cut-video|mute-video)["']|\b(?:addAudioToVideo|cropVideo|cutVideo|muteVideo)\b/,
+  },
+];
 const WEBPACK_CONFIG_PATH = join(ROOT, "webpack.config.cts");
 const RELEASE_DEV_MODE_DEFINE_PATTERN =
   /"process\.env\.SAYLESS_DEV_MODE"\s*:\s*JSON\.stringify\(\s*isDev\s*&&\s*process\.env\.SAYLESS_DEV_MODE\s*===\s*["']true["']\s*\?\s*["']true["']\s*:\s*["']["']\s*\)/;
@@ -651,6 +673,53 @@ const REQUIRED_DYNAMIC_LOCAL_URL_GUARDS = [
       "offscreen i18n shim must load catalogs from local extension URLs only",
   },
 ];
+const REQUIRED_EXPORT_DELIVERY_PROOF = [
+  {
+    file: "src/pages/EditorApp/context/ContentState.tsx",
+    snippets: [
+      "Promise<SaveBlobResult>",
+      "const deliverLocalExport = async",
+      'status: "cancelled"',
+      'status: "failed"',
+    ],
+    message:
+      "editor export delivery must preserve saved, cancelled, and failed outcomes",
+  },
+  {
+    file: "src/pages/EditorApp/layout/player/RightPanel.tsx",
+    snippets: [
+      'data-testid="export-save-to-file"',
+      'data-testid="export-reveal-action"',
+      'data-testid="export-retry-action"',
+      "revealExportDownload(",
+    ],
+    message:
+      "editor export UI must expose stable save, reveal, and retry proof hooks",
+  },
+  {
+    file: "tests/e2e/run-editor-editing-proof.cjs",
+    snippets: [
+      '__saylessSavePickerMode = "cancel"',
+      "save picker cancellation was misreported as a completed export",
+      "retry did not save the packaged MP4 through the File System Access path",
+      "packaged editor export did not expose reveal for its completed Chrome download",
+      "crop inputs did not settle on the requested pixel bounds",
+      "The cropper may asynchronously constrain position after a size change.",
+    ],
+    message:
+      "packaged editor proof must cover File System Access cancellation and retry plus deterministic crop controls",
+  },
+  {
+    file: "tests/unit/exportPanelState.test.mjs",
+    snippets: [
+      "reveal action dispatches the exact validated Chrome download id",
+      "revealExportDownload(42",
+      "assert.deepEqual(ids, [42])",
+    ],
+    message:
+      "export-panel unit proof must validate and dispatch the exact Chrome download id",
+  },
+];
 const TRANSCRIPTION_HARNESS_PATH = join(
   ROOT,
   "tests",
@@ -974,6 +1043,38 @@ const manualQaProfileScriptText = readFileSync(
   join(ROOT, "scripts", "manual-qa-profile.mjs"),
   "utf8"
 );
+const manualQaMediaProbeScriptText = readFileSync(
+  join(ROOT, "scripts", "manual-qa-media-probe.mjs"),
+  "utf8"
+);
+const manualQaMediaCoverageScriptText = readFileSync(
+  join(ROOT, "scripts", "manual-qa-media-coverage.mjs"),
+  "utf8"
+);
+const manualQaReportOutputScriptText = readFileSync(
+  join(ROOT, "scripts", "manual-qa-report-output.mjs"),
+  "utf8"
+);
+const manualQaSidecarProbeScriptText = readFileSync(
+  join(ROOT, "scripts", "manual-qa-sidecar-probe.mjs"),
+  "utf8"
+);
+const manualQaMeasurementImportScriptText = readFileSync(
+  join(ROOT, "scripts", "manual-qa-measurement-import.mjs"),
+  "utf8"
+);
+const applyManualQaMeasurementsScriptText = readFileSync(
+  join(ROOT, "scripts", "apply-manual-qa-measurements.mjs"),
+  "utf8"
+);
+const localRecordingsE2eScriptText = readFileSync(
+  join(ROOT, "tests", "e2e", "run-local-recordings.cjs"),
+  "utf8"
+);
+const manualQaTemplateSyncScriptText = readFileSync(
+  join(ROOT, "scripts", "manual-qa-template-sync.mjs"),
+  "utf8"
+);
 const verifyManualQaScriptText = readFileSync(
   join(ROOT, "scripts", "verify-manual-qa-evidence.mjs"),
   "utf8"
@@ -1279,7 +1380,17 @@ if (
     builtExtensionSurfaceTestText
   ) ||
   !/isTargetClosedError/.test(builtExtensionSurfaceTestText) ||
-  !/scanExtensionPage/.test(builtExtensionSurfaceTestText)
+  !/scanExtensionPage/.test(builtExtensionSurfaceTestText) ||
+  !/SAYLESS_BUILT_EXTENSION_EVIDENCE/.test(builtExtensionSurfaceTestText) ||
+  !/sayless\.builtExtensionSurfaceEvidence/.test(
+    builtExtensionSurfaceTestText
+  ) ||
+  !/extensionId/.test(builtExtensionSurfaceTestText) ||
+  !/writeEvidence\(\{ status: "running" \}\)/.test(
+    builtExtensionSurfaceTestText
+  ) ||
+  !/status: "passed"/.test(builtExtensionSurfaceTestText) ||
+  !/status: "failed"/.test(builtExtensionSurfaceTestText)
 ) {
   fail(
     "tests/e2e/run-built-extension-surface.cjs must fail packaged surface smoke on page JavaScript and console errors."
@@ -1291,7 +1402,14 @@ if (
   !/sayless\.releaseQaAutomatedFailed/.test(releaseQaAutomatedScriptText) ||
   !/sayless\.releaseQaAutomatedIncomplete/.test(releaseQaAutomatedScriptText) ||
   !/failedCommand/.test(releaseQaAutomatedScriptText) ||
-  !/Automated release QA has not passed/.test(releaseQaAutomatedScriptText)
+  !/readBuiltExtensionEvidence/.test(releaseQaAutomatedScriptText) ||
+  !/builtExtensionSurfaceEvidence/.test(releaseQaAutomatedScriptText) ||
+  !/builtExtension:/.test(releaseQaAutomatedScriptText) ||
+  !/Automated release QA has not passed/.test(releaseQaAutomatedScriptText) ||
+  !/test:e2e:editor-editing-proof/.test(releaseQaAutomatedScriptText) ||
+  !/qa:release:manual:profile -- --sync-template/.test(
+    releaseQaAutomatedScriptText
+  )
 ) {
   fail(
     "scripts/release-qa-automated.mjs must overwrite stale automated release QA evidence with non-passing evidence before and after failed runs."
@@ -1319,17 +1437,51 @@ if (
   !/git\.workingTree\.sha256 must match the current git worktree/.test(
     releaseStatusScriptText
   ) ||
+  !/builtExtension\.id must be a browser-observed/.test(
+    releaseStatusScriptText
+  ) ||
   !/verifierErrorCount/.test(releaseStatusScriptText) ||
   !/verifierSummary/.test(releaseStatusScriptText) ||
   !/manualQaTodo/.test(releaseStatusScriptText) ||
+  !/discoverActiveManualQaSession/.test(releaseStatusScriptText) ||
+  !/release-artifacts\/manual-qa-session\.json/.test(releaseStatusScriptText) ||
+  !/recorded session cannot be resumed/.test(releaseStatusScriptText) ||
+  !/resumeAction/.test(releaseStatusScriptText) ||
+  !/manualTemplateSyncState/.test(releaseStatusScriptText) ||
+  !/manual-qa-template-sync\.mjs/.test(releaseStatusScriptText) ||
+  !/analyzeManualTemplateSync/.test(releaseStatusScriptText) ||
+  !/templateSyncRequired/.test(releaseStatusScriptText) ||
+  !/automated QA must pass before template freshness can be established/.test(
+    releaseStatusScriptText
+  ) ||
   !/Manual QA todo/.test(releaseStatusScriptText) ||
+  !/for \(const todo of item\.todo\)/.test(releaseStatusScriptText) ||
   !/Record at least two real recordings/.test(releaseStatusScriptText) ||
+  !/npm run qa:release:manual:media -- --json --require-complete --output=release-artifacts\/manual-qa-media-probe\.json/.test(
+    releaseStatusScriptText
+  ) ||
+  !/npm run qa:release:manual:sidecars -- --json --require-complete --output=release-artifacts\/manual-qa-sidecar-probe\.json/.test(
+    releaseStatusScriptText
+  ) ||
+  !/npm run qa:release:manual:measurements -- --json --write/.test(
+    releaseStatusScriptText
+  ) ||
+  !/filename-matched three-format set/.test(releaseStatusScriptText) ||
+  !/at least 25 MiB/.test(releaseStatusScriptText) ||
+  !/per-recording crop evidence/.test(releaseStatusScriptText) ||
+  !/real WAV, M4A, and MP3 inputs/.test(releaseStatusScriptText) ||
   !/publication-surface evidence for release notes, screenshots, and docs\/STORE_LISTING\.md store text/.test(
     releaseStatusScriptText
   ) ||
   !/npm run qa:release:auto/.test(releaseStatusScriptText) ||
   !/npm run qa:release:manual:template/.test(releaseStatusScriptText) ||
-  !/npm run qa:release:manual:profile/.test(releaseStatusScriptText) ||
+  !/npm run qa:release:manual:profile -- --launch/.test(
+    releaseStatusScriptText
+  ) ||
+  !/npm run qa:release:manual:profile -- --sync-template --launch/.test(
+    releaseStatusScriptText
+  ) ||
+  !/npm run qa:release:manual:progress/.test(releaseStatusScriptText) ||
   !/complete docs\/RELEASE_QA\.md/.test(releaseStatusScriptText) ||
   !/fix release-artifacts\/manual-qa-evidence\.json/.test(
     releaseStatusScriptText
@@ -1341,6 +1493,12 @@ if (
   !/npm run release:cws/.test(releaseStatusScriptText) ||
   !/npm run release:cws:publish/.test(releaseStatusScriptText) ||
   !/release-artifacts\/manual-qa-evidence\.json/.test(
+    releaseStatusScriptText
+  ) ||
+  !/attach release-artifacts\/manual-qa-media-probe\.json/.test(
+    releaseStatusScriptText
+  ) ||
+  !/attach release-artifacts\/manual-qa-sidecar-probe\.json/.test(
     releaseStatusScriptText
   ) ||
   !/attach docs\/STORE_LISTING\.md/.test(releaseStatusScriptText) ||
@@ -1361,15 +1519,19 @@ const releasePrepSteps = [
   /Run: npm run qa:release:auto/,
   /Run: npm run qa:release:status/,
   /Run: npm run qa:release:manual:template/,
-  /Run: npm run qa:release:manual:profile/,
-  /Complete docs\/RELEASE_QA\.md manual sections/,
-  /release-artifacts\/manual-qa-evidence\.json/,
+  /Run: npm run qa:release:manual:profile -- --sync-template --launch/,
+  /Complete docs\/RELEASE_QA\.md in that clean profile/,
+  /Run throughout the session: npm run qa:release:manual:progress/,
+  /npm run qa:release:manual:media -- --json --require-complete --output=release-artifacts\/manual-qa-media-probe\.json/,
+  /npm run qa:release:manual:sidecars -- --json --require-complete --output=release-artifacts\/manual-qa-sidecar-probe\.json/,
+  /npm run qa:release:manual:measurements -- --json --write/,
+  /Only after both strict reports pass/,
   /Run: npm run qa:release:manual(?!:)/,
   /Run: npm run package:release/,
   /Run: npm run verify:release-package/,
   /Run: npm run build:cws/,
   /Run: npm run verify:cws-package/,
-  /Attach release-artifacts\/release-qa-automated\.json, release-artifacts\/manual-qa-evidence\.json, release-artifacts\/package-release\.json, release-artifacts\/cws-package\.json, docs\/STORE_LISTING\.md, extension\.zip, and build-cws\.zip/,
+  /Attach release-artifacts\/release-qa-automated\.json, release-artifacts\/manual-qa-evidence\.json, release-artifacts\/manual-qa-media-probe\.json, release-artifacts\/manual-qa-sidecar-probe\.json, release-artifacts\/package-release\.json, release-artifacts\/cws-package\.json, docs\/STORE_LISTING\.md, extension\.zip, and build-cws\.zip/,
 ];
 let previousReleasePrepIndex = -1;
 for (const step of releasePrepSteps) {
@@ -1419,6 +1581,12 @@ if (
   !/automated QA evidence bundledWhisper\.path must be the canonical relative build\/assets\/whisper path/.test(
     verifyManualQaScriptText
   ) ||
+  !/builtExtension\.id must be a browser-observed/.test(
+    verifyManualQaScriptText
+  ) ||
+  !/unpackedExtensionId must match the browser-observed automated extension id/.test(
+    verifyManualQaScriptText
+  ) ||
   !/current build byte size .+ does not match/.test(verifyManualQaScriptText) ||
   !/automated QA evidence contains duplicate command/.test(
     verifyManualQaScriptText
@@ -1434,6 +1602,22 @@ if (
     verifyManualQaScriptText
   ) ||
   !/automated QA evidence command .+ must be/.test(verifyManualQaScriptText) ||
+  !/MEDIA_PROBE_REPORT_RELATIVE_PATH/.test(verifyManualQaScriptText) ||
+  !/SIDECAR_PROBE_REPORT_RELATIVE_PATH/.test(verifyManualQaScriptText) ||
+  !/probeReports\.\$\{field\} must point to/.test(verifyManualQaScriptText) ||
+  !/manual QA media probe report releaseCoverage\.status must be "measurable-set-complete"/.test(
+    verifyManualQaScriptText
+  ) ||
+  !/manual QA sidecar probe report coverage\.status must be "structurally-complete"/.test(
+    verifyManualQaScriptText
+  ) ||
+  !/must match probeReports\.media/.test(verifyManualQaScriptText) ||
+  !/must match probeReports\.\$\{reportField\}/.test(
+    verifyManualQaScriptText
+  ) ||
+  !/64-character source-file SHA-256/.test(verifyManualQaScriptText) ||
+  !/64-character export-file SHA-256/.test(verifyManualQaScriptText) ||
+  !/64-character project-audio file SHA-256/.test(verifyManualQaScriptText) ||
   !/recordings\[\$\{index\}\]\.id must be unique/.test(
     verifyManualQaScriptText
   ) ||
@@ -1446,6 +1630,47 @@ if (
     verifyManualQaScriptText
   ) ||
   !/externalNetworkProbe/.test(verifyManualQaScriptText) ||
+  !/--progress/.test(verifyManualQaScriptText) ||
+  !/sayless\.manualQaProgress/.test(verifyManualQaScriptText) ||
+  !/MANUAL_QA_PROGRESS_SECTIONS/.test(verifyManualQaScriptText) ||
+  !/"mediaProbe",\s*"Media probe report"/.test(verifyManualQaScriptText) ||
+  !/"sidecarProbe",\s*"Sidecar probe report"/.test(verifyManualQaScriptText) ||
+  !/"measurementImport",\s*"Probe measurements"/.test(
+    verifyManualQaScriptText
+  ) ||
+  !/MEASUREMENT_IMPORT_ERROR_PATTERN/.test(verifyManualQaScriptText) ||
+  !/\["finalization", "Final verification", \["status", "testedAt"\]\]/.test(
+    verifyManualQaScriptText
+  ) ||
+  !/environment\.networkDisabledForOfflineTranscription[\s\S]*return "offlineTranscription"/.test(
+    verifyManualQaScriptText
+  ) ||
+  !/npm run qa:release:manual:media -- --json --require-complete --output=release-artifacts\/manual-qa-media-probe\.json/.test(
+    verifyManualQaScriptText
+  ) ||
+  !/npm run qa:release:manual:sidecars -- --json --require-complete --output=release-artifacts\/manual-qa-sidecar-probe\.json/.test(
+    verifyManualQaScriptText
+  ) ||
+  !/npm run qa:release:manual:measurements -- --json --write/.test(
+    verifyManualQaScriptText
+  ) ||
+  !/errorSamples/.test(verifyManualQaScriptText) ||
+  !/workTargets/.test(verifyManualQaScriptText) ||
+  !/Work targets:/.test(verifyManualQaScriptText) ||
+  !/probeReports\.media/.test(verifyManualQaScriptText) ||
+  !/probeReports\.sidecars/.test(verifyManualQaScriptText) ||
+  !/sayless\.manualQaSessionProvenance/.test(verifyManualQaScriptText) ||
+  !/manualSession\.profileCreatedAt/.test(verifyManualQaScriptText) ||
+  !/manualSessionMatches/.test(verifyManualQaScriptText) ||
+  !/"buildSha256"/.test(verifyManualQaScriptText) ||
+  !/"operatingSystem"/.test(verifyManualQaScriptText) ||
+  !/environment\.networkDisabledForOfflineTranscription/.test(
+    verifyManualQaScriptText
+  ) ||
+  !/--section=/.test(verifyManualQaScriptText) ||
+  !/selectedSection/.test(verifyManualQaScriptText) ||
+  !/nextSection/.test(verifyManualQaScriptText) ||
+  !/Next command:/.test(verifyManualQaScriptText) ||
   !/sameChromeProfile/.test(verifyManualQaScriptText) ||
   !/external http\(s\) URL/.test(verifyManualQaScriptText) ||
   !/observedError must describe the browser network failure/.test(
@@ -1456,22 +1681,166 @@ if (
   ) ||
   !/locked-behind\/pay-to-unlock\/upgrade-required gates/.test(
     verifyManualQaScriptText
-  )
+  ) ||
+  /email:\s*"tester@example\.com"/.test(verifyManualQaScriptText)
 ) {
   fail(
-    "scripts/verify-manual-qa-evidence.mjs must support fixtureable release verification and enforce canonical automated QA evidence provenance, stale-template prefill protection, timing, command inventory, and structured offline network probe evidence."
+    "scripts/verify-manual-qa-evidence.mjs must enforce canonical automated and manual-probe provenance, measurable file identities, stale-template protection, timing, command inventory, structured offline network probe evidence, and named tester attribution without requiring contact data."
   );
 }
 if (
   packageJson.scripts?.["qa:release:manual:profile"] !==
     "node scripts/manual-qa-profile.mjs" ||
+  packageJson.scripts?.["qa:release:manual:progress"] !==
+    "node scripts/verify-manual-qa-evidence.mjs --progress" ||
+  packageJson.scripts?.["qa:release:manual:media"] !==
+    "node scripts/manual-qa-media-probe.mjs" ||
+  packageJson.scripts?.["qa:release:manual:sidecars"] !==
+    "node scripts/manual-qa-sidecar-probe.mjs" ||
+  packageJson.scripts?.["qa:release:manual:measurements"] !==
+    "node scripts/apply-manual-qa-measurements.mjs" ||
   packageJson.scripts?.["qa:release:manual:template"] !==
     "node scripts/verify-manual-qa-evidence.mjs --write-template" ||
   packageJson.scripts?.["qa:release:manual:template:force"] !==
     "node scripts/verify-manual-qa-evidence.mjs --write-template --force"
 ) {
   fail(
-    "manual QA npm scripts must provide the clean-profile helper, safe template writer, and explicit force overwrite command."
+    "manual QA npm scripts must provide the clean-profile helper, read-only progress and media reports, safe template writer, and explicit force overwrite command."
+  );
+}
+if (
+  !/buildManualQaMeasurementImport/.test(applyManualQaMeasurementsScriptText) ||
+  !/SAYLESS_MANUAL_QA_MEASUREMENTS_ROOT/.test(
+    applyManualQaMeasurementsScriptText
+  ) ||
+  !/--write/.test(applyManualQaMeasurementsScriptText) ||
+  !/sayless\.manualQaMeasurementImport/.test(
+    applyManualQaMeasurementsScriptText
+  ) ||
+  !/renameSync/.test(applyManualQaMeasurementsScriptText) ||
+  !/manual QA evidence status must be "template"/.test(
+    manualQaMeasurementImportScriptText
+  ) ||
+  !/measurable-set-complete/.test(manualQaMeasurementImportScriptText) ||
+  !/structurally-complete/.test(manualQaMeasurementImportScriptText) ||
+  !/fileName must exactly match/.test(manualQaMeasurementImportScriptText) ||
+  !/recordingFields/.test(manualQaMeasurementImportScriptText) ||
+  !/projectAudioInputFields/.test(manualQaMeasurementImportScriptText) ||
+  !/\["byteSize", "sha256"\]/.test(manualQaMeasurementImportScriptText) ||
+  /testedAt\s*=/.test(manualQaMeasurementImportScriptText) ||
+  /status\s*=\s*"passed"/.test(manualQaMeasurementImportScriptText)
+) {
+  fail(
+    "manual QA measurement import must remain preview-first, atomic, exact-filename matched, strict-report bound, and limited to machine-measured fields without approving tester observations."
+  );
+}
+if (
+  !/sayless\.localRecordingProject/.test(manualQaSidecarProbeScriptText) ||
+  !/sayless\.localRecordingTranscript/.test(manualQaSidecarProbeScriptText) ||
+  !/PROJECT_SCHEMA_VERSION\s*=\s*4/.test(manualQaSidecarProbeScriptText) ||
+  !/WEBVTT/.test(manualQaSidecarProbeScriptText) ||
+  !/timelineAwareWords/.test(manualQaSidecarProbeScriptText) ||
+  !/project\.timeline\.clips/.test(manualQaSidecarProbeScriptText) ||
+  !/sayless-project-json/.test(manualQaSidecarProbeScriptText) ||
+  !/transcript-json/.test(manualQaSidecarProbeScriptText) ||
+  !/exportFields/.test(manualQaSidecarProbeScriptText) ||
+  !/exportFields:\s*\{[^}]*fileName[^}]*byteSize[^}]*sha256/s.test(
+    manualQaSidecarProbeScriptText
+  ) ||
+  !/requireComplete/.test(manualQaSidecarProbeScriptText) ||
+  !/--require-complete/.test(manualQaSidecarProbeScriptText) ||
+  !/--output=/.test(manualQaSidecarProbeScriptText) ||
+  !/manual-qa-report-output\.mjs/.test(manualQaSidecarProbeScriptText) ||
+  !/writeReportAtomically/.test(manualQaSidecarProbeScriptText) ||
+  !/reportPath/.test(manualQaSidecarProbeScriptText) ||
+  !/process\.exitCode\s*=\s*1/.test(manualQaSidecarProbeScriptText) ||
+  !/sidecarSetName/.test(manualQaSidecarProbeScriptText) ||
+  !/completeSetCount/.test(manualQaSidecarProbeScriptText) ||
+  !/recording-id-mismatch/.test(manualQaSidecarProbeScriptText) ||
+  !/project timeline\/source durations must match/.test(
+    manualQaSidecarProbeScriptText
+  ) ||
+  !/Structural checks are read-only/.test(manualQaSidecarProbeScriptText) ||
+  !/import the project sidecar/.test(manualQaSidecarProbeScriptText) ||
+  /\b(?:writeFile|rename|mkdir|unlink)Sync?\b/.test(
+    manualQaSidecarProbeScriptText
+  )
+) {
+  fail(
+    "scripts/manual-qa-sidecar-probe.mjs must validate current VTT, transcript, and project exports read-only while retaining open/import observations as manual evidence."
+  );
+}
+if (
+  !/manual-qa-sidecar-probe\.mjs/.test(localRecordingsE2eScriptText) ||
+  !/_sidecarProbeExports/.test(localRecordingsE2eScriptText) ||
+  !/productSidecarProbe/.test(localRecordingsE2eScriptText) ||
+  !/--require-complete/.test(localRecordingsE2eScriptText) ||
+  !/coverage\.completeSetCount/.test(localRecordingsE2eScriptText)
+) {
+  fail(
+    "tests/e2e/run-local-recordings.cjs must validate product-generated VTT, transcript, and project exports through the manual QA sidecar probe."
+  );
+}
+if (
+  !/openAsBlob/.test(manualQaMediaProbeScriptText) ||
+  !/BlobSource/.test(manualQaMediaProbeScriptText) ||
+  !/computeDuration/.test(manualQaMediaProbeScriptText) ||
+  !/getDisplayWidth/.test(manualQaMediaProbeScriptText) ||
+  !/getDisplayHeight/.test(manualQaMediaProbeScriptText) ||
+  !/getNumberOfChannels/.test(manualQaMediaProbeScriptText) ||
+  !/getSampleRate/.test(manualQaMediaProbeScriptText) ||
+  !/sha256File/.test(manualQaMediaProbeScriptText) ||
+  !/recordingFields/.test(manualQaMediaProbeScriptText) ||
+  !/recordingFields\s*=\s*\{[^}]*fileName[^}]*sha256/s.test(
+    manualQaMediaProbeScriptText
+  ) ||
+  !/projectAudioInputFields/.test(manualQaMediaProbeScriptText) ||
+  !/projectAudioInputFields\s*=\s*\{[^}]*fileName[^}]*sha256/s.test(
+    manualQaMediaProbeScriptText
+  ) ||
+  !/releaseThresholds/.test(manualQaMediaProbeScriptText) ||
+  !/releaseCoverage/.test(manualQaMediaProbeScriptText) ||
+  !/requireComplete/.test(manualQaMediaProbeScriptText) ||
+  !/--require-complete/.test(manualQaMediaProbeScriptText) ||
+  !/--output=/.test(manualQaMediaProbeScriptText) ||
+  !/manual-qa-report-output\.mjs/.test(manualQaMediaProbeScriptText) ||
+  !/writeReportAtomically/.test(manualQaMediaProbeScriptText) ||
+  !/reportPath/.test(manualQaMediaProbeScriptText) ||
+  !/measurable-set-complete/.test(manualQaMediaProbeScriptText) ||
+  !/process\.exitCode\s*=\s*1/.test(manualQaMediaProbeScriptText) ||
+  !/manual-qa-media-coverage\.mjs/.test(manualQaMediaProbeScriptText) ||
+  !/MIN_LONG_RECORDING_DURATION_SECONDS\s*=\s*180/.test(
+    manualQaMediaCoverageScriptText
+  ) ||
+  !/MIN_LARGE_RECORDING_BYTE_SIZE\s*=\s*25 \* 1024 \* 1024/.test(
+    manualQaMediaCoverageScriptText
+  ) ||
+  !/original source recordings rather than exports/.test(
+    manualQaMediaCoverageScriptText
+  ) ||
+  !/observations manually/.test(manualQaMediaCoverageScriptText) ||
+  /\b(?:writeFile|rename|mkdir|unlink)Sync?\b/.test(
+    manualQaMediaProbeScriptText
+  )
+) {
+  fail(
+    "scripts/manual-qa-media-probe.mjs must stream read-only media metadata and clearly keep perceptual observations manual."
+  );
+}
+if (
+  !/--output may be provided only once/.test(manualQaReportOutputScriptText) ||
+  !/--output requires a file path/.test(manualQaReportOutputScriptText) ||
+  !/must not overwrite an inspected input file/.test(
+    manualQaReportOutputScriptText
+  ) ||
+  !/writeFileSync/.test(manualQaReportOutputScriptText) ||
+  !/flag:\s*"wx"/.test(manualQaReportOutputScriptText) ||
+  !/renameSync/.test(manualQaReportOutputScriptText) ||
+  !/unlinkSync/.test(manualQaReportOutputScriptText) ||
+  !/randomUUID/.test(manualQaReportOutputScriptText)
+) {
+  fail(
+    "scripts/manual-qa-report-output.mjs must write probe diagnostics atomically without overwriting an inspected input."
   );
 }
 if (
@@ -1520,6 +1889,13 @@ if (
   !/buildBytes/.test(manualQaProfileScriptText) ||
   !/buildFormattedBytes/.test(manualQaProfileScriptText) ||
   !/evidencePrefill/.test(manualQaProfileScriptText) ||
+  !/detectedEnvironment/.test(manualQaProfileScriptText) ||
+  !/browserObservedExtensionId/.test(manualQaProfileScriptText) ||
+  !/passing clean-profile built-extension identity evidence/.test(
+    manualQaProfileScriptText
+  ) ||
+  !/detectOperatingSystem/.test(manualQaProfileScriptText) ||
+  !/detectChromeVersion/.test(manualQaProfileScriptText) ||
   !/automated evidence timestamp/.test(manualQaProfileScriptText) ||
   !/manual QA profile directory must be a new or empty directory/.test(
     manualQaProfileScriptText
@@ -1534,11 +1910,77 @@ if (
   !/manual QA profile --profile-dir value must not be empty/.test(
     manualQaProfileScriptText
   ) ||
+  !/--resume-profile/.test(manualQaProfileScriptText) ||
+  !/PROFILE_MARKER_FILE/.test(manualQaProfileScriptText) ||
+  !/sayless\.manualQaProfile/.test(manualQaProfileScriptText) ||
+  !/sayless\.manualQaSession/.test(manualQaProfileScriptText) ||
+  !/release-artifacts\/manual-qa-session\.json/.test(
+    manualQaProfileScriptText
+  ) ||
+  !/writeActiveSession/.test(manualQaProfileScriptText) ||
+  !/activeSessionRecorded/.test(manualQaProfileScriptText) ||
+  !/manualSessionProvenanceRecord/.test(manualQaProfileScriptText) ||
+  !/writeManualSessionProvenance/.test(manualQaProfileScriptText) ||
+  !/sayless\.manualQaSessionProvenance/.test(manualQaProfileScriptText) ||
+  !/manualSessionProvenanceRecorded/.test(manualQaProfileScriptText) ||
+  !/launchChrome/.test(manualQaProfileScriptText) ||
+  !/could not launch the selected Chrome executable/.test(
+    manualQaProfileScriptText
+  ) ||
+  !/profileMarkerRecord/.test(manualQaProfileScriptText) ||
+  !/validateProfileMarker/.test(manualQaProfileScriptText) ||
+  !/operatingSystem/.test(manualQaProfileScriptText) ||
+  !/browserCommand/.test(manualQaProfileScriptText) ||
+  !/browserVersion/.test(manualQaProfileScriptText) ||
+  !/arbitrary existing Chrome profiles cannot be used/.test(
+    manualQaProfileScriptText
+  ) ||
+  !/does not match the current release evidence or test environment/.test(
+    manualQaProfileScriptText
+  ) ||
+  !/resumeCommand/.test(manualQaProfileScriptText) ||
   !/--launch/.test(manualQaProfileScriptText) ||
-  !/--json/.test(manualQaProfileScriptText)
+  !/--json/.test(manualQaProfileScriptText) ||
+  !/--sync-template/.test(manualQaProfileScriptText) ||
+  !/templateSynchronized/.test(manualQaProfileScriptText) ||
+  !/manual-qa-template-sync\.mjs/.test(manualQaProfileScriptText) ||
+  !/buildSynchronizedManualTemplate/.test(manualQaProfileScriptText) ||
+  !/--print-template/.test(manualQaProfileScriptText) ||
+  !/manual QA evidence status must be "template" for --sync-template/.test(
+    manualQaProfileScriptText
+  )
 ) {
   fail(
-    "scripts/manual-qa-profile.mjs must require current passing automated evidence before printing or launching a clean Chrome profile command for the canonical release build."
+    "scripts/manual-qa-profile.mjs must require current passing automated evidence, preserve non-template manual evidence, safely synchronize template provenance, and permit only provenance-marked session resumption before printing or launching a clean Chrome profile command for the canonical release build."
+  );
+}
+if (
+  !/mergeTemplateDefaults/.test(manualQaTemplateSyncScriptText) ||
+  !/migrateRetiredTemplatePlaceholders/.test(manualQaTemplateSyncScriptText) ||
+  !/buildSynchronizedManualTemplate/.test(manualQaTemplateSyncScriptText) ||
+  !/environmentPrefill/.test(manualQaTemplateSyncScriptText) ||
+  !/RETIRED_EXTENSION_ID_PLACEHOLDERS/.test(manualQaTemplateSyncScriptText) ||
+  !/RETIRED_TESTER_EMAIL_PLACEHOLDER/.test(manualQaTemplateSyncScriptText) ||
+  !/\["os", "chromeVersion", "unpackedExtensionId"\]/.test(
+    manualQaTemplateSyncScriptText
+  ) ||
+  !/analyzeManualTemplateSync/.test(manualQaTemplateSyncScriptText) ||
+  !/canonical template fields are missing/.test(
+    manualQaTemplateSyncScriptText
+  ) ||
+  !/retired template placeholders are still present/.test(
+    manualQaTemplateSyncScriptText
+  ) ||
+  !/\.\.\.\(mergedTemplate\.environment \|\| \{\}\)/.test(
+    manualQaTemplateSyncScriptText
+  ) ||
+  /const mergeTemplateDefaults/.test(manualQaProfileScriptText) ||
+  /const mergeTemplateDefaults/.test(releaseStatusScriptText) ||
+  /const migrateRetiredTemplatePlaceholders/.test(manualQaProfileScriptText) ||
+  /const migrateRetiredTemplatePlaceholders/.test(releaseStatusScriptText)
+) {
+  fail(
+    "manual QA template merge, migration, synchronization, and status analysis must stay centralized in scripts/manual-qa-template-sync.mjs."
   );
 }
 if (
@@ -1672,17 +2114,27 @@ if (
 }
 const ciNode24Count = (ciWorkflowText.match(/node-version:\s*24/g) || [])
   .length;
+const ciCheckoutCount = (
+  ciWorkflowText.match(/actions\/checkout@v7\.0\.1/g) || []
+).length;
+const ciSetupNodeCount = (
+  ciWorkflowText.match(/actions\/setup-node@v7\.0\.0/g) || []
+).length;
 if (
   !/pull_request:/.test(ciWorkflowText) ||
   !/push:/.test(ciWorkflowText) ||
   !/workflow_dispatch:/.test(ciWorkflowText) ||
   ciNode24Count < 2 ||
+  ciCheckoutCount < 2 ||
+  ciSetupNodeCount < 2 ||
   !/npm ci/.test(ciWorkflowText) ||
-  !/DeterminateSystems\/determinate-nix-action@v3/.test(ciWorkflowText) ||
-  !/determinate:\s*false/.test(ciWorkflowText) ||
+  !/DeterminateSystems\/determinate-nix-action@v3\.21\.8/.test(
+    ciWorkflowText
+  ) ||
+  /\n\s+determinate:/.test(ciWorkflowText) ||
   !/Typecheck with TypeScript 7/.test(ciWorkflowText) ||
   !/npm run typecheck/.test(ciWorkflowText) ||
-  !/actions\/cache@v4/.test(ciWorkflowText) ||
+  !/actions\/cache@v5\.0\.5/.test(ciWorkflowText) ||
   !/~\/\.cache\/ms-playwright/.test(ciWorkflowText) ||
   !/playwright-core\/package\.json/.test(ciWorkflowText) ||
   !/npx playwright install chrome chromium/.test(ciWorkflowText) ||
@@ -1696,11 +2148,11 @@ if (
   !/npm run build:release/.test(ciWorkflowText) ||
   !/npm run verify:release/.test(ciWorkflowText) ||
   !/npm run package:ci-extension/.test(ciWorkflowText) ||
-  !/actions\/upload-artifact@v4/.test(ciWorkflowText) ||
+  !/actions\/upload-artifact@v7\.0\.1/.test(ciWorkflowText) ||
   !/sayless-extension-v\*\.zip/.test(ciWorkflowText) ||
   !/sayless-extension-v\*\.sha256/.test(ciWorkflowText) ||
   !/sayless-extension-v\*\.json/.test(ciWorkflowText) ||
-  !/softprops\/action-gh-release@v2/.test(ciWorkflowText) ||
+  !/softprops\/action-gh-release@v3\.0\.0/.test(ciWorkflowText) ||
   !/refs\/tags\/v/.test(ciWorkflowText) ||
   !/inputs\.release_tag/.test(ciWorkflowText) ||
   !/draft:\s*false/.test(ciWorkflowText)
@@ -1962,6 +2414,29 @@ if (legacyEnvHits.length) {
   );
 }
 
+const destructiveEditorCompatibilityHits = [];
+for (const file of FORBIDDEN_DESTRUCTIVE_EDITOR_FILES) {
+  if (existsSync(join(ROOT, file))) {
+    destructiveEditorCompatibilityHits.push({ file, match: "file exists" });
+  }
+}
+for (const { file, pattern } of FORBIDDEN_DESTRUCTIVE_EDITOR_PROTOCOLS) {
+  const path = join(ROOT, file);
+  if (!existsSync(path)) continue;
+  const match = readFileSync(path, "utf8").match(pattern);
+  if (match) {
+    destructiveEditorCompatibilityHits.push({ file, match: match[0] });
+  }
+}
+if (destructiveEditorCompatibilityHits.length) {
+  for (const hit of destructiveEditorCompatibilityHits) {
+    console.error(`${hit.file}: ${hit.match}`);
+  }
+  fail(
+    `${destructiveEditorCompatibilityHits.length} obsolete destructive editor compatibility path(s) found.`
+  );
+}
+
 const activeScreenityUiNameHits = [];
 for (const { file, pattern } of FORBIDDEN_ACTIVE_SCREENITY_UI_NAMES) {
   const path = join(ROOT, file);
@@ -2010,6 +2485,27 @@ if (dynamicLocalUrlGuardHits.length) {
   }
   fail(
     `${dynamicLocalUrlGuardHits.length} dynamic local URL guard(s) missing.`
+  );
+}
+
+const exportDeliveryProofHits = [];
+for (const { file, snippets, message } of REQUIRED_EXPORT_DELIVERY_PROOF) {
+  const path = join(ROOT, file);
+  if (!existsSync(path)) continue;
+  const text = readFileSync(path, "utf8");
+  const missing = snippets.filter((snippet) => !text.includes(snippet));
+  if (missing.length) {
+    exportDeliveryProofHits.push({ file, message, missing });
+  }
+}
+if (exportDeliveryProofHits.length) {
+  for (const hit of exportDeliveryProofHits) {
+    console.error(
+      `${hit.file}: ${hit.message}; missing ${hit.missing.join(", ")}`
+    );
+  }
+  fail(
+    `${exportDeliveryProofHits.length} export delivery contract/proof invariant(s) missing.`
   );
 }
 

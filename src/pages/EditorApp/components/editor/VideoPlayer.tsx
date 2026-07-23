@@ -7,6 +7,8 @@ import {
   zoomTransformToCss,
 } from "../../../../edl/zoomViewport";
 import type { Timeline } from "../../../../edl/timeline";
+import { cropPreviewLayout, cropRelativePoint } from "../../../../edl/crop";
+import { useProjectAudioPreview } from "./useProjectAudioPreview";
 
 interface VideoPlayerProps {
   onSeek?: (time: number, updatePlayerTime: boolean) => void;
@@ -31,8 +33,34 @@ const VideoPlayer = (_props: VideoPlayerProps) => {
   }, [contentState.time, edlCtx?.zoomKeyframes]);
   const activeZoomStyle = useMemo(() => {
     if (!activeZoom) return undefined;
-    return zoomTransformToCss(computeZoomViewportTransform(activeZoom, 100, 100));
-  }, [activeZoom]);
+    const viewportZoom = {
+      ...activeZoom,
+      ...cropRelativePoint(
+        edlCtx?.crop,
+        activeZoom.xRatio,
+        activeZoom.yRatio,
+      ),
+    };
+    return zoomTransformToCss(computeZoomViewportTransform(viewportZoom, 100, 100));
+  }, [activeZoom, edlCtx?.crop]);
+  const sourceDimensions = useMemo(() => {
+    const [width, height] = videoRatio.split(":").map(Number);
+    return { width, height };
+  }, [videoRatio]);
+  const cropLayout = useMemo(
+    () => cropPreviewLayout(
+      edlCtx?.crop,
+      sourceDimensions.width,
+      sourceDimensions.height,
+    ),
+    [edlCtx?.crop, sourceDimensions],
+  );
+  useProjectAudioPreview(
+    videoRef,
+    edlCtx?.audioAsset,
+    edlCtx?.audioTrack,
+    edlCtx?.timeline,
+  );
 
   useEffect(() => {
     if (
@@ -129,18 +157,30 @@ const VideoPlayer = (_props: VideoPlayerProps) => {
         {url && (
           <div
             className="plyr plyr--video sayless-native-player-shell"
-            style={{ aspectRatio: videoRatio.replace(":", " / ") }}
+            style={{
+              aspectRatio: cropLayout?.aspectRatio || videoRatio.replace(":", " / "),
+              position: "relative",
+            }}
           >
-            <video
-              ref={videoRef}
-              id="plyr-player"
-              className="sayless-native-player"
-              src={url}
-              controls
-              playsInline
-              preload="metadata"
-              style={activeZoomStyle}
-            />
+            <div style={{ position: "absolute", inset: 0, overflow: "hidden", ...activeZoomStyle }}>
+              <video
+                ref={videoRef}
+                id="plyr-player"
+                className="sayless-native-player"
+                src={url}
+                controls
+                playsInline
+                preload="metadata"
+                style={cropLayout ? {
+                  position: "absolute",
+                  maxWidth: "none",
+                  left: `${cropLayout.leftPercent}%`,
+                  top: `${cropLayout.topPercent}%`,
+                  width: `${cropLayout.widthPercent}%`,
+                  height: `${cropLayout.heightPercent}%`,
+                } : undefined}
+              />
+            </div>
           </div>
         )}
       </div>

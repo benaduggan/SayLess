@@ -15,6 +15,9 @@ const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const BUILD_DIR = path.join(ROOT, "build");
+const EVIDENCE_PATH = process.env.SAYLESS_BUILT_EXTENSION_EVIDENCE
+  ? path.resolve(process.env.SAYLESS_BUILT_EXTENSION_EVIDENCE)
+  : path.join(ROOT, "release-artifacts", "built-extension-surface.json");
 const MIN_EXPECTED_PACKAGED_WHISPER_BYTES = 70 * 1024 * 1024;
 const PAGES = [
   "setup.html",
@@ -75,7 +78,28 @@ const FORBIDDEN_SURFACE_PATTERNS = [
   /app\.screenity\.io/i,
 ];
 
+const writeEvidence = (evidence) => {
+  fs.mkdirSync(path.dirname(EVIDENCE_PATH), { recursive: true });
+  const temporaryPath = `${EVIDENCE_PATH}.tmp-${process.pid}`;
+  fs.writeFileSync(
+    temporaryPath,
+    `${JSON.stringify(
+      {
+        kind: "sayless.builtExtensionSurfaceEvidence",
+        generatedAt: new Date().toISOString(),
+        buildPath: "build",
+        cleanChromeProfile: true,
+        ...evidence,
+      },
+      null,
+      2
+    )}\n`
+  );
+  fs.renameSync(temporaryPath, EVIDENCE_PATH);
+};
+
 const fail = (message) => {
+  writeEvidence({ status: "failed", error: message });
   console.error(`BUILT EXTENSION SURFACE FAIL: ${message}`);
   process.exit(1);
 };
@@ -832,6 +856,7 @@ const launchExtensionContext = async (userDataDir) => {
 };
 
 (async () => {
+  writeEvidence({ status: "running" });
   if (!fs.existsSync(path.join(BUILD_DIR, "manifest.json"))) {
     fail("build/manifest.json is missing. Run npm run build:release first.");
   }
@@ -868,8 +893,9 @@ const launchExtensionContext = async (userDataDir) => {
 
   const hits = [];
   const summaries = [];
+  let extensionId = null;
   try {
-    const extensionId = await getExtensionId(context, userDataDir);
+    extensionId = await getExtensionId(context, userDataDir);
     try {
       const whisperProbe = await probePackagedWhisperAssets(
         context,
@@ -1226,8 +1252,17 @@ const launchExtensionContext = async (userDataDir) => {
     }
     fail(`${hits.length} forbidden rendered surface string(s) found.`);
   }
+  writeEvidence({
+    status: "passed",
+    extensionId,
+    summaryCount: summaries.length,
+  });
   console.log("BUILT EXTENSION SURFACE PASS");
 })().catch((error) => {
+  writeEvidence({
+    status: "failed",
+    error: String(error?.message || error),
+  });
   console.error("RUNNER ERROR", error);
   process.exit(2);
 });

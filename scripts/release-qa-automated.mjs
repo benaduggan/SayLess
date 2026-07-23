@@ -26,6 +26,10 @@ const PACKAGE_PATH = join(ROOT, "package.json");
 const PACKAGE_LOCK_PATH = join(ROOT, "package-lock.json");
 const SOURCE_MANIFEST_PATH = join(ROOT, "src", "manifest.json");
 const BUILD_MANIFEST_PATH = join(BUILD_DIR, "manifest.json");
+const BUILT_EXTENSION_EVIDENCE_PATH = join(
+  EVIDENCE_DIR,
+  "built-extension-surface.json"
+);
 
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const commands = [
@@ -59,6 +63,11 @@ const commands = [
     args: ["run", "test:e2e:editor-layout"],
   },
   { label: "build:release", command: npm, args: ["run", "build:release"] },
+  {
+    label: "test:e2e:editor-editing-proof",
+    command: npm,
+    args: ["run", "test:e2e:editor-editing-proof"],
+  },
   {
     label: "test:e2e:built-extension-surface",
     command: npm,
@@ -188,6 +197,31 @@ const gitWorktreeFingerprint = () => {
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 
+const readBuiltExtensionEvidence = () => {
+  if (!existsSync(BUILT_EXTENSION_EVIDENCE_PATH)) {
+    throw new Error(
+      "built-extension surface evidence is missing after its browser smoke."
+    );
+  }
+  const browserEvidence = readJson(BUILT_EXTENSION_EVIDENCE_PATH);
+  if (
+    browserEvidence.kind !== "sayless.builtExtensionSurfaceEvidence" ||
+    browserEvidence.status !== "passed" ||
+    !/^[a-p]{32}$/.test(browserEvidence.extensionId || "") ||
+    browserEvidence.buildPath !== "build" ||
+    browserEvidence.cleanChromeProfile !== true ||
+    !Number.isInteger(browserEvidence.summaryCount) ||
+    browserEvidence.summaryCount <= 0 ||
+    Number.isNaN(Date.parse(browserEvidence.generatedAt)) ||
+    Date.parse(browserEvidence.generatedAt) < startedAt.getTime()
+  ) {
+    throw new Error(
+      "built-extension surface evidence is incomplete, stale, or invalid."
+    );
+  }
+  return browserEvidence;
+};
+
 const arrayFrom = (value) => (Array.isArray(value) ? value : []);
 
 const releaseManifestSurface = (manifest) => {
@@ -226,6 +260,7 @@ const writeFileAtomic = (path, bytes) => {
 const startedAt = new Date();
 const results = [];
 const skipped = [];
+let builtExtensionEvidence = null;
 
 const writeNonPassingEvidence = ({ status, error = null }) => {
   mkdirSync(EVIDENCE_DIR, { recursive: true });
@@ -267,6 +302,7 @@ try {
     results.push(run(label, command, args));
     writeNonPassingEvidence({ status: "running" });
   }
+  builtExtensionEvidence = readBuiltExtensionEvidence();
 } catch (err) {
   writeNonPassingEvidence({ status: "failed", error: err });
   console.error(`\nAutomated release QA failed: ${err.message}`);
@@ -315,9 +351,16 @@ const evidence = {
     fileCount: whisperFingerprint.fileCount,
     sha256: whisperFingerprint.sha256,
   },
+  builtExtension: {
+    id: builtExtensionEvidence.extensionId,
+    buildPath: builtExtensionEvidence.buildPath,
+    cleanChromeProfile: builtExtensionEvidence.cleanChromeProfile,
+    observedAt: builtExtensionEvidence.generatedAt,
+    summaryCount: builtExtensionEvidence.summaryCount,
+  },
   releaseSurface: releaseManifestSurface(buildManifest),
   remainingManualQa:
-    "Run npm run qa:release:manual:profile, complete docs/RELEASE_QA.md manual sections in that clean Chrome profile, then verify release-artifacts/manual-qa-evidence.json with npm run qa:release:manual before publishing.",
+    "Run npm run qa:release:manual:profile -- --sync-template --launch, complete docs/RELEASE_QA.md manual sections in that clean Chrome profile, then verify release-artifacts/manual-qa-evidence.json with npm run qa:release:manual before publishing.",
 };
 
 writeFileAtomic(EVIDENCE_PATH, `${JSON.stringify(evidence, null, 2)}\n`);

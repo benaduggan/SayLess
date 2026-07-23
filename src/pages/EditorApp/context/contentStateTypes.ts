@@ -14,6 +14,7 @@ export interface EditorContentState {
   blob?: Blob | null;
   originalBlob?: Blob | null;
   pendingAudio?: Blob | null;
+  removeProjectAudio?: boolean;
   time?: number;
   duration: number;
   width: number;
@@ -28,22 +29,19 @@ export interface EditorContentState {
   localRecordingId?: string | null;
   webm?: Blob | null;
   rawBlob?: Blob | null;
-  backupBlob?: Blob | null;
   frame: string | null;
   base64?: string | ArrayBuffer | null;
   title: string | null;
   mode: string;
   playerLoading: boolean;
   finalizingRecording: boolean;
-  trimming: boolean;
-  cutting: boolean;
-  muting: boolean;
   undoDisabled: boolean;
   redoDisabled: boolean;
   reencoding: boolean;
   volume: number;
   cropPreset: string;
   replaceAudio: boolean;
+  loopAudio: boolean;
   bannerSupport: boolean;
   reviewPrompt: boolean;
   reviewEligible: boolean;
@@ -69,10 +67,7 @@ export interface EditorContentState {
   preferFilePicker: boolean;
   pendingCropEntry?: boolean;
   fromCropper?: boolean;
-  fromAudio?: boolean;
-  cropping?: boolean;
   dragInteracted?: boolean;
-  hasTempChanges?: boolean;
   editErrorType?: string | null;
   exportJob: ExportJob | null;
   lastExportDownloadId: number | null;
@@ -112,7 +107,6 @@ export interface EditorContentState {
   lastRecordingBackend?: string | null;
   addToHistory: () => void;
   loadFFmpeg: () => unknown;
-  createBackup: () => void;
   getFrame: () => unknown;
   download: () => Promise<unknown>;
   downloadWEBM: () => Promise<unknown>;
@@ -126,13 +120,8 @@ export interface EditorContentState {
   }) => void;
   dismissExportJob: () => void;
   cancelDownload: () => void;
-  cancelEditOp?: () => void;
-  restoreBackup?: () => void;
-  clearBackup?: () => void;
   undo?: () => void;
   redo?: () => void;
-  handleTrim?: (cut: boolean) => Promise<void>;
-  handleMute?: () => Promise<void>;
   openToast?:
     | ((
         title: string,
@@ -156,17 +145,6 @@ export interface EditorContentState {
         sideButtonAction?: (() => void) | null
       ) => void)
     | null;
-  handleCrop?: (
-    left: number,
-    top: number,
-    width: number,
-    height: number
-  ) => Promise<true | undefined>;
-  addAudio?: (
-    videoBlob: Blob | null,
-    audioBlob: Blob,
-    volume: number
-  ) => Promise<void>;
   handleReencode?: (topLevel?: boolean) => Promise<true | undefined>;
   waitForUpdatedBlob?: () => Promise<unknown>;
 }

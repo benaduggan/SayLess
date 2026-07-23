@@ -33,6 +33,10 @@ const bundleHarness = (work) =>
         },
         resolve: {
           extensions: [".js", ".mjs", ".ts", ".tsx", ".json"],
+          extensionAlias: {
+            ".js": [".js", ".ts"],
+            ".jsx": [".jsx", ".tsx"],
+          },
         },
         module: {
           rules: [
@@ -73,13 +77,13 @@ const bundleHarness = (work) =>
             new Error(
               info.errors
                 .map((error) => error.message || String(error))
-                .join("\n"),
-            ),
+                .join("\n")
+            )
           );
           return;
         }
         resolve();
-      },
+      }
     );
   });
 
@@ -93,7 +97,7 @@ const bundleHarness = (work) =>
     await bundleHarness(work);
     fs.writeFileSync(
       path.join(work, "harness.html"),
-      "<!doctype html><meta charset=utf-8><title>WebCodecs mic quality harness</title><script type=module src=./bundle.js></script>",
+      "<!doctype html><meta charset=utf-8><title>WebCodecs mic quality harness</title><script type=module src=./bundle.js></script>"
     );
 
     server = http.createServer((req, res) => {
@@ -104,7 +108,7 @@ const bundleHarness = (work) =>
       }
       const f = path.join(
         work,
-        req.url === "/" ? "/harness.html" : req.url.split("?")[0],
+        req.url === "/" ? "/harness.html" : req.url.split("?")[0]
       );
       if (!fs.existsSync(f)) {
         res.writeHead(404);
@@ -140,11 +144,12 @@ const bundleHarness = (work) =>
     });
 
     await page.goto(harnessUrl, { waitUntil: "domcontentloaded" });
-    await page.waitForFunction(
-      "window.WEBCODECS_MIC_QUALITY_READY === true",
-      { timeout: 30000 },
+    await page.waitForFunction("window.WEBCODECS_MIC_QUALITY_READY === true", {
+      timeout: 30000,
+    });
+    const summary = await page.evaluate(() =>
+      window.WEBCODECS_MIC_QUALITY.run()
     );
-    const summary = await page.evaluate(() => window.WEBCODECS_MIC_QUALITY.run());
     console.log("=== WEBCODECS MIC QUALITY SMOKE ===");
     console.log(JSON.stringify(summary, null, 2));
     console.log("WEBCODECS MIC QUALITY PASS");

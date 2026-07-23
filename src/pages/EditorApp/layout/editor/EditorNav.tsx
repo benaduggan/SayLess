@@ -8,15 +8,12 @@ const EditorNav = () => {
   const [contentState, setContentState] = useEditorContent();
 
   const handleCancel = () => {
-    contentState.cancelEditOp?.();
     setContentState((prevContentState) => ({
       ...prevContentState,
       mode: "player",
       start: 0,
       end: 1,
     }));
-
-    contentState.restoreBackup?.();
   };
 
   const handleRevert = () => {
@@ -48,12 +45,9 @@ const EditorNav = () => {
     setContentState((prev) => ({
       ...prev,
       mode: "player",
-      hasTempChanges: false,
       start: 0,
       end: 1,
     }));
-
-    contentState.clearBackup?.();
     contentState.openToast?.(
       chrome.i18n.getMessage("sandboxToastSaved"),
       () => contentState.undo?.(),

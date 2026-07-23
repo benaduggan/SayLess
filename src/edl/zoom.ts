@@ -160,3 +160,37 @@ export const buildZoomSuggestions = (
     maxKeyframes: maxSuggestions,
   });
 };
+
+/**
+ * Map source-time zoom intervals into output time. A zoom can be split into
+ * multiple output intervals when edits cut through it or reorder its source
+ * range. Deleted portions are omitted.
+ */
+export const mapZoomKeyframesToOutput = (
+  keyframes: readonly ZoomKeyframe[],
+  timeline: Timeline,
+): ZoomKeyframe[] => {
+  const { segments } = resolveTimeline(timeline);
+  const mapped: ZoomKeyframe[] = [];
+
+  for (const keyframe of keyframes) {
+    const zoomStart = keyframe.time;
+    const zoomEnd = keyframe.time + keyframe.durationSeconds;
+    for (const segment of segments) {
+      const sourceStart = Math.max(zoomStart, segment.sourceStart);
+      const sourceEnd = Math.min(zoomEnd, segment.sourceEnd);
+      if (sourceEnd <= sourceStart) continue;
+
+      mapped.push({
+        ...keyframe,
+        id: `${keyframe.id}:${segment.clipId}`,
+        time: segment.outStart + (sourceStart - segment.sourceStart),
+        durationSeconds: sourceEnd - sourceStart,
+      });
+    }
+  }
+
+  return mapped.sort((a, b) => a.time - b.time);
+};
+import { resolveTimeline } from "./timeline.ts";
+import type { Timeline } from "./timeline.ts";

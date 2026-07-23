@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildZoomSuggestions,
+  mapZoomKeyframesToOutput,
   normalizeZoomKeyframes,
 } from "../../src/edl/zoom.ts";
 
@@ -69,5 +70,66 @@ test("normalizeZoomKeyframes clamps values for portable project data", () => {
       keyframe.label,
     ]),
     [[12, 12, 3, 0, 1, "Demo zoom"]],
+  );
+});
+
+test("mapZoomKeyframesToOutput clips deleted spans and follows output order", () => {
+  const keyframe = {
+    id: "zoom-1",
+    time: 1,
+    durationSeconds: 7,
+    scale: 2,
+    xRatio: 0.25,
+    yRatio: 0.75,
+    label: "Long zoom",
+    source: "manual",
+  };
+  const timeline = {
+    version: 2,
+    source: { duration: 10 },
+    clips: [
+      { id: "late", sourceStart: 6, sourceEnd: 10, muted: false },
+      { id: "early", sourceStart: 0, sourceEnd: 3, muted: false },
+    ],
+  };
+
+  const mapped = mapZoomKeyframesToOutput([keyframe], timeline);
+
+  assert.deepEqual(
+    mapped.map(({ id, time, durationSeconds }) => [id, time, durationSeconds]),
+    [
+      ["zoom-1:late", 0, 2],
+      ["zoom-1:early", 5, 2],
+    ],
+  );
+});
+
+test("mapZoomKeyframesToOutput retains a zoom whose start was deleted", () => {
+  const mapped = mapZoomKeyframesToOutput(
+    [
+      {
+        id: "zoom-gap",
+        time: 2,
+        durationSeconds: 4,
+        scale: 1.6,
+        xRatio: 0.5,
+        yRatio: 0.5,
+        label: "Gap zoom",
+        source: "click",
+      },
+    ],
+    {
+      version: 2,
+      source: { duration: 8 },
+      clips: [
+        { id: "before", sourceStart: 0, sourceEnd: 2, muted: false },
+        { id: "after", sourceStart: 4, sourceEnd: 8, muted: false },
+      ],
+    },
+  );
+
+  assert.deepEqual(
+    mapped.map(({ time, durationSeconds }) => [time, durationSeconds]),
+    [[2, 2]],
   );
 });

@@ -29,9 +29,24 @@ const bundleHarness = (work) =>
         target: "web",
         devtool: false,
         optimization: { minimize: false },
-        resolve: { extensions: [".js", ".mjs", ".json"] },
+        resolve: {
+          extensions: [".js", ".mjs", ".ts", ".tsx", ".json"],
+          extensionAlias: {
+            ".js": [".js", ".ts"],
+            ".jsx": [".jsx", ".tsx"],
+          },
+        },
         module: {
           rules: [
+            {
+              test: /\.tsx?$/,
+              use: {
+                loader: "ts-loader",
+                options: {
+                  transpileOnly: true,
+                },
+              },
+            },
             {
               test: /\.module\.scss$/,
               use: [

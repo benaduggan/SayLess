@@ -39,6 +39,26 @@ const bundleHarness = (work) =>
         optimization: {
           minimize: false,
         },
+        resolve: {
+          extensions: [".js", ".mjs", ".ts", ".tsx", ".json"],
+          extensionAlias: {
+            ".js": [".js", ".ts"],
+            ".jsx": [".jsx", ".tsx"],
+          },
+        },
+        module: {
+          rules: [
+            {
+              test: /\.tsx?$/,
+              use: {
+                loader: "ts-loader",
+                options: {
+                  transpileOnly: true,
+                },
+              },
+            },
+          ],
+        },
       },
       (err, stats) => {
         if (err) {
@@ -56,13 +76,13 @@ const bundleHarness = (work) =>
             new Error(
               info.errors
                 .map((error) => error.message || String(error))
-                .join("\n"),
-            ),
+                .join("\n")
+            )
           );
           return;
         }
         resolve();
-      },
+      }
     );
   });
 
@@ -95,7 +115,7 @@ const createServer = (work) =>
   await bundleHarness(work);
   fs.writeFileSync(
     path.join(work, "harness.html"),
-    "<!doctype html><meta charset=utf-8><title>Offline Whisper assets</title><script type=module src=./bundle.js></script>",
+    "<!doctype html><meta charset=utf-8><title>Offline Whisper assets</title><script type=module src=./bundle.js></script>"
   );
 
   const server = createServer(work);
@@ -116,10 +136,9 @@ const createServer = (work) =>
   let result;
   try {
     await page.goto(`${origin}/harness.html`);
-    await page.waitForFunction(
-      "window.OFFLINE_WHISPER_ASSETS_READY === true",
-      { timeout: 30000 },
-    );
+    await page.waitForFunction("window.OFFLINE_WHISPER_ASSETS_READY === true", {
+      timeout: 30000,
+    });
     result = await page.evaluate(async () => {
       const startedAt = performance.now();
       const status =
@@ -153,7 +172,9 @@ const createServer = (work) =>
     result.totalBytes >= MIN_EXPECTED_MODEL_BYTES &&
     result.durationMs <= MAX_READY_MS;
 
-  console.log(ok ? "OFFLINE WHISPER ASSETS PASS" : "OFFLINE WHISPER ASSETS FAIL");
+  console.log(
+    ok ? "OFFLINE WHISPER ASSETS PASS" : "OFFLINE WHISPER ASSETS FAIL"
+  );
   process.exit(ok ? 0 : 1);
 })().catch((err) => {
   console.error("RUNNER ERROR", err);

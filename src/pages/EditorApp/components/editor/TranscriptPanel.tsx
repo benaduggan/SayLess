@@ -198,6 +198,7 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
                 </button>
                 <button
                   style={miniButton}
+                  data-testid="zoom-suggestion-keep"
                   onClick={() => saveZoomSuggestion(suggestion)}
                   disabled={saved}
                 >
@@ -218,6 +219,7 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
               </button>
               <button
                 style={miniButton}
+                data-testid="zoom-keyframe-remove"
                 onClick={() => removeZoomKeyframe(keyframe.id)}
               >
                 Remove

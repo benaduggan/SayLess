@@ -1,14 +1,19 @@
 import { useContext } from "react";
 import styles from "../../styles/edit/_EditorNav.module.scss";
 import { useEditorContent } from "../../context/ContentState";
+import { EdlContext } from "../../context/EdlContext";
+import { cropRegionFromPixels, cropRegionToPixels } from "../../../../edl/crop";
 
 const URL = chrome.runtime.getURL("assets/");
 
 const CropNav = () => {
   const [contentState, setContentState] = useEditorContent();
+  const edlCtx = useContext(EdlContext);
+
+  const sourceWidth = contentState.prevWidth || contentState.width;
+  const sourceHeight = contentState.prevHeight || contentState.height;
 
   const handleCancel = () => {
-    contentState.cancelEditOp?.();
     setContentState((prevContentState) => ({
       ...prevContentState,
       mode: "player",
@@ -20,28 +25,17 @@ const CropNav = () => {
       top: 0,
       fromCropper: false,
     }));
-
-    contentState.clearBackup?.();
   };
 
   const handleRevert = () => {
-    const prev = {
-      blob: contentState.blob,
-      start: contentState.start,
-      end: contentState.end,
-      width: contentState.width,
-      height: contentState.height,
-      left: contentState.left,
-      top: contentState.top,
-      fromCropper: contentState.fromCropper,
-    };
+    const previousCrop = edlCtx?.crop || null;
+    edlCtx?.updateCrop(null);
     setContentState((prevContentState) => ({
       ...prevContentState,
-      blob: contentState.originalBlob,
       start: 0,
       end: 1,
-      width: contentState.prevWidth,
-      height: contentState.prevHeight,
+      width: sourceWidth,
+      height: sourceHeight,
       left: 0,
       top: 0,
       fromCropper: false,
@@ -49,30 +43,62 @@ const CropNav = () => {
     contentState.openToast?.(
       chrome.i18n.getMessage("sandboxToastReverted"),
       () => {
-        setContentState((p) => ({ ...p, ...prev }));
+        edlCtx?.updateCrop(previousCrop);
+        const restored = cropRegionToPixels(previousCrop, sourceWidth, sourceHeight);
+        setContentState((p) => ({
+          ...p,
+          left: restored.x,
+          top: restored.y,
+          width: restored.width,
+          height: restored.height,
+        }));
       },
     );
   };
 
   const saveChanges = async () => {
-    await contentState.handleCrop?.(
-      contentState.left,
-      contentState.top,
-      contentState.width,
-      contentState.height
+    const previousCrop = edlCtx?.crop || null;
+    const nextCrop = cropRegionFromPixels(
+      {
+        x: contentState.left,
+        y: contentState.top,
+        width: contentState.width,
+        height: contentState.height,
+      },
+      sourceWidth,
+      sourceHeight,
     );
-
     setContentState((prev) => ({
       ...prev,
-      fromCropper: true,
-      hasTempChanges: false,
+      isFfmpegRunning: true,
+      processingProgress: 0,
+      editErrorType: null,
     }));
-
-    contentState.clearBackup?.();
-    contentState.openToast?.(
-      chrome.i18n.getMessage("sandboxToastSaved"),
-      () => contentState.undo?.(),
-    );
+    try {
+      await edlCtx?.saveProjectCrop(nextCrop);
+      setContentState((prev) => ({
+        ...prev,
+        mode: "player",
+        width: sourceWidth,
+        height: sourceHeight,
+        left: 0,
+        top: 0,
+        fromCropper: false,
+        hasBeenEdited: true,
+        isFfmpegRunning: false,
+      }));
+      contentState.openToast?.(
+        chrome.i18n.getMessage("sandboxToastSaved"),
+        () => edlCtx?.updateCrop(previousCrop),
+      );
+    } catch (error) {
+      console.warn("[SayLess] Failed to save project crop", error);
+      setContentState((prev) => ({
+        ...prev,
+        isFfmpegRunning: false,
+        editErrorType: "failed",
+      }));
+    }
   };
 
   return (
@@ -94,12 +120,14 @@ const CropNav = () => {
         </div>
         <div className={styles.editorNavRight}>
           <button
+            data-testid="project-crop-cancel"
             className="button simpleButton blackButton"
             onClick={handleCancel}
           >
             {chrome.i18n.getMessage("sandboxEditorCancelButton")}
           </button>
           <button
+            data-testid="project-crop-revert"
             className="button secondaryButton"
             onClick={handleRevert}
             disabled={Boolean(contentState.isFfmpegRunning)}
@@ -107,6 +135,7 @@ const CropNav = () => {
             {chrome.i18n.getMessage("sandboxEditorRevertButton")}
           </button>
           <button
+            data-testid="project-crop-save"
             className="button primaryButton"
             onClick={saveChanges}
             disabled={Boolean(contentState.isFfmpegRunning)}

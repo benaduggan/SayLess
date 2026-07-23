@@ -28,6 +28,18 @@ const DEFAULT_AUTOMATED_EVIDENCE_PATH = join(
   "release-artifacts",
   "release-qa-automated.json"
 );
+const MEDIA_PROBE_REPORT_RELATIVE_PATH =
+  "release-artifacts/manual-qa-media-probe.json";
+const SIDECAR_PROBE_REPORT_RELATIVE_PATH =
+  "release-artifacts/manual-qa-sidecar-probe.json";
+const DEFAULT_MEDIA_PROBE_REPORT_PATH = join(
+  ROOT,
+  MEDIA_PROBE_REPORT_RELATIVE_PATH
+);
+const DEFAULT_SIDECAR_PROBE_REPORT_PATH = join(
+  ROOT,
+  SIDECAR_PROBE_REPORT_RELATIVE_PATH
+);
 const PACKAGE_PATH = join(ROOT, "package.json");
 const PACKAGE_LOCK_PATH = join(ROOT, "package-lock.json");
 const SOURCE_MANIFEST_PATH = join(ROOT, "src", "manifest.json");
@@ -46,6 +58,7 @@ const REQUIRED_AUTOMATED_COMMANDS = [
   "test:e2e:local-recordings",
   "test:e2e:editor-layout",
   "build:release",
+  "test:e2e:editor-editing-proof",
   "test:e2e:built-extension-surface",
   "verify:release",
 ];
@@ -53,6 +66,8 @@ const CONDITIONAL_AUTOMATED_COMMANDS = [
   "test:e2e:offline-transcription-speech",
 ];
 const AUTOMATED_RUN_WINDOW_TOLERANCE_MS = 5_000;
+const MIN_LONG_RECORDING_DURATION_SECONDS = 180;
+const MIN_LARGE_RECORDING_BYTE_SIZE = 25 * 1024 * 1024;
 const EXPECTED_AUTOMATED_COMMANDS = new Map(
   [...REQUIRED_AUTOMATED_COMMANDS, ...CONDITIONAL_AUTOMATED_COMMANDS].map(
     (label) => [label, `npm run ${label}`]
@@ -68,6 +83,12 @@ const REQUIRED_EXPORT_FORMATS = [
   "transcript-json",
   "sayless-project-json",
 ];
+const REQUIRED_PROJECT_AUDIO_FORMATS = ["wav", "m4a", "mp3"];
+const PROJECT_AUDIO_FILE_NAME_PATTERNS = {
+  wav: /\.wav$/i,
+  m4a: /\.m4a$/i,
+  mp3: /\.mp3$/i,
+};
 const EXPORT_FILE_NAME_PATTERNS = {
   mp4: /\.mp4$/i,
   webm: /\.webm$/i,
@@ -138,6 +159,8 @@ const REQUIRED_CHECKS = [
   "export_cancel_retry_reveal_real_recordings",
   "audio_silence_real_codecs_and_noise",
   "zoom_preview_export_real_recordings",
+  "crop_preview_export_real_recordings",
+  "project_audio_real_inputs_and_long_sync",
   "local_library_recovery",
   "final_surface_no_paid_cloud_or_remote_claims",
 ];
@@ -147,7 +170,9 @@ const CHECK_RECORDING_REF_MINIMUMS = {
   timeline_editing_persistence: 1,
   export_cancel_retry_reveal_real_recordings: 1,
   audio_silence_real_codecs_and_noise: 2,
-  zoom_preview_export_real_recordings: 1,
+  zoom_preview_export_real_recordings: 2,
+  crop_preview_export_real_recordings: 2,
+  project_audio_real_inputs_and_long_sync: 1,
   local_library_recovery: 1,
 };
 
@@ -158,10 +183,25 @@ const TEMPLATE = {
   releaseVersion: PACKAGE_VERSION,
   automatedEvidencePath: "release-artifacts/release-qa-automated.json",
   automatedEvidenceGeneratedAt: "YYYY-MM-DDTHH:mm:ss.sssZ",
+  manualSession: {
+    kind: "sayless.manualQaSessionProvenance",
+    profileCreatedAt: "YYYY-MM-DDTHH:mm:ss.sssZ",
+    releaseVersion: PACKAGE_VERSION,
+    automatedEvidenceGeneratedAt: "YYYY-MM-DDTHH:mm:ss.sssZ",
+    buildSha256: "replace-with-build-sha256",
+    buildFileCount: 0,
+    buildBytes: 0,
+    unpackedExtensionId: "replace-with-32-character-unpacked-extension-id",
+    operatingSystem: "replace-with-os",
+    browserVersion: "replace-with-chrome-version",
+  },
+  probeReports: {
+    media: MEDIA_PROBE_REPORT_RELATIVE_PATH,
+    sidecars: SIDECAR_PROBE_REPORT_RELATIVE_PATH,
+  },
   testedAt: "YYYY-MM-DDTHH:mm:ss.sssZ",
   tester: {
     name: "Manual tester name",
-    email: "tester@example.com",
   },
   environment: {
     os: "macOS 15.x / Windows 11 / Linux distro",
@@ -174,8 +214,13 @@ const TEMPLATE = {
   recordings: [
     {
       id: "real-tab-speaker-a",
+      fileName: "replace-with-real-tab-recording.webm",
+      sha256: "replace-with-source-file-sha256",
       source: "tab",
       durationSeconds: 120,
+      byteSize: 15_000_000,
+      width: 1280,
+      height: 720,
       container: "webm",
       microphone: "built-in mic",
       speakerProfile: "speaker A",
@@ -184,19 +229,41 @@ const TEMPLATE = {
     },
     {
       id: "real-desktop-speaker-b",
+      fileName: "replace-with-real-desktop-recording.mp4",
+      sha256: "replace-with-source-file-sha256",
       source: "desktop",
       durationSeconds: 300,
+      byteSize: 50_000_000,
+      width: 1920,
+      height: 1080,
       container: "mp4",
       microphone: "external mic",
       speakerProfile: "speaker B",
       noiseProfile: "background noise",
       notes: "Longer recording used for export cancellation and noisy-room QA.",
     },
+    {
+      id: "real-region-zoom-c",
+      fileName: "replace-with-real-region-recording.webm",
+      sha256: "replace-with-source-file-sha256",
+      source: "region recording",
+      durationSeconds: 90,
+      byteSize: 12_000_000,
+      width: 1024,
+      height: 768,
+      container: "webm",
+      microphone: "built-in mic",
+      speakerProfile: "speaker A",
+      noiseProfile: "quiet room",
+      notes: "Real region recording used for varied-aspect zoom QA.",
+    },
   ],
   exports: {
     files: REQUIRED_EXPORT_FORMATS.map((format) => ({
       format,
       fileName: `replace-with-${format}-export-file-name`,
+      byteSize: 1,
+      sha256: "replace-with-export-file-sha256",
       sourceRecordingId: "replace-with-recording-id",
       notes: "Replace with how this export was opened or inspected.",
     })),
@@ -273,16 +340,125 @@ const TEMPLATE = {
       "Replace with observed silence-suggestion behavior across real codecs and noise.",
   },
   zoom: {
-    recordingId: "replace-with-tab-or-region-recording-id",
-    sourceHadClickMetadata: false,
-    previewVerified: false,
-    mp4ExportVerified: false,
-    keepRemoveVerified: false,
-    persistedAfterReopen: false,
-    exportInspection:
-      "Replace with how the MP4 export was inspected for the saved zoom framing.",
+    recordingIds: [
+      "replace-with-tab-or-region-recording-id-a",
+      "replace-with-tab-or-region-recording-id-b",
+    ],
+    observations: [
+      {
+        recordingId: "replace-with-tab-or-region-recording-id-a",
+        sourceHadClickMetadata: false,
+        previewVerified: false,
+        mp4ExportVerified: false,
+        keepRemoveVerified: false,
+        persistedAfterReopen: false,
+        exportInspection:
+          "Replace with how this recording's MP4 export was inspected for saved zoom framing.",
+        notes:
+          "Replace with this recording's observed zoom suggestion, preview, reopen, and export behavior.",
+      },
+      {
+        recordingId: "replace-with-tab-or-region-recording-id-b",
+        sourceHadClickMetadata: false,
+        previewVerified: false,
+        mp4ExportVerified: false,
+        keepRemoveVerified: false,
+        persistedAfterReopen: false,
+        exportInspection:
+          "Replace with how this recording's MP4 export was inspected for saved zoom framing.",
+        notes:
+          "Replace with this recording's observed zoom suggestion, preview, reopen, and export behavior.",
+      },
+    ],
     notes:
-      "Replace with observed zoom suggestion, preview, and export behavior.",
+      "Replace with observed varied-dimension zoom behavior across both recordings.",
+  },
+  crop: {
+    recordingIds: [
+      "replace-with-crop-recording-id-a",
+      "replace-with-crop-recording-id-b",
+    ],
+    observations: [
+      {
+        recordingId: "replace-with-crop-recording-id-a",
+        crop: { xRatio: 0, yRatio: 0, widthRatio: 0.75, heightRatio: 1 },
+        exportWidth: 960,
+        exportHeight: 720,
+        nativePlaybackControlsVerified: false,
+        edgeCropVerified: false,
+        previewVerified: false,
+        mp4ExportVerified: false,
+        persistedAfterReopen: false,
+        sourceBlobUnchanged: false,
+        exportInspection:
+          "Replace with how the cropped MP4 dimensions and visible bounds were inspected.",
+        notes:
+          "Replace with observed native-control, preview, reopen, and export crop behavior.",
+      },
+      {
+        recordingId: "replace-with-crop-recording-id-b",
+        crop: {
+          xRatio: 0.25,
+          yRatio: 0,
+          widthRatio: 0.75,
+          heightRatio: 0.75,
+        },
+        exportWidth: 768,
+        exportHeight: 576,
+        nativePlaybackControlsVerified: false,
+        edgeCropVerified: false,
+        previewVerified: false,
+        mp4ExportVerified: false,
+        persistedAfterReopen: false,
+        sourceBlobUnchanged: false,
+        exportInspection:
+          "Replace with how the cropped MP4 dimensions and visible bounds were inspected.",
+        notes:
+          "Replace with observed native-control, preview, reopen, and export crop behavior.",
+      },
+    ],
+    notes:
+      "Replace with observed non-destructive edge-crop behavior across varied real dimensions.",
+  },
+  projectAudio: {
+    recordingId: "replace-with-long-large-recording-id",
+    inputs: REQUIRED_PROJECT_AUDIO_FORMATS.map((format) => ({
+      format,
+      fileName: `replace-with-real-project-audio.${format}`,
+      sha256: "replace-with-project-audio-file-sha256",
+      byteSize: 1,
+      durationSeconds: 1,
+      channels: 2,
+      sampleRate: 48000,
+      decodeVerified: false,
+      audiblePreviewVerified: false,
+      notes: `Replace with decoded metadata and audible preview observations for the real ${format.toUpperCase()} file.`,
+    })),
+    playback: {
+      seekPlayPauseVerified: false,
+      reorderedTimelineVerified: false,
+      playbackRateVerified: false,
+      longRecordingSyncVerified: false,
+      mixVerified: false,
+      replaceVerified: false,
+      loopOnOffVerified: false,
+      cancelRetryVerified: false,
+      gainPerceptionNotes:
+        "Replace with perceived source/project gain observations in mix and replace modes.",
+    },
+    persistence: {
+      reopenVerified: false,
+      sourceBlobUnchanged: false,
+      duplicatePreviewVerified: false,
+      duplicateDeletedOriginalIntact: false,
+      sidecarMissingAssetVerified: false,
+      relinkHashMatched: false,
+      applyEditsCleanupVerified: false,
+      notes:
+        "Replace with reopen, duplicate/delete, sidecar relink, and Apply-edits asset cleanup observations.",
+    },
+    notes:
+      "Replace with real-input project-audio behavior and any remaining risk.",
   },
   localLibraryRecovery: {
     duplicateReopenVerified: false,
@@ -445,6 +621,10 @@ const buildTemplate = () => {
     if (nonEmptyString(automatedEvidence?.build?.path)) {
       template.environment.extensionSource = automatedEvidence.build.path;
     }
+    if (/^[a-p]{32}$/.test(automatedEvidence?.builtExtension?.id || "")) {
+      template.environment.unpackedExtensionId =
+        automatedEvidence.builtExtension.id;
+    }
   } catch {}
   return template;
 };
@@ -465,6 +645,19 @@ const automatedEvidenceCanPrefillTemplate = (automatedEvidence) => {
     return false;
   if (
     automatedEvidence.buildManifestVersion !== automatedEvidence.releaseVersion
+  )
+    return false;
+  if (
+    !/^[a-p]{32}$/.test(automatedEvidence?.builtExtension?.id || "") ||
+    automatedEvidence.builtExtension.buildPath !== "build" ||
+    automatedEvidence.builtExtension.cleanChromeProfile !== true ||
+    !isIsoDate(automatedEvidence.builtExtension.observedAt) ||
+    Date.parse(automatedEvidence.builtExtension.observedAt) <
+      Date.parse(automatedEvidence.startedAt) ||
+    Date.parse(automatedEvidence.builtExtension.observedAt) >
+      Date.parse(automatedEvidence.generatedAt) ||
+    !Number.isInteger(automatedEvidence.builtExtension.summaryCount) ||
+    automatedEvidence.builtExtension.summaryCount <= 0
   )
     return false;
 
@@ -638,6 +831,257 @@ const fail = (errors) => {
   process.exit(1);
 };
 
+const MANUAL_QA_PROGRESS_SECTIONS = [
+  [
+    "automation",
+    "Automated evidence",
+    ["release-artifacts/release-qa-automated.json"],
+  ],
+  [
+    "metadata",
+    "Release and environment",
+    [
+      "kind",
+      "version",
+      "releaseVersion",
+      "automatedEvidencePath",
+      "automatedEvidenceGeneratedAt",
+      "manualSession",
+      "tester.name",
+      "environment",
+    ],
+  ],
+  ["recordings", "Real recordings", ["recordings"]],
+  ["exports", "Exports", ["exports"]],
+  [
+    "offlineTranscription",
+    "Offline transcription",
+    [
+      "environment.networkDisabledForOfflineTranscription",
+      "offlineTranscription",
+    ],
+  ],
+  ["silenceSuggestions", "Silence suggestions", ["silenceSuggestions"]],
+  ["zoom", "Zoom", ["zoom"]],
+  ["crop", "Crop", ["crop"]],
+  ["projectAudio", "Project audio", ["projectAudio"]],
+  ["localLibraryRecovery", "Local library recovery", ["localLibraryRecovery"]],
+  ["publicationSurface", "Publication surface", ["publicationSurface"]],
+  ["checks", "Release checklist", ["checks"]],
+  [
+    "mediaProbe",
+    "Media probe report",
+    ["probeReports.media", "release-artifacts/manual-qa-media-probe.json"],
+  ],
+  [
+    "sidecarProbe",
+    "Sidecar probe report",
+    ["probeReports.sidecars", "release-artifacts/manual-qa-sidecar-probe.json"],
+  ],
+  [
+    "measurementImport",
+    "Probe measurements",
+    [
+      "recordings[*].sha256/durationSeconds/byteSize/width/height/container",
+      "exports.files[*].byteSize/sha256",
+      "projectAudio.inputs[*].sha256/byteSize/durationSeconds/channels/sampleRate",
+    ],
+  ],
+  ["finalization", "Final verification", ["status", "testedAt"]],
+  [
+    "other",
+    "Other verifier requirements",
+    ["listed unmapped verifier requirements"],
+  ],
+];
+const MANUAL_QA_PROGRESS_SECTION_IDS = new Set(
+  MANUAL_QA_PROGRESS_SECTIONS.map(([id]) => id)
+);
+const MEASUREMENT_IMPORT_ERROR_PATTERN =
+  /^(?:recordings\[\d+\]\.(?:sha256|durationSeconds|byteSize|width|height|container)|exports\.files\[\d+\]\.(?:byteSize|sha256)|projectAudio\.inputs\[\d+\]\.(?:sha256|byteSize|durationSeconds|channels|sampleRate))\b/;
+
+const progressSectionForError = (error) => {
+  if (error.startsWith("environment.networkDisabledForOfflineTranscription")) {
+    return "offlineTranscription";
+  }
+  if (/^(?:manual QA evidence status|testedAt)\b/.test(error)) {
+    return "finalization";
+  }
+  if (
+    /^(?:probeReports\.media\b|manual QA media probe report\b)/i.test(error)
+  ) {
+    return "mediaProbe";
+  }
+  if (
+    /^(?:probeReports\.sidecars\b|manual QA sidecar probe report\b)/i.test(
+      error
+    )
+  ) {
+    return "sidecarProbe";
+  }
+  if (MEASUREMENT_IMPORT_ERROR_PATTERN.test(error)) {
+    return "measurementImport";
+  }
+  if (
+    /^(?:automated QA|current (?:build|bundled Whisper)|package(?:\.json|-lock)|source manifest|src manifest|build manifest)/i.test(
+      error
+    )
+  ) {
+    return "automation";
+  }
+  for (const section of [
+    "recordings",
+    "exports",
+    "offlineTranscription",
+    "silenceSuggestions",
+    "zoom",
+    "crop",
+    "projectAudio",
+    "localLibraryRecovery",
+    "publicationSurface",
+    "checks",
+  ]) {
+    if (
+      error.startsWith(`${section}.`) ||
+      error.startsWith(`${section}[`) ||
+      error.startsWith(`${section} `)
+    ) {
+      return section;
+    }
+  }
+  if (
+    /^(?:kind |version |releaseVersion|automatedEvidenceGeneratedAt|automatedEvidencePath|manualSession\.|tester\.|environment\.)/.test(
+      error
+    )
+  ) {
+    return "metadata";
+  }
+  return "other";
+};
+
+const progressCommandForSection = (sectionId) => {
+  if (sectionId === "automation") return "npm run qa:release:auto";
+  if (sectionId === "mediaProbe") {
+    return "npm run qa:release:manual:media -- --json --require-complete --output=release-artifacts/manual-qa-media-probe.json /path/to/all-source-export-and-project-audio-files";
+  }
+  if (sectionId === "sidecarProbe") {
+    return "npm run qa:release:manual:sidecars -- --json --require-complete --output=release-artifacts/manual-qa-sidecar-probe.json /path/to/matched-vtt-transcript-and-project-files";
+  }
+  if (sectionId === "measurementImport") {
+    return "npm run qa:release:manual:measurements -- --json --write";
+  }
+  return `npm run qa:release:manual:progress -- --section=${sectionId}`;
+};
+
+const buildProgressReport = ({ evidencePath, errors, selectedSectionId }) => {
+  const grouped = new Map(MANUAL_QA_PROGRESS_SECTIONS.map(([id]) => [id, []]));
+  for (const error of errors) {
+    grouped.get(progressSectionForError(error)).push(error);
+  }
+  const sections = MANUAL_QA_PROGRESS_SECTIONS.map(
+    ([id, label, workTargets]) => {
+      const sectionErrors = grouped.get(id);
+      return {
+        id,
+        label,
+        workTargets,
+        status: sectionErrors.length === 0 ? "complete" : "incomplete",
+        errorCount: sectionErrors.length,
+        errorSamples: sectionErrors.slice(0, 3),
+      };
+    }
+  );
+  const nextSection = sections.find(
+    (section) => section.status === "incomplete"
+  );
+  const selectedSection = selectedSectionId
+    ? sections.find((section) => section.id === selectedSectionId)
+    : null;
+  return {
+    kind: "sayless.manualQaProgress",
+    status: errors.length === 0 ? "complete" : "incomplete",
+    evidencePath: relative(ROOT, evidencePath),
+    totalErrorCount: errors.length,
+    completedSectionCount: sections.filter(
+      (section) => section.status === "complete"
+    ).length,
+    totalSectionCount: sections.length,
+    nextSection: nextSection
+      ? {
+          id: nextSection.id,
+          label: nextSection.label,
+          workTargets: nextSection.workTargets,
+          errorCount: nextSection.errorCount,
+          command: progressCommandForSection(nextSection.id),
+        }
+      : null,
+    selectedSection: selectedSection
+      ? {
+          id: selectedSection.id,
+          label: selectedSection.label,
+          workTargets: selectedSection.workTargets,
+          status: selectedSection.status,
+          errorCount: selectedSection.errorCount,
+          errors: grouped.get(selectedSection.id),
+        }
+      : null,
+    sections,
+  };
+};
+
+const printProgressReport = (report, { asJson }) => {
+  if (asJson) {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+  console.log(
+    `Manual QA progress: ${report.status} (${
+      report.totalErrorCount
+    } verifier issue${report.totalErrorCount === 1 ? "" : "s"})`
+  );
+  console.log(`Evidence: ${report.evidencePath}`);
+  console.log(
+    `Sections complete: ${report.completedSectionCount}/${report.totalSectionCount}`
+  );
+  if (report.selectedSection) {
+    const section = report.selectedSection;
+    const detail =
+      section.status === "complete"
+        ? "complete"
+        : `${section.errorCount} issue${section.errorCount === 1 ? "" : "s"}`;
+    console.log(`Focused section: ${section.label} (${detail})`);
+    console.log(`Work targets: ${section.workTargets.join(", ")}`);
+    for (const error of section.errors) console.log(`  - ${error}`);
+    if (report.nextSection) {
+      console.log(
+        `Next section: ${report.nextSection.label} (${
+          report.nextSection.errorCount
+        } issue${report.nextSection.errorCount === 1 ? "" : "s"})`
+      );
+      console.log(`Work targets: ${report.nextSection.workTargets.join(", ")}`);
+      console.log(`Next command: ${report.nextSection.command}`);
+    }
+    return;
+  }
+  for (const section of report.sections) {
+    const detail =
+      section.status === "complete"
+        ? "complete"
+        : `${section.errorCount} issue${section.errorCount === 1 ? "" : "s"}`;
+    console.log(`  - ${section.label}: ${detail}`);
+    for (const error of section.errorSamples) console.log(`      ${error}`);
+  }
+  if (report.nextSection) {
+    console.log(
+      `Next section: ${report.nextSection.label} (${
+        report.nextSection.errorCount
+      } issue${report.nextSection.errorCount === 1 ? "" : "s"})`
+    );
+    console.log(`Work targets: ${report.nextSection.workTargets.join(", ")}`);
+    console.log(`Next command: ${report.nextSection.command}`);
+  }
+};
+
 const isIsoDate = (value) =>
   typeof value === "string" &&
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value) &&
@@ -779,6 +1223,251 @@ const readJson = (path, label, errors) => {
 const resolveRootPath = (path) =>
   isAbsolute(path) ? path : resolve(ROOT, path);
 const isCanonicalRelativePath = (value, expected) => value === expected;
+const isSha256 = (value) =>
+  typeof value === "string" && /^[0-9a-f]{64}$/i.test(value);
+
+const validateProbeReportTimestamp = ({
+  label,
+  report,
+  automatedEvidenceGeneratedAtMs,
+  testedAtMs,
+  errors,
+}) => {
+  if (!isIsoDate(report?.generatedAt)) {
+    errors.push(`${label} generatedAt must be an ISO UTC timestamp.`);
+    return;
+  }
+  const generatedAtMs = timestampMs(report.generatedAt);
+  if (
+    automatedEvidenceGeneratedAtMs !== null &&
+    generatedAtMs < automatedEvidenceGeneratedAtMs
+  ) {
+    errors.push(`${label} must be generated after automated QA evidence.`);
+  }
+  if (testedAtMs !== null && generatedAtMs > testedAtMs) {
+    errors.push(`${label} must be generated at or before testedAt.`);
+  }
+  if (generatedAtMs > Date.now() + 5 * 60 * 1000) {
+    errors.push(`${label} generatedAt must not be in the future.`);
+  }
+};
+
+const validateProbeFileIdentities = (label, report, errors) => {
+  if (!Array.isArray(report?.files) || report.files.length < 1) {
+    errors.push(`${label} files must contain at least one inspected file.`);
+    return null;
+  }
+  if (report.fileCount !== report.files.length) {
+    errors.push(`${label} fileCount must match files.length.`);
+  }
+  const filesByName = new Map();
+  for (const [index, file] of report.files.entries()) {
+    const prefix = `${label} files[${index}]`;
+    if (!nonEmptyString(file?.fileName)) {
+      errors.push(`${prefix}.fileName is required.`);
+      continue;
+    }
+    if (filesByName.has(file.fileName)) {
+      errors.push(`${prefix}.fileName must be unique within the report.`);
+    }
+    filesByName.set(file.fileName, file);
+    if (!Number.isSafeInteger(file.byteSize) || file.byteSize < 1) {
+      errors.push(`${prefix}.byteSize must be a positive integer.`);
+    }
+    if (!isSha256(file.sha256)) {
+      errors.push(`${prefix}.sha256 must be a 64-character SHA-256.`);
+    }
+    if (!nonEmptyString(file.format)) {
+      errors.push(`${prefix}.format is required.`);
+    }
+  }
+  return filesByName;
+};
+
+const validateProbeReports = ({
+  evidence,
+  automatedEvidenceGeneratedAtMs,
+  testedAtMs,
+  errors,
+}) => {
+  const loadReport = ({ field, expectedPath, absolutePath, label }) => {
+    const configuredPath = evidence?.probeReports?.[field];
+    if (!nonEmptyString(configuredPath)) {
+      errors.push(`probeReports.${field} is required.`);
+      return null;
+    }
+    if (
+      !isCanonicalRelativePath(configuredPath, expectedPath) ||
+      resolveRootPath(configuredPath) !== absolutePath
+    ) {
+      errors.push(`probeReports.${field} must point to ${expectedPath}.`);
+      return null;
+    }
+    if (!existsSync(absolutePath)) {
+      errors.push(`probeReports.${field} does not exist: ${expectedPath}`);
+      return null;
+    }
+    const report = readJson(absolutePath, label, errors);
+    if (!report) return null;
+    if (report.reportPath !== expectedPath) {
+      errors.push(`${label} reportPath must be ${expectedPath}.`);
+    }
+    if (report.requireComplete !== true) {
+      errors.push(`${label} requireComplete must be true.`);
+    }
+    validateProbeReportTimestamp({
+      label,
+      report,
+      automatedEvidenceGeneratedAtMs,
+      testedAtMs,
+      errors,
+    });
+    return report;
+  };
+
+  const media = loadReport({
+    field: "media",
+    expectedPath: MEDIA_PROBE_REPORT_RELATIVE_PATH,
+    absolutePath: DEFAULT_MEDIA_PROBE_REPORT_PATH,
+    label: "manual QA media probe report",
+  });
+  let mediaFilesByName = null;
+  if (media) {
+    if (media.kind !== "sayless.manualQaMediaProbe") {
+      errors.push(
+        'manual QA media probe report kind must be "sayless.manualQaMediaProbe".'
+      );
+    }
+    if (media.status !== "measured") {
+      errors.push('manual QA media probe report status must be "measured".');
+    }
+    if (media?.releaseCoverage?.status !== "measurable-set-complete") {
+      errors.push(
+        'manual QA media probe report releaseCoverage.status must be "measurable-set-complete".'
+      );
+    }
+    if (
+      media?.releaseCoverage?.passedCheckCount !==
+      media?.releaseCoverage?.totalCheckCount
+    ) {
+      errors.push(
+        "manual QA media probe report must pass every measurable release coverage check."
+      );
+    }
+    mediaFilesByName = validateProbeFileIdentities(
+      "manual QA media probe report",
+      media,
+      errors
+    );
+    for (const file of media.files || []) {
+      if (file.recordingFields) {
+        if (
+          file.recordingFields.fileName !== file.fileName ||
+          file.recordingFields.sha256 !== file.sha256
+        ) {
+          errors.push(
+            `manual QA media probe report ${file.fileName} recordingFields identity must match measured metadata.`
+          );
+        }
+        for (const field of ["width", "height"]) {
+          if (file.recordingFields[field] !== file.video?.[field]) {
+            errors.push(
+              `manual QA media probe report ${file.fileName} recordingFields.${field} must match measured metadata.`
+            );
+          }
+        }
+        if (file.recordingFields.byteSize !== file.byteSize) {
+          errors.push(
+            `manual QA media probe report ${file.fileName} recordingFields.byteSize must match measured metadata.`
+          );
+        }
+        if (file.recordingFields.durationSeconds !== file.durationSeconds) {
+          errors.push(
+            `manual QA media probe report ${file.fileName} recordingFields.durationSeconds must match measured metadata.`
+          );
+        }
+        if (file.recordingFields.container !== file.format) {
+          errors.push(
+            `manual QA media probe report ${file.fileName} recordingFields.container must match measured format.`
+          );
+        }
+      }
+      if (file.projectAudioInputFields) {
+        for (const field of [
+          "format",
+          "fileName",
+          "sha256",
+          "byteSize",
+          "durationSeconds",
+        ]) {
+          if (file.projectAudioInputFields[field] !== file[field]) {
+            errors.push(
+              `manual QA media probe report ${file.fileName} projectAudioInputFields.${field} must match measured metadata.`
+            );
+          }
+        }
+        if (
+          file.projectAudioInputFields.channels !== file.audio?.channels ||
+          file.projectAudioInputFields.sampleRate !== file.audio?.sampleRate
+        ) {
+          errors.push(
+            `manual QA media probe report ${file.fileName} projectAudioInputFields audio metadata must match measured metadata.`
+          );
+        }
+      }
+    }
+  }
+
+  const sidecars = loadReport({
+    field: "sidecars",
+    expectedPath: SIDECAR_PROBE_REPORT_RELATIVE_PATH,
+    absolutePath: DEFAULT_SIDECAR_PROBE_REPORT_PATH,
+    label: "manual QA sidecar probe report",
+  });
+  let sidecarFilesByName = null;
+  if (sidecars) {
+    if (sidecars.kind !== "sayless.manualQaSidecarProbe") {
+      errors.push(
+        'manual QA sidecar probe report kind must be "sayless.manualQaSidecarProbe".'
+      );
+    }
+    if (sidecars.status !== "inspected") {
+      errors.push('manual QA sidecar probe report status must be "inspected".');
+    }
+    if (sidecars?.coverage?.status !== "structurally-complete") {
+      errors.push(
+        'manual QA sidecar probe report coverage.status must be "structurally-complete".'
+      );
+    }
+    if (
+      !Number.isSafeInteger(sidecars?.coverage?.completeSetCount) ||
+      sidecars.coverage.completeSetCount < 1
+    ) {
+      errors.push(
+        "manual QA sidecar probe report must contain a matched structurally complete set."
+      );
+    }
+    sidecarFilesByName = validateProbeFileIdentities(
+      "manual QA sidecar probe report",
+      sidecars,
+      errors
+    );
+    for (const file of sidecars.files || []) {
+      if (
+        file.exportFields?.fileName !== file.fileName ||
+        file.exportFields?.format !== file.format ||
+        file.exportFields?.byteSize !== file.byteSize ||
+        file.exportFields?.sha256 !== file.sha256
+      ) {
+        errors.push(
+          `manual QA sidecar probe report ${file.fileName} exportFields must match inspected metadata.`
+        );
+      }
+    }
+  }
+
+  return { mediaFilesByName, sidecarFilesByName };
+};
 
 const isExternalHttpUrl = (value) => {
   if (!nonEmptyString(value)) return false;
@@ -1263,6 +1952,48 @@ const validateAutomatedEvidence = (evidence, errors) => {
       "automated QA evidence build.path must be the canonical relative build path."
     );
   }
+  if (!/^[a-p]{32}$/.test(automatedEvidence?.builtExtension?.id || "")) {
+    errors.push(
+      "automated QA evidence builtExtension.id must be a browser-observed 32-character Chrome extension id."
+    );
+  }
+  if (automatedEvidence?.builtExtension?.buildPath !== "build") {
+    errors.push(
+      "automated QA evidence builtExtension.buildPath must be the canonical relative build path."
+    );
+  }
+  if (automatedEvidence?.builtExtension?.cleanChromeProfile !== true) {
+    errors.push(
+      "automated QA evidence builtExtension.cleanChromeProfile must be true."
+    );
+  }
+  if (!isIsoDate(automatedEvidence?.builtExtension?.observedAt)) {
+    errors.push(
+      "automated QA evidence builtExtension.observedAt must be an ISO UTC timestamp."
+    );
+  } else {
+    const builtExtensionObservedAtMs = Date.parse(
+      automatedEvidence.builtExtension.observedAt
+    );
+    if (
+      (automatedStartedAtMs !== null &&
+        builtExtensionObservedAtMs < automatedStartedAtMs) ||
+      (automatedGeneratedAtMs !== null &&
+        builtExtensionObservedAtMs > automatedGeneratedAtMs)
+    ) {
+      errors.push(
+        "automated QA evidence builtExtension.observedAt must fall within the automated QA run window."
+      );
+    }
+  }
+  if (
+    !Number.isInteger(automatedEvidence?.builtExtension?.summaryCount) ||
+    automatedEvidence.builtExtension.summaryCount <= 0
+  ) {
+    errors.push(
+      "automated QA evidence builtExtension.summaryCount must be a positive integer."
+    );
+  }
   if (
     !Number.isFinite(automatedEvidence?.bundledWhisper?.bytes) ||
     automatedEvidence.bundledWhisper.bytes <= 0
@@ -1427,6 +2158,81 @@ const validate = (evidence) => {
     errors.push("automatedEvidencePath is required.");
   }
   const automatedEvidence = validateAutomatedEvidence(evidence, errors);
+  const manualSession = evidence?.manualSession;
+  if (manualSession?.kind !== "sayless.manualQaSessionProvenance") {
+    errors.push(
+      'manualSession.kind must be "sayless.manualQaSessionProvenance".'
+    );
+  }
+  if (!isIsoDate(manualSession?.profileCreatedAt)) {
+    errors.push("manualSession.profileCreatedAt must be an ISO UTC timestamp.");
+  }
+  const profileCreatedAtMs = timestampMs(manualSession?.profileCreatedAt);
+  if (
+    profileCreatedAtMs !== null &&
+    automatedEvidenceGeneratedAtMs !== null &&
+    profileCreatedAtMs < automatedEvidenceGeneratedAtMs
+  ) {
+    errors.push(
+      "manualSession.profileCreatedAt must be at or after automatedEvidenceGeneratedAt."
+    );
+  }
+  if (
+    profileCreatedAtMs !== null &&
+    testedAtMs !== null &&
+    profileCreatedAtMs > testedAtMs
+  ) {
+    errors.push(
+      "manualSession.profileCreatedAt must be at or before testedAt."
+    );
+  }
+  if (
+    profileCreatedAtMs !== null &&
+    profileCreatedAtMs > Date.now() + 5 * 60 * 1000
+  ) {
+    errors.push("manualSession.profileCreatedAt must not be in the future.");
+  }
+  const manualSessionMatches = (field, expected, label = field) => {
+    if (manualSession?.[field] !== expected) {
+      errors.push(`manualSession.${field} must match ${label}.`);
+    }
+  };
+  manualSessionMatches(
+    "releaseVersion",
+    evidence?.releaseVersion,
+    "releaseVersion"
+  );
+  manualSessionMatches(
+    "automatedEvidenceGeneratedAt",
+    evidence?.automatedEvidenceGeneratedAt,
+    "automatedEvidenceGeneratedAt"
+  );
+  manualSessionMatches(
+    "buildSha256",
+    automatedEvidence?.build?.sha256,
+    "automated QA build.sha256"
+  );
+  manualSessionMatches(
+    "buildFileCount",
+    automatedEvidence?.build?.fileCount,
+    "automated QA build.fileCount"
+  );
+  manualSessionMatches(
+    "buildBytes",
+    automatedEvidence?.build?.bytes,
+    "automated QA build.bytes"
+  );
+  manualSessionMatches(
+    "unpackedExtensionId",
+    automatedEvidence?.builtExtension?.id,
+    "automated QA builtExtension.id"
+  );
+  const { mediaFilesByName, sidecarFilesByName } = validateProbeReports({
+    evidence,
+    automatedEvidenceGeneratedAtMs,
+    testedAtMs,
+    errors,
+  });
   if (!nonEmptyString(evidence?.tester?.name)) {
     errors.push("tester.name is required.");
   } else {
@@ -1496,12 +2302,36 @@ const validate = (evidence) => {
         "environment.unpackedExtensionId must be a 32-character Chrome extension id."
       );
     }
+    if (
+      /^[a-p]{32}$/.test(automatedEvidence?.builtExtension?.id || "") &&
+      evidence.environment.unpackedExtensionId !==
+        automatedEvidence.builtExtension.id
+    ) {
+      errors.push(
+        `environment.unpackedExtensionId must match the browser-observed automated extension id (${automatedEvidence.builtExtension.id}).`
+      );
+    }
   }
   if (evidence?.environment?.networkDisabledForOfflineTranscription !== true) {
     errors.push(
       "environment.networkDisabledForOfflineTranscription must be true."
     );
   }
+  manualSessionMatches(
+    "unpackedExtensionId",
+    evidence?.environment?.unpackedExtensionId,
+    "environment.unpackedExtensionId"
+  );
+  manualSessionMatches(
+    "operatingSystem",
+    evidence?.environment?.os,
+    "environment.os"
+  );
+  manualSessionMatches(
+    "browserVersion",
+    evidence?.environment?.chromeVersion,
+    "environment.chromeVersion"
+  );
 
   const recordings = Array.isArray(evidence?.recordings)
     ? evidence.recordings
@@ -1513,7 +2343,7 @@ const validate = (evidence) => {
   const containers = new Set();
   const sources = new Set();
   const seenRecordingIds = new Set();
-  let hasLongRecording = false;
+  const longLargeRecordingIds = new Set();
   for (const [index, recording] of recordings.entries()) {
     if (!nonEmptyString(recording?.id)) {
       errors.push(`recordings[${index}].id is required.`);
@@ -1523,6 +2353,20 @@ const validate = (evidence) => {
         errors.push(`recordings[${index}].id must be unique.`);
       }
       seenRecordingIds.add(recording.id);
+    }
+    if (!nonEmptyString(recording?.fileName)) {
+      errors.push(`recordings[${index}].fileName is required.`);
+    } else {
+      rejectPlaceholder(
+        `recordings[${index}].fileName`,
+        recording.fileName,
+        errors
+      );
+    }
+    if (!isSha256(recording?.sha256)) {
+      errors.push(
+        `recordings[${index}].sha256 must be a 64-character source-file SHA-256.`
+      );
     }
     if (!nonEmptyString(recording?.source)) {
       errors.push(`recordings[${index}].source is required.`);
@@ -1544,8 +2388,28 @@ const validate = (evidence) => {
       recording.durationSeconds < 30
     ) {
       errors.push(`recordings[${index}].durationSeconds must be at least 30.`);
-    } else if (recording.durationSeconds >= 180) {
-      hasLongRecording = true;
+    }
+    if (!Number.isSafeInteger(recording?.byteSize) || recording.byteSize < 1) {
+      errors.push(
+        `recordings[${index}].byteSize must be a positive integer source-file byte count.`
+      );
+    }
+    for (const dimension of ["width", "height"]) {
+      if (
+        !Number.isSafeInteger(recording?.[dimension]) ||
+        recording[dimension] < 1
+      ) {
+        errors.push(
+          `recordings[${index}].${dimension} must be a positive integer source-video dimension.`
+        );
+      }
+    }
+    if (
+      recording.durationSeconds >= MIN_LONG_RECORDING_DURATION_SECONDS &&
+      recording.byteSize >= MIN_LARGE_RECORDING_BYTE_SIZE &&
+      nonEmptyString(recording.id)
+    ) {
+      longLargeRecordingIds.add(recording.id);
     }
     if (!nonEmptyString(recording?.container)) {
       errors.push(`recordings[${index}].container is required.`);
@@ -1572,14 +2436,18 @@ const validate = (evidence) => {
       );
       speakerProfiles.add(recording.speakerProfile.toLowerCase());
     }
-    if (nonEmptyString(recording?.microphone)) {
+    if (!nonEmptyString(recording?.microphone)) {
+      errors.push(`recordings[${index}].microphone is required.`);
+    } else {
       rejectPlaceholder(
         `recordings[${index}].microphone`,
         recording.microphone,
         errors
       );
     }
-    if (nonEmptyString(recording?.noiseProfile)) {
+    if (!nonEmptyString(recording?.noiseProfile)) {
+      errors.push(`recordings[${index}].noiseProfile is required.`);
+    } else {
       rejectPlaceholder(
         `recordings[${index}].noiseProfile`,
         recording.noiseProfile,
@@ -1594,6 +2462,47 @@ const validate = (evidence) => {
         errors.push(
           `recordings[${index}].notes must describe observed, confirmed, verified, recorded, inspected, tested, opened, or reviewed local/offline recording behavior.`
         );
+      }
+    }
+    if (mediaFilesByName && nonEmptyString(recording?.fileName)) {
+      const measured = mediaFilesByName.get(recording.fileName);
+      if (!measured) {
+        errors.push(
+          `recordings[${index}].fileName must match a file in probeReports.media.`
+        );
+      } else {
+        const measuredFields = measured.recordingFields;
+        if (!measuredFields) {
+          errors.push(
+            `recordings[${index}] must match an MP4/WebM recording candidate in probeReports.media.`
+          );
+        } else {
+          for (const field of [
+            "durationSeconds",
+            "byteSize",
+            "width",
+            "height",
+          ]) {
+            if (recording?.[field] !== measuredFields[field]) {
+              errors.push(
+                `recordings[${index}].${field} must match probeReports.media for ${recording.fileName}.`
+              );
+            }
+          }
+          if (
+            String(recording?.container || "").toLowerCase() !==
+            measuredFields.container
+          ) {
+            errors.push(
+              `recordings[${index}].container must match probeReports.media for ${recording.fileName}.`
+            );
+          }
+        }
+        if (recording?.sha256 !== measured.sha256) {
+          errors.push(
+            `recordings[${index}].sha256 must match probeReports.media for ${recording.fileName}.`
+          );
+        }
       }
     }
   }
@@ -1616,9 +2525,9 @@ const validate = (evidence) => {
       "recordings must include at least one desktop/screen/window recording."
     );
   }
-  if (!hasLongRecording) {
+  if (longLargeRecordingIds.size === 0) {
     errors.push(
-      "recordings must include at least one recording of 180 seconds or longer."
+      "recordings must include at least one recording that is both 180 seconds or longer and at least 25 MiB."
     );
   }
 
@@ -1673,6 +2582,19 @@ const validate = (evidence) => {
         );
       }
     }
+    if (
+      !Number.isSafeInteger(exportedFile?.byteSize) ||
+      exportedFile.byteSize < 1
+    ) {
+      errors.push(
+        `exports.files[${index}].byteSize must be a positive integer export-file byte count.`
+      );
+    }
+    if (!isSha256(exportedFile?.sha256)) {
+      errors.push(
+        `exports.files[${index}].sha256 must be a 64-character export-file SHA-256.`
+      );
+    }
     if (!nonEmptyString(exportedFile?.sourceRecordingId)) {
       errors.push(`exports.files[${index}].sourceRecordingId is required.`);
     } else {
@@ -1701,6 +2623,34 @@ const validate = (evidence) => {
         errors.push(
           `exports.files[${index}].notes must describe opening, playing, importing, decoding, previewing, viewing, loading, listening to, or inspecting the export.`
         );
+      }
+    }
+    if (nonEmptyString(exportedFile?.fileName)) {
+      const usesSidecarReport = [
+        "vtt",
+        "transcript-json",
+        "sayless-project-json",
+      ].includes(format);
+      const reportFiles = usesSidecarReport
+        ? sidecarFilesByName
+        : mediaFilesByName;
+      if (reportFiles) {
+        const measured = reportFiles.get(exportedFile.fileName);
+        const reportField = usesSidecarReport ? "sidecars" : "media";
+        if (!measured) {
+          errors.push(
+            `exports.files[${index}].fileName must match a file in probeReports.${reportField}.`
+          );
+        } else {
+          for (const field of ["byteSize", "sha256", "format"]) {
+            const actual = field === "format" ? format : exportedFile?.[field];
+            if (actual !== measured[field]) {
+              errors.push(
+                `exports.files[${index}].${field} must match probeReports.${reportField} for ${exportedFile.fileName}.`
+              );
+            }
+          }
+        }
       }
     }
   }
@@ -1732,6 +2682,12 @@ const validate = (evidence) => {
     if (!recordingIds.has(exportWorkflow.cancelRetryRecordingId)) {
       errors.push(
         "exports.workflow.cancelRetryRecordingId must reference an id from recordings."
+      );
+    } else if (
+      !longLargeRecordingIds.has(exportWorkflow.cancelRetryRecordingId)
+    ) {
+      errors.push(
+        "exports.workflow.cancelRetryRecordingId must reference a listed recording that is both 180 seconds or longer and at least 25 MiB."
       );
     }
   }
@@ -2019,6 +2975,43 @@ const validate = (evidence) => {
     silenceSuggestions.recordingIds,
     2
   );
+  const silenceRecordingIds = new Set(
+    Array.isArray(silenceSuggestions.recordingIds)
+      ? silenceSuggestions.recordingIds.filter((id) => recordingIds.has(id))
+      : []
+  );
+  const silenceRecordings = recordings.filter((recording) =>
+    silenceRecordingIds.has(recording?.id)
+  );
+  const linkedSilenceContainers = new Set(
+    silenceRecordings.map((recording) =>
+      String(recording.container).toLowerCase()
+    )
+  );
+  if (
+    ![...linkedSilenceContainers].some((container) => /webm/.test(container))
+  ) {
+    errors.push(
+      "silenceSuggestions.recordingIds must reference at least one listed WebM recording."
+    );
+  }
+  if (
+    ![...linkedSilenceContainers].some((container) => /mp4/.test(container))
+  ) {
+    errors.push(
+      "silenceSuggestions.recordingIds must reference at least one listed MP4 recording."
+    );
+  }
+  const linkedNoiseProfiles = new Set(
+    silenceRecordings
+      .map((recording) => String(recording.noiseProfile || "").toLowerCase())
+      .filter(Boolean)
+  );
+  if (linkedNoiseProfiles.size < 2) {
+    errors.push(
+      "silenceSuggestions.recordingIds must reference recordings with at least two distinct noise profiles."
+    );
+  }
   const silenceContainers = new Set(
     Array.isArray(silenceSuggestions.codecsOrContainers)
       ? silenceSuggestions.codecsOrContainers.map((value) =>
@@ -2049,6 +3042,36 @@ const validate = (evidence) => {
     silenceSuggestions.ignoredNoiseRanges,
     1
   );
+  const suggestedRangeRecordingIds = new Set(
+    Array.isArray(silenceSuggestions.suggestedQuietRanges)
+      ? silenceSuggestions.suggestedQuietRanges
+          .map((range) => range?.recordingId)
+          .filter((id) => silenceRecordingIds.has(id))
+      : []
+  );
+  for (const recordingId of silenceRecordingIds) {
+    if (!suggestedRangeRecordingIds.has(recordingId)) {
+      errors.push(
+        `silenceSuggestions.suggestedQuietRanges must include an observed range for referenced recording ${recordingId}.`
+      );
+    }
+  }
+  for (const rangeKey of ["suggestedQuietRanges", "ignoredNoiseRanges"]) {
+    const ranges = Array.isArray(silenceSuggestions[rangeKey])
+      ? silenceSuggestions[rangeKey]
+      : [];
+    for (const [index, range] of ranges.entries()) {
+      if (
+        nonEmptyString(range?.recordingId) &&
+        recordingIds.has(range.recordingId) &&
+        !silenceRecordingIds.has(range.recordingId)
+      ) {
+        errors.push(
+          `silenceSuggestions.${rangeKey}[${index}].recordingId must also appear in silenceSuggestions.recordingIds.`
+        );
+      }
+    }
+  }
   if (!usefulString(silenceSuggestions.notes)) {
     errors.push(
       "silenceSuggestions.notes must describe real-codec/noise behavior."
@@ -2062,24 +3085,93 @@ const validate = (evidence) => {
   }
 
   const zoom = evidence?.zoom || {};
-  validateRecordingRefs("zoom.recordingId", [zoom.recordingId], 1);
-  for (const key of [
-    "sourceHadClickMetadata",
-    "previewVerified",
-    "mp4ExportVerified",
-    "keepRemoveVerified",
-    "persistedAfterReopen",
-  ]) {
-    if (zoom[key] !== true) {
-      errors.push(`zoom.${key} must be true.`);
+  validateRecordingRefs("zoom.recordingIds", zoom.recordingIds, 2);
+  const zoomRecordingIds = new Set(
+    Array.isArray(zoom.recordingIds)
+      ? zoom.recordingIds.filter((id) => recordingIds.has(id))
+      : []
+  );
+  const zoomRecordings = recordings.filter((recording) =>
+    zoomRecordingIds.has(recording?.id)
+  );
+  for (const recording of zoomRecordings) {
+    if (!/tab|browser|region/i.test(String(recording.source))) {
+      errors.push(
+        `zoom.recordingIds must reference tab, browser, or region recordings; ${recording.id} uses ${recording.source}.`
+      );
     }
   }
-  if (!usefulString(zoom.exportInspection)) {
+  const zoomDimensionPairs = new Set(
+    zoomRecordings.map((recording) => `${recording.width}x${recording.height}`)
+  );
+  const zoomAspectRatios = new Set(
+    zoomRecordings.map((recording) =>
+      (Number(recording.width) / Number(recording.height)).toFixed(2)
+    )
+  );
+  if (zoomDimensionPairs.size < 2 || zoomAspectRatios.size < 2) {
     errors.push(
-      "zoom.exportInspection must describe how the MP4 export was inspected for zoom framing."
+      "zoom.recordingIds must reference recordings with at least two distinct dimension pairs and aspect ratios."
     );
-  } else {
-    rejectPlaceholder("zoom.exportInspection", zoom.exportInspection, errors);
+  }
+  const zoomObservations = Array.isArray(zoom.observations)
+    ? zoom.observations
+    : [];
+  if (zoomObservations.length < 2) {
+    errors.push("zoom.observations must include both referenced recordings.");
+  }
+  const observedZoomRecordingIds = new Set();
+  for (const [index, observation] of zoomObservations.entries()) {
+    const prefix = `zoom.observations[${index}]`;
+    if (!nonEmptyString(observation?.recordingId)) {
+      errors.push(`${prefix}.recordingId is required.`);
+    } else if (!zoomRecordingIds.has(observation.recordingId)) {
+      errors.push(
+        `${prefix}.recordingId must reference an id from zoom.recordingIds.`
+      );
+    } else if (observedZoomRecordingIds.has(observation.recordingId)) {
+      errors.push(
+        `${prefix}.recordingId must be unique within zoom.observations.`
+      );
+    } else {
+      observedZoomRecordingIds.add(observation.recordingId);
+    }
+    for (const key of [
+      "sourceHadClickMetadata",
+      "previewVerified",
+      "mp4ExportVerified",
+      "keepRemoveVerified",
+      "persistedAfterReopen",
+    ]) {
+      if (observation?.[key] !== true) {
+        errors.push(`${prefix}.${key} must be true.`);
+      }
+    }
+    if (!usefulString(observation?.exportInspection)) {
+      errors.push(
+        `${prefix}.exportInspection must describe how the MP4 export was inspected for zoom framing.`
+      );
+    } else {
+      rejectPlaceholder(
+        `${prefix}.exportInspection`,
+        observation.exportInspection,
+        errors
+      );
+    }
+    if (!usefulString(observation?.notes)) {
+      errors.push(
+        `${prefix}.notes must describe zoom suggestion, preview, reopen, and export behavior.`
+      );
+    } else {
+      rejectPlaceholder(`${prefix}.notes`, observation.notes, errors);
+    }
+  }
+  for (const recordingId of zoomRecordingIds) {
+    if (!observedZoomRecordingIds.has(recordingId)) {
+      errors.push(
+        `zoom.observations must include referenced recording ${recordingId}.`
+      );
+    }
   }
   if (!usefulString(zoom.notes)) {
     errors.push(
@@ -2087,6 +3179,351 @@ const validate = (evidence) => {
     );
   } else {
     rejectPlaceholder("zoom.notes", zoom.notes, errors);
+  }
+
+  const crop = evidence?.crop || {};
+  validateRecordingRefs("crop.recordingIds", crop.recordingIds, 2);
+  const cropRecordingIds = new Set(
+    Array.isArray(crop.recordingIds)
+      ? crop.recordingIds.filter((id) => recordingIds.has(id))
+      : []
+  );
+  const cropRecordings = recordings.filter((recording) =>
+    cropRecordingIds.has(recording?.id)
+  );
+  const cropDimensionPairs = new Set(
+    cropRecordings.map((recording) => `${recording.width}x${recording.height}`)
+  );
+  const cropAspectRatios = new Set(
+    cropRecordings.map((recording) =>
+      (Number(recording.width) / Number(recording.height)).toFixed(2)
+    )
+  );
+  if (cropDimensionPairs.size < 2 || cropAspectRatios.size < 2) {
+    errors.push(
+      "crop.recordingIds must reference recordings with at least two distinct dimension pairs and aspect ratios."
+    );
+  }
+  const cropObservations = Array.isArray(crop.observations)
+    ? crop.observations
+    : [];
+  if (cropObservations.length < 2) {
+    errors.push("crop.observations must include both referenced recordings.");
+  }
+  const observedCropRecordingIds = new Set();
+  for (const [index, observation] of cropObservations.entries()) {
+    const prefix = `crop.observations[${index}]`;
+    const recording = recordings.find(
+      (candidate) => candidate?.id === observation?.recordingId
+    );
+    if (!nonEmptyString(observation?.recordingId)) {
+      errors.push(`${prefix}.recordingId is required.`);
+    } else if (!cropRecordingIds.has(observation.recordingId)) {
+      errors.push(
+        `${prefix}.recordingId must reference an id from crop.recordingIds.`
+      );
+    } else if (observedCropRecordingIds.has(observation.recordingId)) {
+      errors.push(
+        `${prefix}.recordingId must be unique within crop.observations.`
+      );
+    } else {
+      observedCropRecordingIds.add(observation.recordingId);
+    }
+    const bounds = observation?.crop || {};
+    const xRatio = bounds.xRatio;
+    const yRatio = bounds.yRatio;
+    const widthRatio = bounds.widthRatio;
+    const heightRatio = bounds.heightRatio;
+    const validBounds =
+      Number.isFinite(xRatio) &&
+      Number.isFinite(yRatio) &&
+      Number.isFinite(widthRatio) &&
+      Number.isFinite(heightRatio) &&
+      xRatio >= 0 &&
+      yRatio >= 0 &&
+      widthRatio > 0 &&
+      heightRatio > 0 &&
+      xRatio + widthRatio <= 1.0001 &&
+      yRatio + heightRatio <= 1.0001;
+    if (!validBounds) {
+      errors.push(
+        `${prefix}.crop must contain normalized in-bounds xRatio, yRatio, widthRatio, and heightRatio values.`
+      );
+    } else {
+      const touchesEdge =
+        xRatio <= 0.001 ||
+        yRatio <= 0.001 ||
+        Math.abs(xRatio + widthRatio - 1) <= 0.001 ||
+        Math.abs(yRatio + heightRatio - 1) <= 0.001;
+      if (!touchesEdge) {
+        errors.push(`${prefix}.crop must exercise at least one source edge.`);
+      }
+    }
+    if (
+      !Number.isSafeInteger(observation?.exportWidth) ||
+      observation.exportWidth < 1 ||
+      !Number.isSafeInteger(observation?.exportHeight) ||
+      observation.exportHeight < 1
+    ) {
+      errors.push(
+        `${prefix}.exportWidth and exportHeight must be positive integer output dimensions.`
+      );
+    } else if (recording && validBounds) {
+      const expectedAspect =
+        (recording.width * widthRatio) / (recording.height * heightRatio);
+      const exportedAspect = observation.exportWidth / observation.exportHeight;
+      if (
+        !Number.isFinite(expectedAspect) ||
+        Math.abs(exportedAspect - expectedAspect) /
+          Math.max(expectedAspect, 0.0001) >
+          0.03
+      ) {
+        errors.push(
+          `${prefix} exported dimensions must match the normalized crop aspect ratio within 3%.`
+        );
+      }
+    }
+    for (const key of [
+      "nativePlaybackControlsVerified",
+      "edgeCropVerified",
+      "previewVerified",
+      "mp4ExportVerified",
+      "persistedAfterReopen",
+      "sourceBlobUnchanged",
+    ]) {
+      if (observation?.[key] !== true) {
+        errors.push(`${prefix}.${key} must be true.`);
+      }
+    }
+    if (!usefulString(observation?.exportInspection)) {
+      errors.push(
+        `${prefix}.exportInspection must describe inspected crop bounds and MP4 output dimensions.`
+      );
+    } else {
+      rejectPlaceholder(
+        `${prefix}.exportInspection`,
+        observation.exportInspection,
+        errors
+      );
+    }
+    if (!usefulString(observation?.notes)) {
+      errors.push(
+        `${prefix}.notes must describe native controls, edge crop, preview, reopen, and non-destructive behavior.`
+      );
+    } else {
+      rejectPlaceholder(`${prefix}.notes`, observation.notes, errors);
+    }
+  }
+  for (const recordingId of cropRecordingIds) {
+    if (!observedCropRecordingIds.has(recordingId)) {
+      errors.push(
+        `crop.observations must include referenced recording ${recordingId}.`
+      );
+    }
+  }
+  if (!usefulString(crop.notes)) {
+    errors.push(
+      "crop.notes must describe non-destructive edge-crop preview and export behavior across varied dimensions."
+    );
+  } else {
+    rejectPlaceholder("crop.notes", crop.notes, errors);
+  }
+
+  const projectAudio = evidence?.projectAudio || {};
+  if (!nonEmptyString(projectAudio.recordingId)) {
+    errors.push("projectAudio.recordingId is required.");
+  } else {
+    rejectPlaceholder(
+      "projectAudio.recordingId",
+      projectAudio.recordingId,
+      errors
+    );
+    if (!recordingIds.has(projectAudio.recordingId)) {
+      errors.push(
+        "projectAudio.recordingId must reference an id from recordings."
+      );
+    } else if (!longLargeRecordingIds.has(projectAudio.recordingId)) {
+      errors.push(
+        "projectAudio.recordingId must reference a listed recording that is both 180 seconds or longer and at least 25 MiB."
+      );
+    }
+    if (projectAudio.recordingId !== exportWorkflow.cancelRetryRecordingId) {
+      errors.push(
+        "projectAudio.recordingId must match exports.workflow.cancelRetryRecordingId so cancellation is proven on the long project-audio recording."
+      );
+    }
+  }
+  const projectAudioInputs = Array.isArray(projectAudio.inputs)
+    ? projectAudio.inputs
+    : [];
+  const projectAudioFormats = new Set();
+  for (const [index, input] of projectAudioInputs.entries()) {
+    const prefix = `projectAudio.inputs[${index}]`;
+    const format = String(input?.format || "").toLowerCase();
+    if (!REQUIRED_PROJECT_AUDIO_FORMATS.includes(format)) {
+      errors.push(`${prefix}.format must be one of wav, m4a, or mp3.`);
+    } else if (projectAudioFormats.has(format)) {
+      errors.push(
+        `${prefix}.format must be unique within projectAudio.inputs.`
+      );
+    } else {
+      projectAudioFormats.add(format);
+    }
+    if (!nonEmptyString(input?.fileName)) {
+      errors.push(`${prefix}.fileName is required.`);
+    } else {
+      rejectPlaceholder(`${prefix}.fileName`, input.fileName, errors);
+      if (
+        PROJECT_AUDIO_FILE_NAME_PATTERNS[format] &&
+        !PROJECT_AUDIO_FILE_NAME_PATTERNS[format].test(input.fileName)
+      ) {
+        errors.push(
+          `${prefix}.fileName must match its declared ${format} format.`
+        );
+      }
+    }
+    if (!isSha256(input?.sha256)) {
+      errors.push(
+        `${prefix}.sha256 must be a 64-character project-audio file SHA-256.`
+      );
+    }
+    for (const [field, minimum] of [
+      ["byteSize", 1],
+      ["durationSeconds", 0.01],
+      ["channels", 1],
+      ["sampleRate", 8000],
+    ]) {
+      const value = input?.[field];
+      const valid =
+        field === "durationSeconds"
+          ? Number.isFinite(value) && value >= minimum
+          : Number.isSafeInteger(value) && value >= minimum;
+      if (!valid) {
+        errors.push(`${prefix}.${field} must be at least ${minimum}.`);
+      }
+    }
+    for (const key of ["decodeVerified", "audiblePreviewVerified"]) {
+      if (input?.[key] !== true) {
+        errors.push(`${prefix}.${key} must be true.`);
+      }
+    }
+    if (!usefulString(input?.notes)) {
+      errors.push(
+        `${prefix}.notes must describe decoded metadata and audible preview behavior.`
+      );
+    } else {
+      rejectPlaceholder(`${prefix}.notes`, input.notes, errors);
+    }
+    if (mediaFilesByName && nonEmptyString(input?.fileName)) {
+      const measured = mediaFilesByName.get(input.fileName);
+      if (!measured) {
+        errors.push(
+          `${prefix}.fileName must match a file in probeReports.media.`
+        );
+      } else if (!measured.projectAudioInputFields) {
+        errors.push(
+          `${prefix} must match a WAV/M4A/MP3 candidate in probeReports.media.`
+        );
+      } else {
+        for (const field of [
+          "format",
+          "fileName",
+          "byteSize",
+          "durationSeconds",
+          "channels",
+          "sampleRate",
+        ]) {
+          const actual = field === "format" ? format : input?.[field];
+          if (actual !== measured.projectAudioInputFields[field]) {
+            errors.push(
+              `${prefix}.${field} must match probeReports.media for ${input.fileName}.`
+            );
+          }
+        }
+        if (input?.sha256 !== measured.sha256) {
+          errors.push(
+            `${prefix}.sha256 must match probeReports.media for ${input.fileName}.`
+          );
+        }
+      }
+    }
+  }
+  for (const format of REQUIRED_PROJECT_AUDIO_FORMATS) {
+    if (!projectAudioFormats.has(format)) {
+      errors.push(`projectAudio.inputs must include ${format}.`);
+    }
+  }
+  const projectAudioPlayback = projectAudio.playback || {};
+  for (const key of [
+    "seekPlayPauseVerified",
+    "reorderedTimelineVerified",
+    "playbackRateVerified",
+    "longRecordingSyncVerified",
+    "mixVerified",
+    "replaceVerified",
+    "loopOnOffVerified",
+    "cancelRetryVerified",
+  ]) {
+    if (projectAudioPlayback[key] !== true) {
+      errors.push(`projectAudio.playback.${key} must be true.`);
+    }
+  }
+  if (!usefulString(projectAudioPlayback.gainPerceptionNotes)) {
+    errors.push(
+      "projectAudio.playback.gainPerceptionNotes must describe perceived mix/replace source and project gain."
+    );
+  } else {
+    rejectPlaceholder(
+      "projectAudio.playback.gainPerceptionNotes",
+      projectAudioPlayback.gainPerceptionNotes,
+      errors
+    );
+    if (!/mix|replace/i.test(projectAudioPlayback.gainPerceptionNotes)) {
+      errors.push(
+        "projectAudio.playback.gainPerceptionNotes must mention mix or replace behavior."
+      );
+    }
+    if (
+      !/gain|volume|loud|audible|level/i.test(
+        projectAudioPlayback.gainPerceptionNotes
+      )
+    ) {
+      errors.push(
+        "projectAudio.playback.gainPerceptionNotes must mention perceived gain, volume, loudness, audibility, or level."
+      );
+    }
+  }
+  const projectAudioPersistence = projectAudio.persistence || {};
+  for (const key of [
+    "reopenVerified",
+    "sourceBlobUnchanged",
+    "duplicatePreviewVerified",
+    "duplicateDeletedOriginalIntact",
+    "sidecarMissingAssetVerified",
+    "relinkHashMatched",
+    "applyEditsCleanupVerified",
+  ]) {
+    if (projectAudioPersistence[key] !== true) {
+      errors.push(`projectAudio.persistence.${key} must be true.`);
+    }
+  }
+  if (!usefulString(projectAudioPersistence.notes)) {
+    errors.push(
+      "projectAudio.persistence.notes must describe reopen, duplicate/delete, sidecar relink, and Apply-edits cleanup behavior."
+    );
+  } else {
+    rejectPlaceholder(
+      "projectAudio.persistence.notes",
+      projectAudioPersistence.notes,
+      errors
+    );
+  }
+  if (!usefulString(projectAudio.notes)) {
+    errors.push(
+      "projectAudio.notes must describe real-input project-audio behavior and remaining risk."
+    );
+  } else {
+    rejectPlaceholder("projectAudio.notes", projectAudio.notes, errors);
   }
 
   const localLibraryRecovery = evidence?.localLibraryRecovery || {};
@@ -2504,6 +3941,25 @@ const validate = (evidence) => {
 };
 
 const args = process.argv.slice(2);
+const sectionArgs = args.filter((arg) => arg.startsWith("--section="));
+if (args.includes("--section") || sectionArgs.length > 1) {
+  fail([
+    "manual QA progress accepts exactly one section as --section=<section-id>.",
+  ]);
+}
+const selectedSectionId = sectionArgs[0]?.slice("--section=".length);
+if (
+  selectedSectionId !== undefined &&
+  !MANUAL_QA_PROGRESS_SECTION_IDS.has(selectedSectionId)
+) {
+  fail([
+    `unknown manual QA progress section: ${selectedSectionId || "(empty)"}.`,
+    `Available sections: ${[...MANUAL_QA_PROGRESS_SECTION_IDS].join(", ")}.`,
+  ]);
+}
+if (selectedSectionId !== undefined && !args.includes("--progress")) {
+  fail(["--section=<section-id> requires --progress."]);
+}
 if (args.includes("--print-template")) {
   printTemplate();
   process.exit(0);
@@ -2535,6 +3991,17 @@ try {
 }
 
 const errors = validate(evidence);
+if (args.includes("--progress")) {
+  printProgressReport(
+    buildProgressReport({
+      evidencePath: absoluteEvidencePath,
+      errors,
+      selectedSectionId,
+    }),
+    { asJson: args.includes("--json") }
+  );
+  process.exit(0);
+}
 if (errors.length) fail(errors);
 
 console.log(

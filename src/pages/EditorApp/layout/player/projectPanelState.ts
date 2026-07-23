@@ -5,6 +5,8 @@ export const buildProjectSummary = ({
   transcript,
   chapterMarkers,
   zoomKeyframes,
+  crop,
+  audioTrack,
   exportSettings,
 }: {
   recordingId?: unknown;
@@ -13,6 +15,8 @@ export const buildProjectSummary = ({
   transcript?: { words?: unknown } | null;
   chapterMarkers?: unknown;
   zoomKeyframes?: unknown;
+  crop?: unknown;
+  audioTrack?: unknown;
   exportSettings?: Partial<ExportSettings> | null;
 } = {}) => {
   const clips = Array.isArray(timeline?.clips) ? timeline.clips : [];
@@ -40,6 +44,8 @@ export const buildProjectSummary = ({
       { label: "Words", value: transcriptWords.length || 0 },
       { label: "Chapters", value: chapters.length || 0 },
       { label: "Zooms", value: zooms.length || 0 },
+      { label: "Crop", value: crop ? "Yes" : "No" },
+      { label: "Audio", value: audioTrack ? "Added" : "Source" },
     ],
     exportLabel: `${String(format).toUpperCase()} export`,
     sidecarLabel: sidecars.length

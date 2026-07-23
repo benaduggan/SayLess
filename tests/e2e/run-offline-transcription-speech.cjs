@@ -55,9 +55,13 @@ const commandExists = (command) => {
 };
 
 const generateSpeechFixture = (work) => {
-  if (process.platform !== "darwin" || !commandExists("say") || !commandExists("afconvert")) {
+  if (
+    process.platform !== "darwin" ||
+    !commandExists("say") ||
+    !commandExists("afconvert")
+  ) {
     throw new Error(
-      "offline speech transcription harness requires macOS `say` and `afconvert`.",
+      "offline speech transcription harness requires macOS `say` and `afconvert`."
     );
   }
   const aiffPath = path.join(work, "speech.aiff");
@@ -76,7 +80,9 @@ const generateSpeechFixture = (work) => {
   ]);
   const stat = fs.statSync(wavPath);
   if (stat.size < 1000) {
-    throw new Error(`generated speech fixture is unexpectedly small: ${stat.size} bytes`);
+    throw new Error(
+      `generated speech fixture is unexpectedly small: ${stat.size} bytes`
+    );
   }
   generateNoisySpeechFixture(wavPath, path.join(work, NOISY_SPEECH_FILE));
   generateLongSpeechFixture(work);
@@ -101,7 +107,7 @@ const generateLongSpeechFixture = (work) => {
   const stat = fs.statSync(wavPath);
   if (stat.size < 1000) {
     throw new Error(
-      `generated long speech fixture is unexpectedly small: ${stat.size} bytes`,
+      `generated long speech fixture is unexpectedly small: ${stat.size} bytes`
     );
   }
 };
@@ -138,7 +144,12 @@ const readPcm16Wav = (wavPath) => {
     offset = chunkStart + size + (size % 2);
   }
 
-  if (!fmt || fmt.audioFormat !== 1 || fmt.channels !== 1 || fmt.bitsPerSample !== 16) {
+  if (
+    !fmt ||
+    fmt.audioFormat !== 1 ||
+    fmt.channels !== 1 ||
+    fmt.bitsPerSample !== 16
+  ) {
     throw new Error(`expected mono PCM16 WAV fixture: ${wavPath}`);
   }
   if (dataStart < 0 || dataSize <= 0) {
@@ -150,7 +161,7 @@ const readPcm16Wav = (wavPath) => {
     samples: new Int16Array(
       buffer.buffer,
       buffer.byteOffset + dataStart,
-      Math.floor(dataSize / 2),
+      Math.floor(dataSize / 2)
     ),
   };
 };
@@ -216,6 +227,26 @@ const bundleHarness = (work) =>
         optimization: {
           minimize: false,
         },
+        resolve: {
+          extensions: [".js", ".mjs", ".ts", ".tsx", ".json"],
+          extensionAlias: {
+            ".js": [".js", ".ts"],
+            ".jsx": [".jsx", ".tsx"],
+          },
+        },
+        module: {
+          rules: [
+            {
+              test: /\.tsx?$/,
+              use: {
+                loader: "ts-loader",
+                options: {
+                  transpileOnly: true,
+                },
+              },
+            },
+          ],
+        },
       },
       (err, stats) => {
         if (err) {
@@ -233,13 +264,13 @@ const bundleHarness = (work) =>
             new Error(
               info.errors
                 .map((error) => error.message || String(error))
-                .join("\n"),
-            ),
+                .join("\n")
+            )
           );
           return;
         }
         resolve();
-      },
+      }
     );
   });
 
@@ -273,7 +304,9 @@ const createServer = (work) =>
 const copyOrtFiles = (work) => {
   const ortDir = path.join(work, "ort");
   fs.mkdirSync(ortDir);
-  for (const fileName of fs.readdirSync(ORT_SRC).filter((name) => /^ort-wasm-/.test(name))) {
+  for (const fileName of fs
+    .readdirSync(ORT_SRC)
+    .filter((name) => /^ort-wasm-/.test(name))) {
     fs.copyFileSync(path.join(ORT_SRC, fileName), path.join(ortDir, fileName));
   }
 };
@@ -285,7 +318,7 @@ const copyOrtFiles = (work) => {
   generateSpeechFixture(work);
   fs.writeFileSync(
     path.join(work, "harness.html"),
-    "<!doctype html><meta charset=utf-8><title>Offline speech transcription</title><script type=module src=./bundle.js></script>",
+    "<!doctype html><meta charset=utf-8><title>Offline speech transcription</title><script type=module src=./bundle.js></script>"
   );
 
   const server = createServer(work);
@@ -301,7 +334,9 @@ const copyOrtFiles = (work) => {
     headless: process.env.SAYLESS_E2E_HEADLESS !== "0",
   });
   const page = await browser.newPage();
-  page.on("console", (message) => console.log("  [page]", message.type(), message.text()));
+  page.on("console", (message) =>
+    console.log("  [page]", message.type(), message.text())
+  );
   page.on("pageerror", (error) => console.log("  [pageerror]", error.message));
 
   let result;
@@ -309,7 +344,7 @@ const copyOrtFiles = (work) => {
     await page.goto(`${origin}/harness.html`);
     await page.waitForFunction(
       "window.OFFLINE_TRANSCRIPTION_SMOKE_READY === true",
-      { timeout: 30000 },
+      { timeout: 30000 }
     );
     result = await page.evaluate(async (baseUrl) => {
       const options = {
@@ -329,7 +364,9 @@ const copyOrtFiles = (work) => {
       const transcribeFixture = async (fileName) => {
         const response = await fetch(`${baseUrl}/${fileName}`);
         if (!response.ok) {
-          throw new Error(`${fileName} fixture fetch failed: ${response.status}`);
+          throw new Error(
+            `${fileName} fixture fetch failed: ${response.status}`
+          );
         }
         const blob = await response.blob();
         const progress = [];
@@ -340,7 +377,7 @@ const copyOrtFiles = (work) => {
             language: "en",
             onProgress: (value) => progress.push(Number(value) || 0),
           },
-          options,
+          options
         );
         const words = Array.isArray(transcript.words) ? transcript.words : [];
         return {
@@ -378,11 +415,11 @@ const copyOrtFiles = (work) => {
       minMatchedWords = 2,
       maxWordEndLimit = 12,
       minWordEnd = 0,
-    } = {},
+    } = {}
   ) => {
     const normalizedText = String(fixture.text || "").toLowerCase();
     const matchedWords = expectedWords.filter((word) =>
-      normalizedText.includes(word),
+      normalizedText.includes(word)
     );
     const words = Array.isArray(fixture.words) ? fixture.words : [];
     const timedWords = words.filter(
@@ -390,10 +427,10 @@ const copyOrtFiles = (work) => {
         Number.isFinite(word.start) &&
         Number.isFinite(word.end) &&
         word.start >= 0 &&
-        word.end > word.start,
+        word.end > word.start
     );
     const monotonicTiming = timedWords.every(
-      (word, index) => index === 0 || word.start >= timedWords[index - 1].start,
+      (word, index) => index === 0 || word.start >= timedWords[index - 1].start
     );
     const maxWordEnd = timedWords.length
       ? Math.max(...timedWords.map((word) => word.end))
@@ -437,7 +474,11 @@ const copyOrtFiles = (work) => {
 
   console.log("=== OFFLINE TRANSCRIPTION SPEECH ===");
   console.log(JSON.stringify(summary, null, 2));
-  console.log(ok ? "OFFLINE TRANSCRIPTION SPEECH PASS" : "OFFLINE TRANSCRIPTION SPEECH FAIL");
+  console.log(
+    ok
+      ? "OFFLINE TRANSCRIPTION SPEECH PASS"
+      : "OFFLINE TRANSCRIPTION SPEECH FAIL"
+  );
   process.exit(ok ? 0 : 1);
 })().catch((error) => {
   console.error("RUNNER ERROR", error);

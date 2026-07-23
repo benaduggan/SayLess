@@ -20,6 +20,11 @@ import {
   computeThumbnailCaptureTime,
 } from "./thumbnail";
 import { normalizeLocalRecordingStorageFields } from "./localRecordingEntry";
+import {
+  MAX_PROJECT_AUDIO_BYTES,
+  normalizeProjectAudioTrack,
+} from "../../edl/projectAudio";
+import type { ProjectAudioMode, ProjectAudioTrack } from "../../edl/projectAudio";
 
 export interface LocalRecordingBackendRef {
   backend: "opfs";
@@ -94,6 +99,11 @@ const TRANSCRIPT_SIDECAR_SCHEMA_VERSION = 1;
 const TRANSCRIPT_SIDECAR_KIND = "sayless.localRecordingTranscript";
 const THUMBNAIL_TIMEOUT_MS = 5000;
 
+export const localRecordingAudioAssetKey = (
+  recordingId: string,
+  assetId: string,
+): string => `project-audio:${recordingId}:${assetId}`;
+
 const storageGet = (keys: string[]) => chrome.storage.local.get(keys);
 const storageSet = (value: Record<string, unknown>) =>
   chrome.storage.local.set(value);
@@ -159,7 +169,16 @@ const buildWebVtt = (words: readonly CaptionWord[]): string => {
 const referencedBlobKeys = (index: LocalRecordingIndex): Set<string> =>
   new Set(
     Object.values(index)
-      .flatMap((entry) => [entry.blobKey, entry.editedBlobKey])
+      .flatMap((entry) => [
+        entry.blobKey,
+        entry.editedBlobKey,
+        entry.project?.audioTrack
+          ? localRecordingAudioAssetKey(
+              entry.id,
+              entry.project.audioTrack.assetId,
+            )
+          : null,
+      ])
       .filter((key): key is string => Boolean(key))
   );
 
@@ -224,6 +243,8 @@ const sanitizeProject = (project: unknown): LocalRecordingProject | null => {
   const zoomKeyframes = Array.isArray(project.zoomKeyframes)
     ? jsonClone(project.zoomKeyframes)
     : [];
+  const crop = isPlainObject(project.crop) ? jsonClone(project.crop) : null;
+  const audioTrack = normalizeProjectAudioTrack(project.audioTrack);
   const exportSettings = normalizeExportSettings(
     isPlainObject(project.exportSettings) ? project.exportSettings : {},
     project.source
@@ -237,6 +258,8 @@ const sanitizeProject = (project: unknown): LocalRecordingProject | null => {
     transcript,
     chapterMarkers,
     zoomKeyframes,
+    crop,
+    audioTrack,
     selectedClipId: project.selectedClipId || null,
     exportSettings,
   }) as LocalRecordingProject | null;
@@ -407,6 +430,14 @@ export const deleteLocalRecording = async (
   const keys = [entry.blobKey, entry.editedBlobKey].filter(
     (key): key is string => Boolean(key)
   );
+  if (entry.project?.audioTrack) {
+    keys.push(
+      localRecordingAudioAssetKey(
+        recordingId,
+        entry.project.audioTrack.assetId,
+      ),
+    );
+  }
   await Promise.all(
     keys.map((key) => BLOB_STORE.removeItem(key).catch(() => {}))
   );
@@ -458,6 +489,20 @@ export const duplicateLocalRecording = async (
         recordingId: duplicatedId,
       })
     : null;
+  if (entry.project?.audioTrack) {
+    const sourceAudioKey = localRecordingAudioAssetKey(
+      recordingId,
+      entry.project.audioTrack.assetId,
+    );
+    const duplicatedAudioKey = localRecordingAudioAssetKey(
+      duplicatedId,
+      entry.project.audioTrack.assetId,
+    );
+    const audioBlob = await BLOB_STORE.getItem<Blob>(sourceAudioKey);
+    if (audioBlob instanceof Blob) {
+      await BLOB_STORE.setItem(duplicatedAudioKey, audioBlob);
+    }
+  }
 
   return saveLocalRecordingEntry({
     id: duplicatedId,
@@ -736,10 +781,91 @@ export const saveLocalRecordingProject = async (
   });
 };
 
+const sha256Blob = async (blob: Blob): Promise<string> => {
+  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+};
+
+export const saveLocalRecordingAudioAsset = async (
+  recordingId: string,
+  blob: Blob,
+  options: {
+    fileName?: string;
+    volume?: number;
+    sourceVolume?: number;
+    mode?: ProjectAudioMode;
+    loop?: boolean;
+  } = {},
+): Promise<ProjectAudioTrack> => {
+  if (!recordingId) throw new Error("local-recording-audio-missing-id");
+  const index = await getLocalRecordingIndex();
+  if (!index[recordingId]) throw new Error("local-recording-audio-entry-missing");
+  if (!(blob instanceof Blob) || blob.size <= 0) {
+    throw new Error("local-recording-audio-invalid");
+  }
+  if (blob.size > MAX_PROJECT_AUDIO_BYTES) {
+    throw new Error("local-recording-audio-too-large");
+  }
+  const sha256 = await sha256Blob(blob);
+  const assetId = `sha256-${sha256.slice(0, 24)}`;
+  const track = normalizeProjectAudioTrack({
+    version: 1,
+    assetId,
+    fileName:
+      options.fileName ||
+      (typeof File !== "undefined" && blob instanceof File
+        ? blob.name
+        : "Project audio"),
+    mimeType: blob.type || "audio/*",
+    byteSize: blob.size,
+    sha256,
+    volume: options.volume,
+    sourceVolume: options.sourceVolume,
+    mode: options.mode,
+    loop: options.loop,
+  });
+  if (!track) throw new Error("local-recording-audio-metadata-invalid");
+  await BLOB_STORE.setItem(localRecordingAudioAssetKey(recordingId, assetId), blob);
+  return track;
+};
+
+export const readLocalRecordingAudioAsset = async (
+  recordingId: string,
+  audioTrack: ProjectAudioTrack | null | undefined,
+): Promise<Blob> => {
+  const track = normalizeProjectAudioTrack(audioTrack);
+  if (!recordingId || !track) throw new Error("local-recording-audio-reference-invalid");
+  const blob = await BLOB_STORE.getItem<Blob>(
+    localRecordingAudioAssetKey(recordingId, track.assetId),
+  );
+  if (!(blob instanceof Blob) || blob.size !== track.byteSize) {
+    throw new Error("local-recording-audio-asset-missing");
+  }
+  return blob;
+};
+
+export const deleteLocalRecordingAudioAsset = async (
+  recordingId: string,
+  audioTrack: ProjectAudioTrack | null | undefined,
+): Promise<boolean> => {
+  const track = normalizeProjectAudioTrack(audioTrack);
+  if (!recordingId || !track) return false;
+  await BLOB_STORE.removeItem(
+    localRecordingAudioAssetKey(recordingId, track.assetId),
+  );
+  return true;
+};
+
 export const clearLocalRecordingProject = async (recordingId: string) => {
   if (!recordingId) throw new Error("local-recording-project-missing-id");
   const index = await getLocalRecordingIndex();
   if (!index[recordingId]) return null;
+  await deleteLocalRecordingAudioAsset(
+    recordingId,
+    index[recordingId].project?.audioTrack,
+  ).catch(() => false);
   index[recordingId] = normalizeLocalRecordingEntry({
     ...index[recordingId],
     project: null,
@@ -790,7 +916,10 @@ export const classifyLocalRecordingStoragePressure = ({
 export const estimateLocalRecordingStorage = async () => {
   const index = await getLocalRecordingIndex();
   const indexedBytes = Object.values(index).reduce(
-    (total, entry) => total + (Number(entry.byteSize) || 0),
+    (total, entry) =>
+      total +
+      (Number(entry.byteSize) || 0) +
+      (Number(entry.project?.audioTrack?.byteSize) || 0),
     0
   );
   const estimate =
@@ -1052,12 +1181,13 @@ export const importLocalRecordingProjectSidecar = async (
     recordingId: targetId,
     updatedAt: now(),
   });
+  const existingAudioTrack = index[targetId].project?.audioTrack;
   const thumbnailDataUrl =
     typeof sidecarRecording.thumbnailDataUrl === "string" &&
     sidecarRecording.thumbnailDataUrl.startsWith("data:image/")
       ? sidecarRecording.thumbnailDataUrl
       : null;
-  return saveLocalRecordingEntry({
+  const saved = await saveLocalRecordingEntry({
     id: targetId,
     project,
     ...(thumbnailDataUrl
@@ -1069,6 +1199,15 @@ export const importLocalRecordingProjectSidecar = async (
       : {}),
     updatedAt: now(),
   });
+  if (
+    existingAudioTrack &&
+    existingAudioTrack.assetId !== project?.audioTrack?.assetId
+  ) {
+    await deleteLocalRecordingAudioAsset(targetId, existingAudioTrack).catch(
+      () => false,
+    );
+  }
+  return saved;
 };
 
 export const checkpointEditedLocalRecording = async (
@@ -1088,6 +1227,43 @@ export const checkpointEditedLocalRecording = async (
   await generateLocalRecordingThumbnail(recordingId).catch(() => null);
   const index = await getLocalRecordingIndex();
   return index[recordingId] || entry;
+};
+
+/**
+ * Commits an explicit Apply-edits bake as one library-index update. The media
+ * blob is written first, so a failed index write leaves only a recoverable
+ * orphan instead of publishing a project that references missing media.
+ */
+export const checkpointAppliedLocalRecording = async (
+  recordingId: string,
+  blob: Blob,
+  project: unknown,
+) => {
+  if (!recordingId || !(blob instanceof Blob) || blob.size <= 0) {
+    throw new Error("local-recording-apply-checkpoint-invalid");
+  }
+  const index = await getLocalRecordingIndex();
+  if (!index[recordingId]) {
+    throw new Error("local-recording-apply-checkpoint-entry-missing");
+  }
+  const editedBlobKey = `edited:${recordingId}`;
+  const nextProject = sanitizeProject({
+    ...(isPlainObject(project) ? project : {}),
+    recordingId,
+    updatedAt: now(),
+  });
+  await BLOB_STORE.setItem(editedBlobKey, blob);
+  const entry = await saveLocalRecordingEntry({
+    id: recordingId,
+    editedBlobKey,
+    editedAt: now(),
+    byteSize: blob.size,
+    mimeType: blob.type || "video/mp4",
+    project: nextProject,
+    updatedAt: now(),
+  });
+  await generateLocalRecordingThumbnail(recordingId).catch(() => null);
+  return entry;
 };
 
 export const readOpfsRecordingBlob = async (

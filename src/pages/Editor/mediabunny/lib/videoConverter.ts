@@ -21,6 +21,7 @@ export interface ConversionOptions {
   audioCodec?: AudioCodec;
   onProgress?: (progress: number) => void;
   verbose?: boolean;
+  signal?: AbortSignal;
   // When provided (e.g. a StreamTarget writing to OPFS), output streams to it
   // and convert() resolves to null; the caller owns the written file. Used by
   // the offscreen worker to re-encode large files with bounded memory.
@@ -45,11 +46,17 @@ export class VideoConverter {
   private cachedMP4Codec: VideoCodec | null = null;
   private cachedWebMCodec: VideoCodec | null = null;
 
-  async convertToMP4(sourceBlob: Blob, options: ConversionOptions = {}): Promise<Blob> {
+  async convertToMP4(
+    sourceBlob: Blob,
+    options: ConversionOptions = {}
+  ): Promise<Blob> {
     return this.convert(sourceBlob, "mp4", options);
   }
 
-  async convertToWebM(sourceBlob: Blob, options: ConversionOptions = {}): Promise<Blob> {
+  async convertToWebM(
+    sourceBlob: Blob,
+    options: ConversionOptions = {}
+  ): Promise<Blob> {
     return this.convert(sourceBlob, "webm", options);
   }
 
@@ -101,13 +108,19 @@ export class VideoConverter {
       preferredVideoCodec,
       audioCodec,
       onProgress,
+      signal,
     } = options;
+    throwIfAborted(signal);
 
-    const cache = targetFormat === "mp4" ? this.cachedMP4Codec : this.cachedWebMCodec;
+    const cache =
+      targetFormat === "mp4" ? this.cachedMP4Codec : this.cachedWebMCodec;
     let videoCodec: VideoCodec | null = cache;
 
     if (!videoCodec) {
-      if (preferredVideoCodec && (await this.canEncodeCodec(preferredVideoCodec))) {
+      if (
+        preferredVideoCodec &&
+        (await this.canEncodeCodec(preferredVideoCodec))
+      ) {
         videoCodec = preferredVideoCodec;
       } else {
         const codecInfo = await this.detectBestCodec(targetFormat);
@@ -121,49 +134,74 @@ export class VideoConverter {
       if (targetFormat === "mp4") this.cachedMP4Codec = videoCodec;
       else this.cachedWebMCodec = videoCodec;
     }
+    throwIfAborted(signal);
 
-    const finalAudioCodec = audioCodec || (targetFormat === "mp4" ? "aac" : "opus");
+    const finalAudioCodec =
+      audioCodec || (targetFormat === "mp4" ? "aac" : "opus");
 
     const input = new Input({
       formats: ALL_FORMATS,
       source: new BlobSource(sourceBlob),
     });
+    let conversion = null;
+    let cancelPromise = null;
+    const cancelConversion = () => {
+      if (conversion && !cancelPromise) {
+        cancelPromise = conversion.cancel().catch(() => {});
+      }
+    };
+    signal?.addEventListener("abort", cancelConversion, { once: true });
 
-    const outputFormat =
-      targetFormat === "mp4"
-        ? new Mp4OutputFormat({ fastStart: false })
-        : new WebMOutputFormat();
+    try {
+      const outputFormat =
+        targetFormat === "mp4"
+          ? new Mp4OutputFormat({ fastStart: false })
+          : new WebMOutputFormat();
 
-    const target = options.target || new BufferTarget();
-    const output = new Output({ format: outputFormat, target });
+      const target = options.target || new BufferTarget();
+      const output = new Output({ format: outputFormat, target });
 
-    const conversion = await Conversion.init({
-      input,
-      output,
-      video: { codec: videoCodec, bitrate: videoBitrate },
-      audio: { codec: finalAudioCodec, bitrate: audioBitrate },
-    });
+      conversion = await Conversion.init({
+        input,
+        output,
+        video: { codec: videoCodec, bitrate: videoBitrate },
+        audio: { codec: finalAudioCodec, bitrate: audioBitrate },
+      });
+      throwIfAborted(signal);
 
-    if (!conversion.isValid) {
-      const reasons = conversion.discardedTracks
-        .map((t) => `${t.track.type}: ${t.reason}`)
-        .join(", ");
-      throw new Error(`Conversion failed - ${reasons}`);
+      if (!conversion.isValid) {
+        const reasons = conversion.discardedTracks
+          .map((t) => `${t.track.type}: ${t.reason}`)
+          .join(", ");
+        throw new Error(`Conversion failed - ${reasons}`);
+      }
+
+      if (onProgress) conversion.onProgress = onProgress;
+
+      await conversion.execute();
+      throwIfAborted(signal);
+
+      // Streamed to a caller-provided target (e.g. OPFS): the caller owns the
+      // output file, so there's no in-memory buffer to wrap.
+      if (options.target) return null;
+
+      if (!target.buffer)
+        throw new Error("Conversion failed - no output buffer");
+
+      return new Blob([target.buffer], {
+        type: targetFormat === "mp4" ? "video/mp4" : "video/webm",
+      });
+    } catch (error) {
+      if (signal?.aborted) {
+        cancelConversion();
+        await cancelPromise;
+        throw abortReason(signal);
+      }
+      throw error;
+    } finally {
+      signal?.removeEventListener("abort", cancelConversion);
+      input.dispose();
     }
-
-    if (onProgress) conversion.onProgress = onProgress;
-
-    await conversion.execute();
-
-    // Streamed to a caller-provided target (e.g. OPFS): the caller owns the
-    // output file, so there's no in-memory buffer to wrap.
-    if (options.target) return null;
-
-    if (!target.buffer) throw new Error("Conversion failed - no output buffer");
-
-    return new Blob([target.buffer], {
-      type: targetFormat === "mp4" ? "video/mp4" : "video/webm",
-    });
   }
 
   private getEncoderConfig(codec: VideoCodec): VideoEncoderConfig {
@@ -179,12 +217,33 @@ export class VideoConverter {
   }
 }
 
+function abortReason(signal?: AbortSignal): unknown {
+  if (signal?.reason instanceof Error) return signal.reason;
+  try {
+    return new DOMException("Export cancelled.", "AbortError");
+  } catch {
+    const error = new Error("Export cancelled.");
+    error.name = "AbortError";
+    return error;
+  }
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw abortReason(signal);
+}
+
 export const videoConverter = new VideoConverter();
 
-export async function convertToMP4(blob: Blob, options?: ConversionOptions): Promise<Blob> {
+export async function convertToMP4(
+  blob: Blob,
+  options?: ConversionOptions
+): Promise<Blob> {
   return videoConverter.convertToMP4(blob, options);
 }
 
-export async function convertToWebM(blob: Blob, options?: ConversionOptions): Promise<Blob> {
+export async function convertToWebM(
+  blob: Blob,
+  options?: ConversionOptions
+): Promise<Blob> {
   return videoConverter.convertToWebM(blob, options);
 }

@@ -120,6 +120,7 @@ const CropUI = () => {
               {chrome.i18n.getMessage("widthLabel")}
             </div>
             <input
+              data-testid="project-crop-width"
               type="text"
               className="input"
               onChange={(e) => handleWidth(e)}
@@ -140,6 +141,7 @@ const CropUI = () => {
               {chrome.i18n.getMessage("heightLabel")}
             </div>
             <input
+              data-testid="project-crop-height"
               type="text"
               className="input"
               onChange={(e) => handleHeight(e)}
@@ -162,6 +164,7 @@ const CropUI = () => {
               {chrome.i18n.getMessage("leftLabel")}
             </div>
             <input
+              data-testid="project-crop-left"
               type="text"
               className="input"
               onChange={(e) => handleLeft(e)}
@@ -182,6 +185,7 @@ const CropUI = () => {
               {chrome.i18n.getMessage("topLabel")}
             </div>
             <input
+              data-testid="project-crop-top"
               type="text"
               className="input"
               onChange={(e) => handleTop(e)}
@@ -197,22 +201,6 @@ const CropUI = () => {
             />
             <span>px</span>
           </div>
-          {/* <button
-            className={["button", "primaryButton", styles.updateButton].join(
-              " "
-            )}
-            onClick={() => {
-              contentState.handleCrop(
-                contentState.left,
-                contentState.top,
-                contentState.width,
-                contentState.height
-              );
-            }}
-            disabled={contentState.isFfmpegRunning}
-          >
-            {chrome.i18n.getMessage("sandboxCropUpdateButton") || "Update crop"}
-          </button> */}
         </div>
       </div>
     </div>

@@ -83,6 +83,24 @@ test("project schema migrates old project shapes to the current version", () => 
         source: "click",
       },
     ],
+    crop: {
+      xRatio: -0.5,
+      yRatio: 0.25,
+      widthRatio: 0.8,
+      heightRatio: 2,
+    },
+    audioTrack: {
+      version: 1,
+      assetId: "audio-fixture",
+      fileName: "Music.wav",
+      mimeType: "audio/wav",
+      byteSize: 32044,
+      sha256: "a".repeat(64),
+      volume: 2,
+      sourceVolume: -1,
+      mode: "replace",
+      loop: false,
+    },
     exportSettings: {
       format: "bad-format",
       qualityPreset: "bad-quality",
@@ -114,4 +132,22 @@ test("project schema migrates old project shapes to the current version", () => 
     ]),
     [["zoom-late", 12, 12, 3, 0.25, 0.75]],
   );
+  assert.deepEqual(project.crop, {
+    xRatio: 0,
+    yRatio: 0.25,
+    widthRatio: 0.8,
+    heightRatio: 0.75,
+  });
+  assert.deepEqual(project.audioTrack, {
+    version: 1,
+    assetId: "audio-fixture",
+    fileName: "Music.wav",
+    mimeType: "audio/wav",
+    byteSize: 32044,
+    sha256: "a".repeat(64),
+    volume: 1,
+    sourceVolume: 0,
+    mode: "replace",
+    loop: false,
+  });
 });

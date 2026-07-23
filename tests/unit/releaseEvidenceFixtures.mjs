@@ -16,8 +16,19 @@ export const REQUIRED_AUTOMATED_COMMANDS = [
   "test:e2e:local-recordings",
   "test:e2e:editor-layout",
   "build:release",
+  "test:e2e:editor-editing-proof",
   "test:e2e:built-extension-surface",
   "verify:release",
+];
+const REQUIRED_EXPORT_FORMATS = [
+  "mp4",
+  "webm",
+  "gif",
+  "wav",
+  "m4a",
+  "vtt",
+  "transcript-json",
+  "sayless-project-json",
 ];
 
 export const walkFiles = (dir, root = dir) => {
@@ -89,6 +100,7 @@ export const writeCompleteReleaseEvidence = ({
 }) => {
   const recordingA = "qa-tab-local-docs-20260716-a";
   const recordingB = "qa-desktop-terminal-20260716-b";
+  const recordingC = "qa-region-zoom-20260716-c";
   const generatedAt = new Date(Date.now() - 60_000).toISOString();
   const testedAt = new Date(Date.now() - 30_000).toISOString();
   const whisperDir = join(buildDir, "assets", "whisper");
@@ -155,7 +167,139 @@ export const writeCompleteReleaseEvidence = ({
       fileCount: bundledWhisper.fileCount,
       sha256: bundledWhisper.sha256,
     },
+    builtExtension: {
+      id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      buildPath: "build",
+      cleanChromeProfile: true,
+      observedAt: generatedAt,
+      summaryCount: 10,
+    },
     releaseSurface,
+  });
+
+  const probeGeneratedAt = new Date(Date.now() - 45_000).toISOString();
+  const fixtureSha256 = (seed) =>
+    createHash("sha256").update(`manual QA fixture ${seed}`).digest("hex");
+  const recordingProbeFiles = [
+    {
+      fileName: "qa-tab-local-docs.webm",
+      format: "webm",
+      byteSize: 15_000_000,
+      sha256: fixtureSha256("recording-a"),
+      durationSeconds: 132,
+      video: { width: 1280, height: 720 },
+    },
+    {
+      fileName: "qa-desktop-terminal.mp4",
+      format: "mp4",
+      byteSize: 75_000_000,
+      sha256: fixtureSha256("recording-b"),
+      durationSeconds: 315,
+      video: { width: 1920, height: 1080 },
+    },
+    {
+      fileName: "qa-region-zoom.webm",
+      format: "webm",
+      byteSize: 12_000_000,
+      sha256: fixtureSha256("recording-c"),
+      durationSeconds: 96,
+      video: { width: 1024, height: 768 },
+    },
+  ].map((file) => ({
+    ...file,
+    recordingFields: {
+      fileName: file.fileName,
+      sha256: file.sha256,
+      durationSeconds: file.durationSeconds,
+      byteSize: file.byteSize,
+      width: file.video.width,
+      height: file.video.height,
+      container: file.format,
+    },
+  }));
+  const exportProbeFiles = REQUIRED_EXPORT_FORMATS.map((format, index) => ({
+    format,
+    fileName: exportFileNameForFormat(format, index),
+    byteSize: 10_000 + index,
+    sha256: fixtureSha256(`export-${format}`),
+  }));
+  const projectAudioProbeFiles = [
+    {
+      format: "wav",
+      fileName: "field-music-bed.wav",
+      byteSize: 2_304_000,
+      durationSeconds: 24,
+      channels: 2,
+      sampleRate: 48000,
+    },
+    {
+      format: "m4a",
+      fileName: "phone-voice-note.m4a",
+      byteSize: 486_000,
+      durationSeconds: 31.2,
+      channels: 1,
+      sampleRate: 44100,
+    },
+    {
+      format: "mp3",
+      fileName: "podcast-intro.mp3",
+      byteSize: 912_000,
+      durationSeconds: 38,
+      channels: 2,
+      sampleRate: 44100,
+    },
+  ].map((file) => {
+    const sha256 = fixtureSha256(`project-audio-${file.format}`);
+    return {
+      ...file,
+      sha256,
+      audio: { channels: file.channels, sampleRate: file.sampleRate },
+      projectAudioInputFields: { ...file, sha256 },
+    };
+  });
+  const mediaReportFiles = [
+    ...recordingProbeFiles,
+    ...exportProbeFiles.filter((file) =>
+      ["mp4", "webm", "gif", "wav", "m4a"].includes(file.format)
+    ),
+    ...projectAudioProbeFiles,
+  ];
+  writeJson(join(artifactsDir, "manual-qa-media-probe.json"), {
+    kind: "sayless.manualQaMediaProbe",
+    status: "measured",
+    generatedAt: probeGeneratedAt,
+    fileCount: mediaReportFiles.length,
+    requireComplete: true,
+    reportPath: "release-artifacts/manual-qa-media-probe.json",
+    releaseCoverage: {
+      status: "measurable-set-complete",
+      passedCheckCount: 5,
+      totalCheckCount: 5,
+    },
+    files: mediaReportFiles,
+  });
+  const sidecarReportFiles = exportProbeFiles
+    .filter((file) =>
+      ["vtt", "transcript-json", "sayless-project-json"].includes(file.format)
+    )
+    .map((file) => ({
+      ...file,
+      exportFields: {
+        format: file.format,
+        fileName: file.fileName,
+        byteSize: file.byteSize,
+        sha256: file.sha256,
+      },
+    }));
+  writeJson(join(artifactsDir, "manual-qa-sidecar-probe.json"), {
+    kind: "sayless.manualQaSidecarProbe",
+    status: "inspected",
+    generatedAt: probeGeneratedAt,
+    fileCount: sidecarReportFiles.length,
+    requireComplete: true,
+    reportPath: "release-artifacts/manual-qa-sidecar-probe.json",
+    coverage: { status: "structurally-complete", completeSetCount: 1 },
+    files: sidecarReportFiles,
   });
 
   writeJson(manualEvidencePath, {
@@ -165,6 +309,24 @@ export const writeCompleteReleaseEvidence = ({
     releaseVersion: version,
     automatedEvidencePath: "release-artifacts/release-qa-automated.json",
     automatedEvidenceGeneratedAt: generatedAt,
+    manualSession: {
+      kind: "sayless.manualQaSessionProvenance",
+      profileCreatedAt: new Date(
+        Date.parse(generatedAt) + 10_000
+      ).toISOString(),
+      releaseVersion: version,
+      automatedEvidenceGeneratedAt: generatedAt,
+      buildSha256: buildFingerprint.sha256,
+      buildFileCount: buildFingerprint.fileCount,
+      buildBytes: dirSize(buildDir),
+      unpackedExtensionId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      operatingSystem: "macOS 15.5 QA workstation",
+      browserVersion: "Chrome 126.0.6478.127 stable",
+    },
+    probeReports: {
+      media: "release-artifacts/manual-qa-media-probe.json",
+      sidecars: "release-artifacts/manual-qa-sidecar-probe.json",
+    },
     testedAt,
     tester: { name: "Release QA Operator", email: "qa-operator@sayless.local" },
     environment: {
@@ -178,8 +340,13 @@ export const writeCompleteReleaseEvidence = ({
     recordings: [
       {
         id: recordingA,
+        fileName: recordingProbeFiles[0].fileName,
+        sha256: recordingProbeFiles[0].sha256,
         source: "tab capture of local documentation",
         durationSeconds: 132,
+        byteSize: 15_000_000,
+        width: 1280,
+        height: 720,
         container: "webm",
         microphone: "internal QA microphone",
         speakerProfile: "slow technical narrator",
@@ -189,14 +356,35 @@ export const writeCompleteReleaseEvidence = ({
       },
       {
         id: recordingB,
+        fileName: recordingProbeFiles[1].fileName,
+        sha256: recordingProbeFiles[1].sha256,
         source: "desktop capture of terminal workflow",
         durationSeconds: 315,
+        byteSize: 75_000_000,
+        width: 1920,
+        height: 1080,
         container: "mp4",
         microphone: "USB headset QA microphone",
         speakerProfile: "fast technical narrator",
         noiseProfile: "keyboard noise and room fan",
         notes:
           "Recorded and inspected this local desktop recording for long export cancellation, retry, reveal, and noisy silence checks.",
+      },
+      {
+        id: recordingC,
+        fileName: recordingProbeFiles[2].fileName,
+        sha256: recordingProbeFiles[2].sha256,
+        source: "region recording of local documentation",
+        durationSeconds: 96,
+        byteSize: 12_000_000,
+        width: 1024,
+        height: 768,
+        container: "webm",
+        microphone: "internal QA microphone",
+        speakerProfile: "slow technical narrator",
+        noiseProfile: "quiet office with low fan noise",
+        notes:
+          "Recorded and opened this local region recording for varied-aspect click zoom preview and export checks.",
       },
     ],
     exports: {
@@ -212,6 +400,8 @@ export const writeCompleteReleaseEvidence = ({
       ].map((format, index) => ({
         format,
         fileName: exportFileNameForFormat(format, index),
+        byteSize: exportProbeFiles[index].byteSize,
+        sha256: exportProbeFiles[index].sha256,
         sourceRecordingId: index % 2 === 0 ? recordingA : recordingB,
         notes: `Opened and inspected the ${format} export against the local project state.`,
       })),
@@ -283,16 +473,148 @@ export const writeCompleteReleaseEvidence = ({
         "Quiet regions were suggested and noisy keyboard regions were ignored.",
     },
     zoom: {
-      recordingId: recordingA,
-      sourceHadClickMetadata: true,
-      previewVerified: true,
-      mp4ExportVerified: true,
-      keepRemoveVerified: true,
-      persistedAfterReopen: true,
-      exportInspection:
-        "Opened the MP4 export and confirmed the clicked target stayed framed.",
+      recordingIds: [recordingA, recordingC],
+      observations: [
+        {
+          recordingId: recordingA,
+          sourceHadClickMetadata: true,
+          previewVerified: true,
+          mp4ExportVerified: true,
+          keepRemoveVerified: true,
+          persistedAfterReopen: true,
+          exportInspection:
+            "Opened the wide MP4 export and confirmed the clicked target stayed framed.",
+          notes:
+            "Kept, removed, previewed, reopened, and exported click-derived zoom keyframes on the wide tab recording.",
+        },
+        {
+          recordingId: recordingC,
+          sourceHadClickMetadata: true,
+          previewVerified: true,
+          mp4ExportVerified: true,
+          keepRemoveVerified: true,
+          persistedAfterReopen: true,
+          exportInspection:
+            "Opened the 4:3 MP4 export and confirmed the clicked target stayed framed.",
+          notes:
+            "Kept, removed, previewed, reopened, and exported click-derived zoom keyframes on the region recording.",
+        },
+      ],
       notes:
-        "Kept, removed, previewed, reopened, and exported click-derived zoom keyframes.",
+        "Compared saved click-derived zoom framing across wide and 4:3 real recordings.",
+    },
+    crop: {
+      recordingIds: [recordingA, recordingC],
+      observations: [
+        {
+          recordingId: recordingA,
+          crop: { xRatio: 0, yRatio: 0, widthRatio: 0.75, heightRatio: 1 },
+          exportWidth: 960,
+          exportHeight: 720,
+          nativePlaybackControlsVerified: true,
+          edgeCropVerified: true,
+          previewVerified: true,
+          mp4ExportVerified: true,
+          persistedAfterReopen: true,
+          sourceBlobUnchanged: true,
+          exportInspection:
+            "Opened the 960x720 MP4 and inspected the saved left/top edge crop against preview.",
+          notes:
+            "Verified native controls, edge crop preview, reopen persistence, and unchanged source media on the wide tab recording.",
+        },
+        {
+          recordingId: recordingC,
+          crop: {
+            xRatio: 0.25,
+            yRatio: 0,
+            widthRatio: 0.75,
+            heightRatio: 0.75,
+          },
+          exportWidth: 768,
+          exportHeight: 576,
+          nativePlaybackControlsVerified: true,
+          edgeCropVerified: true,
+          previewVerified: true,
+          mp4ExportVerified: true,
+          persistedAfterReopen: true,
+          sourceBlobUnchanged: true,
+          exportInspection:
+            "Opened the 768x576 MP4 and inspected the saved top/right edge crop against preview.",
+          notes:
+            "Verified native controls, edge crop preview, reopen persistence, and unchanged source media on the 4:3 region recording.",
+        },
+      ],
+      notes:
+        "Compared non-destructive edge crops and matching MP4 dimensions across wide and 4:3 real recordings.",
+    },
+    projectAudio: {
+      recordingId: recordingB,
+      inputs: [
+        {
+          format: "wav",
+          fileName: "field-music-bed.wav",
+          sha256: projectAudioProbeFiles[0].sha256,
+          byteSize: 2_304_000,
+          durationSeconds: 24,
+          channels: 2,
+          sampleRate: 48000,
+          decodeVerified: true,
+          audiblePreviewVerified: true,
+          notes:
+            "Decoded stereo 48 kHz WAV metadata and heard the real music bed in preview.",
+        },
+        {
+          format: "m4a",
+          fileName: "phone-voice-note.m4a",
+          sha256: projectAudioProbeFiles[1].sha256,
+          byteSize: 486_000,
+          durationSeconds: 31.2,
+          channels: 1,
+          sampleRate: 44100,
+          decodeVerified: true,
+          audiblePreviewVerified: true,
+          notes:
+            "Decoded mono 44.1 kHz M4A metadata and heard the real voice note in preview.",
+        },
+        {
+          format: "mp3",
+          fileName: "podcast-intro.mp3",
+          sha256: projectAudioProbeFiles[2].sha256,
+          byteSize: 912_000,
+          durationSeconds: 38,
+          channels: 2,
+          sampleRate: 44100,
+          decodeVerified: true,
+          audiblePreviewVerified: true,
+          notes:
+            "Decoded stereo 44.1 kHz MP3 metadata and heard the real podcast intro in preview.",
+        },
+      ],
+      playback: {
+        seekPlayPauseVerified: true,
+        reorderedTimelineVerified: true,
+        playbackRateVerified: true,
+        longRecordingSyncVerified: true,
+        mixVerified: true,
+        replaceVerified: true,
+        loopOnOffVerified: true,
+        cancelRetryVerified: true,
+        gainPerceptionNotes:
+          "Compared mix and replace modes: source and project volume levels remained audible without clipping at the chosen gains.",
+      },
+      persistence: {
+        reopenVerified: true,
+        sourceBlobUnchanged: true,
+        duplicatePreviewVerified: true,
+        duplicateDeletedOriginalIntact: true,
+        sidecarMissingAssetVerified: true,
+        relinkHashMatched: true,
+        applyEditsCleanupVerified: true,
+        notes:
+          "Verified reopen, duplicate preview/delete isolation, explicit missing sidecar asset, SHA-256 relink, and Apply-edits asset cleanup.",
+      },
+      notes:
+        "Tested real WAV, M4A, and MP3 inputs on the long recording with no remaining project-audio risk observed.",
     },
     localLibraryRecovery: {
       duplicateReopenVerified: true,
@@ -443,7 +765,15 @@ export const writeCompleteReleaseEvidence = ({
       ),
       zoom_preview_export_real_recordings: check(
         "zoom preview and export matched click metadata",
-        [recordingA]
+        [recordingA, recordingC]
+      ),
+      crop_preview_export_real_recordings: check(
+        "crop preview and export matched normalized edge bounds",
+        [recordingA, recordingC]
+      ),
+      project_audio_real_inputs_and_long_sync: check(
+        "real project audio inputs stayed synchronized on the long recording",
+        [recordingB]
       ),
       local_library_recovery: check("library recovery operations completed", [
         recordingA,

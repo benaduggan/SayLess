@@ -62,6 +62,34 @@ const manualQaProfileScript = readFileSync(
   join(ROOT, "scripts", "manual-qa-profile.mjs"),
   "utf8"
 );
+const manualQaMediaProbeScript = readFileSync(
+  join(ROOT, "scripts", "manual-qa-media-probe.mjs"),
+  "utf8"
+);
+const manualQaMediaCoverageScript = readFileSync(
+  join(ROOT, "scripts", "manual-qa-media-coverage.mjs"),
+  "utf8"
+);
+const manualQaSidecarProbeScript = readFileSync(
+  join(ROOT, "scripts", "manual-qa-sidecar-probe.mjs"),
+  "utf8"
+);
+const manualQaMeasurementImportScript = readFileSync(
+  join(ROOT, "scripts", "manual-qa-measurement-import.mjs"),
+  "utf8"
+);
+const applyManualQaMeasurementsScript = readFileSync(
+  join(ROOT, "scripts", "apply-manual-qa-measurements.mjs"),
+  "utf8"
+);
+const localRecordingsE2eScript = readFileSync(
+  join(ROOT, "tests", "e2e", "run-local-recordings.cjs"),
+  "utf8"
+);
+const manualQaTemplateSyncScript = readFileSync(
+  join(ROOT, "scripts", "manual-qa-template-sync.mjs"),
+  "utf8"
+);
 const builtExtensionSurfaceScript = readFileSync(
   join(ROOT, "tests", "e2e", "run-built-extension-surface.cjs"),
   "utf8"
@@ -509,7 +537,7 @@ test("release audit guards package release script gates", () => {
   assert.ok(
     releaseAuditScript.includes("stale active Screenity UI/debug name")
   );
-  assert.ok(releaseAuditScript.includes("actions\\/cache@v4"));
+  assert.ok(releaseAuditScript.includes("actions\\/cache@v5\\.0\\.5"));
   assert.ok(releaseAuditScript.includes("~\\/\\.cache\\/ms-playwright"));
   assert.ok(releaseAuditScript.includes("playwright-core\\/package\\.json"));
   assert.match(
@@ -686,6 +714,7 @@ test("automated release QA overwrites stale evidence with non-passing status", (
   assert.match(releaseQaAutomatedScript, /Automated release QA has not passed/);
   assert.match(releaseQaAutomatedScript, /remainingManualQa/);
   assert.match(releaseQaAutomatedScript, /npm run qa:release:manual:profile/);
+  assert.match(releaseQaAutomatedScript, /test:e2e:editor-editing-proof/);
 });
 
 test("release status command reports evidence gates without creating artifacts", () => {
@@ -718,6 +747,14 @@ test("release status command reports evidence gates without creating artifacts",
   assert.match(releaseStatusScript, /verifierErrorCount/);
   assert.match(releaseStatusScript, /verifierSummary/);
   assert.match(releaseStatusScript, /manualQaTodo/);
+  assert.match(releaseStatusScript, /manualTemplateSyncState/);
+  assert.match(releaseStatusScript, /manual-qa-template-sync\.mjs/);
+  assert.match(releaseStatusScript, /analyzeManualTemplateSync/);
+  assert.match(releaseStatusScript, /templateSyncRequired/);
+  assert.match(
+    releaseStatusScript,
+    /automated QA must pass before template freshness can be established/
+  );
   assert.match(releaseStatusScript, /Manual QA todo/);
   assert.match(releaseStatusScript, /Record at least two real recordings/);
   assert.match(
@@ -731,6 +768,20 @@ test("release status command reports evidence gates without creating artifacts",
   assert.match(releaseStatusScript, /npm run qa:release:auto/);
   assert.match(releaseStatusScript, /npm run qa:release:manual:template/);
   assert.match(releaseStatusScript, /npm run qa:release:manual:profile/);
+  assert.match(
+    releaseStatusScript,
+    /npm run qa:release:manual:media -- --json --require-complete/
+  );
+  assert.match(
+    releaseStatusScript,
+    /npm run qa:release:manual:sidecars -- --json --require-complete/
+  );
+  assert.match(
+    releaseStatusScript,
+    /npm run qa:release:manual:measurements -- --json --write/
+  );
+  assert.match(releaseStatusScript, /filename-matched three-format set/);
+  assert.match(releaseStatusScript, /npm run qa:release:manual:progress/);
   assert.match(releaseStatusScript, /complete docs\/RELEASE_QA\.md/);
   assert.match(
     releaseStatusScript,
@@ -764,16 +815,20 @@ test("release prep script prints the gated release evidence sequence", () => {
     /Run: npm run qa:release:auto/,
     /Run: npm run qa:release:status/,
     /Run: npm run qa:release:manual:template/,
-    /Run: npm run qa:release:manual:profile/,
-    /Complete docs\/RELEASE_QA\.md manual sections/,
-    /release-artifacts\/manual-qa-evidence\.json/,
+    /Run: npm run qa:release:manual:profile -- --sync-template --launch/,
+    /Complete docs\/RELEASE_QA\.md in that clean profile/,
+    /Run throughout the session: npm run qa:release:manual:progress/,
+    /npm run qa:release:manual:media/,
+    /npm run qa:release:manual:sidecars/,
+    /npm run qa:release:manual:measurements -- --json --write/,
+    /Only after both strict reports pass/,
     /Run: npm run qa:release:manual(?!:)/,
     /Run: npm run package:release/,
     /Run: npm run verify:release-package/,
     /Run: npm run build:cws/,
     /Run: npm run verify:cws-package/,
     /Run: npm run qa:release:status/,
-    /Attach release-artifacts\/release-qa-automated\.json, release-artifacts\/manual-qa-evidence\.json, release-artifacts\/package-release\.json, release-artifacts\/cws-package\.json, docs\/STORE_LISTING\.md, extension\.zip, and build-cws\.zip/,
+    /Attach release-artifacts\/release-qa-automated\.json, release-artifacts\/manual-qa-evidence\.json, release-artifacts\/manual-qa-media-probe\.json, release-artifacts\/manual-qa-sidecar-probe\.json, release-artifacts\/package-release\.json, release-artifacts\/cws-package\.json, docs\/STORE_LISTING\.md, extension\.zip, and build-cws\.zip/,
   ];
 
   let previousIndex = -1;
@@ -812,7 +867,31 @@ test("release dry run previews the gated release evidence sequence", () => {
   assert.match(result.stdout, /--dry-run: no files written, no build run\./);
   assert.match(result.stdout, /Release v\d+\.\d+\.\d+ preview/);
   assert.match(result.stdout, /Run: npm run qa:release:manual:template/);
-  assert.match(result.stdout, /Run: npm run qa:release:manual:profile/);
+  assert.match(
+    result.stdout,
+    /Run: npm run qa:release:manual:profile -- --sync-template --launch/
+  );
+  assert.match(
+    result.stdout,
+    /Complete docs\/RELEASE_QA\.md in that clean profile/
+  );
+  assert.match(
+    result.stdout,
+    /npm run qa:release:manual:media -- --json --require-complete/
+  );
+  assert.match(
+    result.stdout,
+    /npm run qa:release:manual:sidecars -- --json --require-complete/
+  );
+  assert.match(
+    result.stdout,
+    /npm run qa:release:manual:measurements -- --json --write/
+  );
+  assert.match(result.stdout, /Only after both strict reports pass/);
+  assert.match(
+    result.stdout,
+    /Run throughout the session: npm run qa:release:manual:progress/
+  );
   assert.match(result.stdout, /Run: npm run qa:release:manual/);
   assert.match(result.stdout, /Run: npm run build:cws/);
   assert.match(result.stdout, /Run: npm run verify:cws-package/);
@@ -831,6 +910,62 @@ test("manual QA template commands use the safe template writer", () => {
     "node scripts/manual-qa-profile.mjs"
   );
   assert.equal(
+    packageJson.scripts["qa:release:manual:progress"],
+    "node scripts/verify-manual-qa-evidence.mjs --progress"
+  );
+  assert.equal(
+    packageJson.scripts["qa:release:manual:media"],
+    "node scripts/manual-qa-media-probe.mjs"
+  );
+  assert.equal(
+    packageJson.scripts["qa:release:manual:sidecars"],
+    "node scripts/manual-qa-sidecar-probe.mjs"
+  );
+  assert.equal(
+    packageJson.scripts["qa:release:manual:measurements"],
+    "node scripts/apply-manual-qa-measurements.mjs"
+  );
+  assert.match(
+    applyManualQaMeasurementsScript,
+    /SAYLESS_MANUAL_QA_MEASUREMENTS_ROOT/
+  );
+  assert.match(applyManualQaMeasurementsScript, /--write/);
+  assert.match(applyManualQaMeasurementsScript, /renameSync/);
+  assert.match(
+    manualQaMeasurementImportScript,
+    /buildManualQaMeasurementImport/
+  );
+  assert.match(
+    manualQaMeasurementImportScript,
+    /manual QA evidence status must be "template"/
+  );
+  assert.match(manualQaMeasurementImportScript, /measurable-set-complete/);
+  assert.match(manualQaMeasurementImportScript, /structurally-complete/);
+  assert.doesNotMatch(manualQaMeasurementImportScript, /testedAt\s*=/);
+  assert.match(manualQaMediaProbeScript, /releaseThresholds/);
+  assert.match(manualQaMediaProbeScript, /releaseCoverage/);
+  assert.match(manualQaMediaProbeScript, /--require-complete/);
+  assert.match(manualQaMediaProbeScript, /measurable-set-complete/);
+  assert.match(
+    manualQaMediaCoverageScript,
+    /MIN_LONG_RECORDING_DURATION_SECONDS = 180/
+  );
+  assert.match(
+    manualQaMediaCoverageScript,
+    /MIN_LARGE_RECORDING_BYTE_SIZE = 25 \* 1024 \* 1024/
+  );
+  assert.match(manualQaSidecarProbeScript, /sayless\.localRecordingProject/);
+  assert.match(manualQaSidecarProbeScript, /sayless\.localRecordingTranscript/);
+  assert.match(manualQaSidecarProbeScript, /PROJECT_SCHEMA_VERSION = 4/);
+  assert.match(manualQaSidecarProbeScript, /completeSetCount/);
+  assert.match(manualQaSidecarProbeScript, /recording-id-mismatch/);
+  assert.match(manualQaSidecarProbeScript, /--require-complete/);
+  assert.match(manualQaSidecarProbeScript, /Structural checks are read-only/);
+  assert.match(localRecordingsE2eScript, /manual-qa-sidecar-probe\.mjs/);
+  assert.match(localRecordingsE2eScript, /productSidecarProbe/);
+  assert.match(localRecordingsE2eScript, /coverage\.completeSetCount/);
+  assert.match(localRecordingsE2eScript, /--require-complete/);
+  assert.equal(
     packageJson.scripts["qa:release:manual:template"],
     "node scripts/verify-manual-qa-evidence.mjs --write-template"
   );
@@ -839,6 +974,24 @@ test("manual QA template commands use the safe template writer", () => {
     "node scripts/verify-manual-qa-evidence.mjs --write-template --force"
   );
   assert.match(verifyManualQaScript, /--write-template/);
+  assert.match(verifyManualQaScript, /--progress/);
+  assert.match(verifyManualQaScript, /sayless\.manualQaProgress/);
+  assert.match(verifyManualQaScript, /MANUAL_QA_PROGRESS_SECTIONS/);
+  assert.match(verifyManualQaScript, /errorSamples/);
+  assert.match(verifyManualQaScript, /--section=/);
+  assert.match(verifyManualQaScript, /selectedSection/);
+  assert.match(verifyManualQaScript, /nextSection/);
+  assert.match(verifyManualQaScript, /workTargets/);
+  assert.match(verifyManualQaScript, /MEASUREMENT_IMPORT_ERROR_PATTERN/);
+  assert.match(
+    verifyManualQaScript,
+    /"measurementImport",\s*"Probe measurements"/
+  );
+  assert.match(
+    verifyManualQaScript,
+    /npm run qa:release:manual:measurements -- --json --write/
+  );
+  assert.match(verifyManualQaScript, /Work targets:/);
   assert.match(verifyManualQaScript, /writeFileAtomic/);
   assert.match(verifyManualQaScript, /automatedEvidenceCanPrefillTemplate/);
   assert.match(verifyManualQaScript, /gitWorktreeFingerprint/);
@@ -955,13 +1108,87 @@ test("manual QA profile helper prints a clean Chrome command for the canonical b
     manualQaProfileScript,
     /manual QA profile --profile-dir value must not be empty/
   );
+  assert.match(manualQaProfileScript, /--resume-profile/);
+  assert.match(manualQaProfileScript, /sayless\.manualQaProfile/);
+  assert.match(manualQaProfileScript, /sayless\.manualQaSession/);
+  assert.match(manualQaProfileScript, /manual-qa-session\.json/);
+  assert.match(manualQaProfileScript, /writeActiveSession/);
+  assert.match(manualQaProfileScript, /activeSessionRecorded/);
+  assert.match(manualQaProfileScript, /manualSessionProvenanceRecord/);
+  assert.match(manualQaProfileScript, /writeManualSessionProvenance/);
+  assert.match(manualQaProfileScript, /sayless\.manualQaSessionProvenance/);
+  assert.match(manualQaProfileScript, /manualSessionProvenanceRecorded/);
+  assert.match(manualQaProfileScript, /launchChrome/);
+  assert.match(
+    manualQaProfileScript,
+    /could not launch the selected Chrome executable/
+  );
+  assert.match(
+    manualQaProfileScript,
+    /arbitrary existing Chrome profiles cannot be used/
+  );
+  assert.match(
+    manualQaProfileScript,
+    /does not match the current release evidence or test environment/
+  );
   assert.match(manualQaProfileScript, /--launch/);
   assert.match(manualQaProfileScript, /--json/);
+  assert.match(manualQaProfileScript, /--sync-template/);
+  assert.match(manualQaProfileScript, /templateSynchronized/);
+  assert.match(manualQaProfileScript, /manual-qa-template-sync\.mjs/);
+  assert.match(manualQaProfileScript, /buildSynchronizedManualTemplate/);
+  assert.doesNotMatch(manualQaProfileScript, /const mergeTemplateDefaults/);
+  assert.doesNotMatch(releaseStatusScript, /const mergeTemplateDefaults/);
+  assert.match(releaseStatusScript, /discoverActiveManualQaSession/);
+  assert.match(releaseStatusScript, /manual-qa-session\.json/);
+  assert.match(releaseStatusScript, /resumeAction/);
+  assert.match(manualQaTemplateSyncScript, /mergeTemplateDefaults/);
+  assert.match(
+    manualQaTemplateSyncScript,
+    /migrateRetiredTemplatePlaceholders/
+  );
+  assert.match(manualQaTemplateSyncScript, /buildSynchronizedManualTemplate/);
+  assert.match(manualQaTemplateSyncScript, /analyzeManualTemplateSync/);
+  assert.match(
+    manualQaTemplateSyncScript,
+    /canonical template fields are missing/
+  );
+  assert.match(
+    manualQaTemplateSyncScript,
+    /retired template placeholders are still present/
+  );
+  assert.match(
+    manualQaTemplateSyncScript,
+    /\.\.\.\(mergedTemplate\.environment \|\| \{\}\)/
+  );
+  assert.match(manualQaProfileScript, /--print-template/);
+  assert.match(
+    manualQaProfileScript,
+    /manual QA evidence status must be "template" for --sync-template/
+  );
 
   const fixture = mkdtempSync(join(tmpdir(), "sayless-manual-profile-pass-"));
   try {
+    const firstProfileDir = join(fixture, "manual-profile-one");
+    const secondProfileDir = join(fixture, "manual-profile-two");
     mkdirSync(join(fixture, "build"), { recursive: true });
     mkdirSync(join(fixture, "release-artifacts"), { recursive: true });
+    mkdirSync(join(fixture, "src"), { recursive: true });
+    writeFileSync(
+      join(fixture, "package.json"),
+      JSON.stringify({ version: "1.2.3" })
+    );
+    writeFileSync(
+      join(fixture, "package-lock.json"),
+      JSON.stringify({
+        version: "1.2.3",
+        packages: { "": { version: "1.2.3" } },
+      })
+    );
+    writeFileSync(
+      join(fixture, "src", "manifest.json"),
+      JSON.stringify({ version: "1.2.3" })
+    );
     writeFileSync(
       join(fixture, "build", "manifest.json"),
       JSON.stringify({ version: "1.2.3" })
@@ -974,6 +1201,13 @@ test("manual QA profile helper prints a clean Chrome command for the canonical b
         status: "passed",
         releaseVersion: "1.2.3",
         generatedAt: "2026-07-17T00:00:00.000Z",
+        builtExtension: {
+          id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          buildPath: "build",
+          cleanChromeProfile: true,
+          observedAt: "2026-07-17T00:00:00.000Z",
+          summaryCount: 10,
+        },
         git: {
           workingTree: emptyGitWorkingTree,
         },
@@ -986,20 +1220,50 @@ test("manual QA profile helper prints a clean Chrome command for the canonical b
         },
       })
     );
+    writeFileSync(
+      join(fixture, "release-artifacts", "manual-qa-evidence.json"),
+      JSON.stringify({
+        kind: "sayless.manualQaEvidence",
+        status: "template",
+        releaseVersion: "stale",
+        automatedEvidencePath: "stale.json",
+        automatedEvidenceGeneratedAt: "YYYY-MM-DDTHH:mm:ss.sssZ",
+        tester: { name: "Preserve this observation" },
+        environment: {
+          extensionSource: "stale-build",
+          cleanChromeProfile: false,
+          unpackedExtensionId: "preserve-extension-placeholder",
+        },
+        zoom: {
+          recordingId: "legacy-user-entered-recording-id",
+          sourceHadClickMetadata: false,
+          previewVerified: false,
+          mp4ExportVerified: false,
+          keepRemoveVerified: false,
+          persistedAfterReopen: false,
+          exportInspection:
+            "Replace with how the MP4 export was inspected for the saved zoom framing.",
+          notes:
+            "Replace with observed zoom suggestion, preview, and export behavior.",
+          legacyTesterComment: "Preserve this user-entered legacy note",
+        },
+      })
+    );
 
     const result = spawnSync(
       process.execPath,
       [
         "scripts/manual-qa-profile.mjs",
         "--json",
-        "--profile-dir=/tmp/sayless-profile-test",
+        "--sync-template",
+        `--profile-dir=${firstProfileDir}`,
       ],
       {
         cwd: ROOT,
         encoding: "utf8",
         env: {
           ...process.env,
-          SAYLESS_CHROME: "/tmp/Chrome Test",
+          SAYLESS_CHROME: process.execPath,
           SAYLESS_MANUAL_QA_PROFILE_ROOT: fixture,
         },
       }
@@ -1018,6 +1282,11 @@ test("manual QA profile helper prints a clean Chrome command for the canonical b
     assert.equal(profile.buildSha256, build.sha256);
     assert.equal(profile.buildBytes, buildBytes);
     assert.equal(profile.buildFormattedBytes, `${buildBytes} B`);
+    assert.equal(profile.templateSynchronized, true);
+    assert.equal(
+      profile.synchronizedTemplatePath,
+      "release-artifacts/manual-qa-evidence.json"
+    );
     assert.equal(profile.evidenceReminder.cleanChromeProfile, true);
     assert.equal(profile.evidenceReminder.extensionSource, "build");
     assert.equal(
@@ -1030,11 +1299,371 @@ test("manual QA profile helper prints a clean Chrome command for the canonical b
     );
     assert.equal(profile.evidencePrefill.environment.extensionSource, "build");
     assert.equal(profile.evidencePrefill.environment.cleanChromeProfile, true);
-    assert.equal(profile.profileDir, "/tmp/sayless-profile-test");
+    assert.equal(typeof profile.detectedEnvironment.os, "string");
+    assert.ok(profile.detectedEnvironment.os.length > 0);
+    assert.equal(profile.detectedEnvironment.chromeVersion, process.version);
+    assert.equal(
+      profile.evidencePrefill.environment.os,
+      profile.detectedEnvironment.os
+    );
+    assert.equal(
+      profile.evidencePrefill.environment.chromeVersion,
+      process.version
+    );
+    assert.equal(profile.profileDir, firstProfileDir);
+    assert.equal(profile.profileMode, "new");
+    assert.equal(
+      profile.profileMarkerPath,
+      join(firstProfileDir, ".sayless-manual-qa-profile.json")
+    );
+    const profileMarker = JSON.parse(
+      readFileSync(profile.profileMarkerPath, "utf8")
+    );
+    assert.equal(profile.profileCreatedAt, profileMarker.createdAt);
+    assert.equal(profileMarker.operatingSystem, profile.detectedEnvironment.os);
+    assert.equal(profileMarker.browserCommand, process.execPath);
+    assert.equal(profileMarker.browserVersion, process.version);
+    assert.deepEqual(profile.resumeCommand, [
+      "npm",
+      "run",
+      "qa:release:manual:profile",
+      "--",
+      `--profile-dir=${firstProfileDir}`,
+      "--resume-profile",
+      "--launch",
+    ]);
+    assert.equal(profile.activeSessionPath, null);
+    assert.equal(profile.activeSessionRecorded, false);
+    assert.equal(profile.manualSessionProvenancePath, null);
+    assert.equal(profile.manualSessionProvenanceRecorded, false);
     assert.ok(
       profile.command.includes("--load-extension=" + join(fixture, "build"))
     );
     assert.ok(profile.command.includes("chrome://extensions/"));
+    writeFileSync(join(firstProfileDir, "Preferences"), "{}");
+    const resumedProfileResult = spawnSync(
+      process.execPath,
+      [
+        "scripts/manual-qa-profile.mjs",
+        "--json",
+        "--resume-profile",
+        `--profile-dir=${firstProfileDir}`,
+      ],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SAYLESS_CHROME: process.execPath,
+          SAYLESS_MANUAL_QA_PROFILE_ROOT: fixture,
+        },
+      }
+    );
+    assert.equal(resumedProfileResult.status, 0, resumedProfileResult.stderr);
+    const resumedProfile = JSON.parse(resumedProfileResult.stdout);
+    assert.equal(resumedProfile.profileMode, "resumed");
+    assert.equal(resumedProfile.profileCreatedAt, profile.profileCreatedAt);
+    assert.equal(resumedProfile.profileDir, firstProfileDir);
+    const launchedResumeResult = spawnSync(
+      process.execPath,
+      [
+        "scripts/manual-qa-profile.mjs",
+        "--json",
+        "--resume-profile",
+        "--launch",
+        `--profile-dir=${firstProfileDir}`,
+      ],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SAYLESS_CHROME: process.execPath,
+          SAYLESS_MANUAL_QA_PROFILE_ROOT: fixture,
+        },
+      }
+    );
+    assert.equal(launchedResumeResult.status, 0, launchedResumeResult.stderr);
+    const launchedResume = JSON.parse(launchedResumeResult.stdout);
+    assert.equal(launchedResume.activeSessionRecorded, true);
+    assert.equal(launchedResume.manualSessionProvenanceRecorded, true);
+    assert.equal(
+      launchedResume.manualSessionProvenancePath,
+      "release-artifacts/manual-qa-evidence.json"
+    );
+    assert.equal(
+      launchedResume.activeSessionPath,
+      "release-artifacts/manual-qa-session.json"
+    );
+    const activeSession = JSON.parse(
+      readFileSync(
+        join(fixture, "release-artifacts", "manual-qa-session.json"),
+        "utf8"
+      )
+    );
+    assert.equal(activeSession.kind, "sayless.manualQaSession");
+    assert.equal(activeSession.status, "active");
+    assert.equal(activeSession.profileDir, firstProfileDir);
+    assert.equal(activeSession.profileMarkerPath, profile.profileMarkerPath);
+    assert.equal(activeSession.profileCreatedAt, profile.profileCreatedAt);
+    assert.equal(activeSession.releaseVersion, "1.2.3");
+    assert.equal(
+      activeSession.automatedEvidenceGeneratedAt,
+      "2026-07-17T00:00:00.000Z"
+    );
+    assert.equal(activeSession.buildSha256, build.sha256);
+    assert.equal(activeSession.browserCommand, process.execPath);
+    assert.equal(activeSession.browserVersion, process.version);
+    const activeSessionPath = join(
+      fixture,
+      "release-artifacts",
+      "manual-qa-session.json"
+    );
+    const activeSessionBeforeFailedLaunch = readFileSync(
+      activeSessionPath,
+      "utf8"
+    );
+    const nonExecutableBrowserPath = join(fixture, "not-executable-browser");
+    writeFileSync(nonExecutableBrowserPath, "not an executable");
+    const failedLaunchResult = spawnSync(
+      process.execPath,
+      [
+        "scripts/manual-qa-profile.mjs",
+        "--json",
+        "--launch",
+        `--profile-dir=${join(fixture, "failed-launch-profile")}`,
+      ],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SAYLESS_CHROME: nonExecutableBrowserPath,
+          SAYLESS_MANUAL_QA_PROFILE_ROOT: fixture,
+        },
+      }
+    );
+    assert.notEqual(failedLaunchResult.status, 0);
+    assert.match(
+      JSON.parse(failedLaunchResult.stderr).error,
+      /could not launch the selected Chrome executable/
+    );
+    assert.equal(
+      readFileSync(activeSessionPath, "utf8"),
+      activeSessionBeforeFailedLaunch
+    );
+    const synchronizedTemplate = JSON.parse(
+      readFileSync(
+        join(fixture, "release-artifacts", "manual-qa-evidence.json"),
+        "utf8"
+      )
+    );
+    assert.equal(synchronizedTemplate.releaseVersion, "1.2.3");
+    assert.equal(
+      synchronizedTemplate.automatedEvidencePath,
+      "release-artifacts/release-qa-automated.json"
+    );
+    assert.equal(
+      synchronizedTemplate.automatedEvidenceGeneratedAt,
+      "2026-07-17T00:00:00.000Z"
+    );
+    assert.deepEqual(synchronizedTemplate.manualSession, {
+      kind: "sayless.manualQaSessionProvenance",
+      profileCreatedAt: profile.profileCreatedAt,
+      releaseVersion: "1.2.3",
+      automatedEvidenceGeneratedAt: "2026-07-17T00:00:00.000Z",
+      buildSha256: build.sha256,
+      buildFileCount: build.fileCount,
+      buildBytes,
+      unpackedExtensionId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      operatingSystem: profile.detectedEnvironment.os,
+      browserVersion: process.version,
+    });
+    assert.equal("profileDir" in synchronizedTemplate.manualSession, false);
+    assert.equal("browserCommand" in synchronizedTemplate.manualSession, false);
+    assert.equal(synchronizedTemplate.environment.extensionSource, "build");
+    assert.equal(synchronizedTemplate.environment.cleanChromeProfile, true);
+    assert.equal(
+      synchronizedTemplate.environment.os,
+      profile.detectedEnvironment.os
+    );
+    assert.equal(
+      synchronizedTemplate.environment.chromeVersion,
+      process.version
+    );
+    assert.equal(
+      synchronizedTemplate.environment.unpackedExtensionId,
+      "preserve-extension-placeholder"
+    );
+    for (const canonicalEnvironmentField of [
+      "os",
+      "chromeVersion",
+      "networkDisabledForOfflineTranscription",
+    ]) {
+      assert.ok(
+        canonicalEnvironmentField in synchronizedTemplate.environment,
+        `template sync must restore environment.${canonicalEnvironmentField}`
+      );
+    }
+    assert.equal(synchronizedTemplate.tester.name, "Preserve this observation");
+    for (const retiredZoomField of [
+      "sourceHadClickMetadata",
+      "previewVerified",
+      "mp4ExportVerified",
+      "keepRemoveVerified",
+      "persistedAfterReopen",
+      "exportInspection",
+    ]) {
+      assert.equal(
+        retiredZoomField in synchronizedTemplate.zoom,
+        false,
+        `template sync must remove untouched retired zoom.${retiredZoomField}`
+      );
+    }
+    assert.equal(
+      synchronizedTemplate.zoom.recordingId,
+      "legacy-user-entered-recording-id"
+    );
+    assert.equal(
+      synchronizedTemplate.zoom.notes,
+      "Replace with observed varied-dimension zoom behavior across both recordings."
+    );
+    assert.equal(
+      synchronizedTemplate.zoom.legacyTesterComment,
+      "Preserve this user-entered legacy note"
+    );
+    assert.equal(typeof synchronizedTemplate.crop, "object");
+    assert.equal(typeof synchronizedTemplate.projectAudio, "object");
+    assert.ok(
+      "crop_preview_export_real_recordings" in synchronizedTemplate.checks
+    );
+    assert.ok(
+      "project_audio_real_inputs_and_long_sync" in synchronizedTemplate.checks
+    );
+
+    const synchronizedTemplateText = readFileSync(
+      join(fixture, "release-artifacts", "manual-qa-evidence.json"),
+      "utf8"
+    );
+    const repeatedSyncResult = spawnSync(
+      process.execPath,
+      [
+        "scripts/manual-qa-profile.mjs",
+        "--json",
+        "--sync-template",
+        `--profile-dir=${secondProfileDir}`,
+      ],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SAYLESS_CHROME: process.execPath,
+          SAYLESS_MANUAL_QA_PROFILE_ROOT: fixture,
+        },
+      }
+    );
+    assert.equal(repeatedSyncResult.status, 0, repeatedSyncResult.stderr);
+    assert.equal(
+      readFileSync(
+        join(fixture, "release-artifacts", "manual-qa-evidence.json"),
+        "utf8"
+      ),
+      synchronizedTemplateText,
+      "repeated synchronization must converge without changing the template"
+    );
+
+    writeFileSync(
+      join(fixture, "release-artifacts", "manual-qa-evidence.json"),
+      JSON.stringify({
+        ...synchronizedTemplate,
+        status: "passed",
+        tester: { name: "Do not overwrite" },
+      })
+    );
+    const refusedSyncResult = spawnSync(
+      process.execPath,
+      ["scripts/manual-qa-profile.mjs", "--json", "--sync-template"],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SAYLESS_MANUAL_QA_PROFILE_ROOT: fixture,
+        },
+      }
+    );
+    assert.notEqual(refusedSyncResult.status, 0);
+    assert.match(
+      JSON.parse(refusedSyncResult.stderr).error,
+      /status must be "template" for --sync-template/
+    );
+    assert.equal(
+      JSON.parse(
+        readFileSync(
+          join(fixture, "release-artifacts", "manual-qa-evidence.json"),
+          "utf8"
+        )
+      ).tester.name,
+      "Do not overwrite"
+    );
+
+    const markerPath = join(firstProfileDir, ".sayless-manual-qa-profile.json");
+    const validMarker = JSON.parse(readFileSync(markerPath, "utf8"));
+    writeFileSync(
+      markerPath,
+      JSON.stringify({ ...validMarker, buildSha256: "0".repeat(64) })
+    );
+    const staleResumeResult = spawnSync(
+      process.execPath,
+      [
+        "scripts/manual-qa-profile.mjs",
+        "--json",
+        "--resume-profile",
+        `--profile-dir=${firstProfileDir}`,
+      ],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SAYLESS_MANUAL_QA_PROFILE_ROOT: fixture,
+        },
+      }
+    );
+    assert.notEqual(staleResumeResult.status, 0);
+    assert.match(
+      JSON.parse(staleResumeResult.stderr).error,
+      /marker buildSha256 does not match the current release evidence or test environment/
+    );
+    writeFileSync(
+      markerPath,
+      JSON.stringify({ ...validMarker, browserVersion: "Different Chrome" })
+    );
+    const changedBrowserResumeResult = spawnSync(
+      process.execPath,
+      [
+        "scripts/manual-qa-profile.mjs",
+        "--json",
+        "--resume-profile",
+        `--profile-dir=${firstProfileDir}`,
+      ],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SAYLESS_CHROME: process.execPath,
+          SAYLESS_MANUAL_QA_PROFILE_ROOT: fixture,
+        },
+      }
+    );
+    assert.notEqual(changedBrowserResumeResult.status, 0);
+    assert.match(
+      JSON.parse(changedBrowserResumeResult.stderr).error,
+      /marker browserVersion does not match the current release evidence or test environment/
+    );
+    writeFileSync(markerPath, JSON.stringify(validMarker));
 
     const dirtyProfileDir = join(fixture, "dirty-profile");
     mkdirSync(dirtyProfileDir);
@@ -1061,6 +1690,29 @@ test("manual QA profile helper prints a clean Chrome command for the canonical b
     assert.match(
       dirtyProfileError.error,
       /manual QA profile directory must be empty/
+    );
+
+    const unmarkedResumeResult = spawnSync(
+      process.execPath,
+      [
+        "scripts/manual-qa-profile.mjs",
+        "--json",
+        "--resume-profile",
+        `--profile-dir=${dirtyProfileDir}`,
+      ],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SAYLESS_MANUAL_QA_PROFILE_ROOT: fixture,
+        },
+      }
+    );
+    assert.notEqual(unmarkedResumeResult.status, 0);
+    assert.match(
+      JSON.parse(unmarkedResumeResult.stderr).error,
+      /arbitrary existing Chrome profiles cannot be used/
     );
 
     const fileProfileDir = join(fixture, "not-a-directory");
@@ -1152,6 +1804,48 @@ test("manual QA profile helper prints a clean Chrome command for the canonical b
     assert.match(
       emptyProfileError.error,
       /--profile-dir value must not be empty/
+    );
+
+    const resumeWithoutDirResult = spawnSync(
+      process.execPath,
+      ["scripts/manual-qa-profile.mjs", "--json", "--resume-profile"],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SAYLESS_MANUAL_QA_PROFILE_ROOT: fixture,
+        },
+      }
+    );
+    assert.notEqual(resumeWithoutDirResult.status, 0);
+    assert.match(
+      JSON.parse(resumeWithoutDirResult.stderr).error,
+      /--resume-profile requires --profile-dir/
+    );
+
+    const resumeWithSyncResult = spawnSync(
+      process.execPath,
+      [
+        "scripts/manual-qa-profile.mjs",
+        "--json",
+        "--resume-profile",
+        "--sync-template",
+        `--profile-dir=${firstProfileDir}`,
+      ],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SAYLESS_MANUAL_QA_PROFILE_ROOT: fixture,
+        },
+      }
+    );
+    assert.notEqual(resumeWithSyncResult.status, 0);
+    assert.match(
+      JSON.parse(resumeWithSyncResult.stderr).error,
+      /cannot be combined with --sync-template/
     );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -1529,7 +2223,7 @@ test("TypeScript 7 is a required CI and release evidence gate", () => {
   assert.match(typecheckScript, /"nix-shell"/);
   assert.match(releaseQaAutomatedScript, /label: "typecheck"/);
   assert.match(releaseAuditScript, /node-version:\\s\*24/);
-  assert.match(releaseAuditScript, /determinate-nix-action@v3/);
+  assert.match(releaseAuditScript, /determinate-nix-action@v3\\\.21\\\.8/);
   assert.match(releaseAuditScript, /npm run typecheck/);
 });
 
@@ -1617,6 +2311,33 @@ test("release audit blocks inherited Screenity product names in active source", 
   assert.match(
     releaseAuditScript,
     /inherited Screenity product reference\(s\) found in active extension source/
+  );
+});
+
+test("release audit keeps retired destructive editor compatibility paths out", () => {
+  assert.ok(releaseAuditScript.includes("FORBIDDEN_DESTRUCTIVE_EDITOR_FILES"));
+  assert.ok(
+    releaseAuditScript.includes("FORBIDDEN_DESTRUCTIVE_EDITOR_PROTOCOLS")
+  );
+  for (const legacyPath of [
+    "src/pages/Editor/utils/addAudioToVideo.ts",
+    "src/pages/Editor/utils/cropVideo.ts",
+    "src/pages/Editor/utils/cutVideo.ts",
+    "src/pages/Editor/utils/muteVideo.ts",
+    "add-audio-to-video",
+    "crop-video",
+    "cut-video",
+    "mute-video",
+    "contentState\\.hasBeenEdited",
+  ]) {
+    assert.ok(
+      releaseAuditScript.includes(legacyPath),
+      `missing destructive editor compatibility guard for ${legacyPath}`
+    );
+  }
+  assert.match(
+    releaseAuditScript,
+    /obsolete destructive editor compatibility path\(s\) found/
   );
 });
 
