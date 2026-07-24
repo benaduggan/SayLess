@@ -769,20 +769,31 @@ const seedRecording = async (page) => {
       ),
     }));
 
-    await page.waitForFunction(
-      () => {
-        const action = document.querySelector(
-          '[data-testid="player-edit-action"]'
-        );
-        return (
-          action &&
-          action.getAttribute("aria-disabled") !== "true" &&
-          action.getAttribute("data-disabled") !== "true"
-        );
-      },
-      null,
-      { timeout: 60000 }
-    );
+    const waitForEditablePlayer = (timeout) =>
+      page.waitForFunction(
+        () => {
+          const action = document.querySelector(
+            '[data-testid="player-edit-action"]'
+          );
+          return (
+            action &&
+            action.getAttribute("aria-disabled") !== "true" &&
+            action.getAttribute("data-disabled") !== "true"
+          );
+        },
+        null,
+        { timeout }
+      );
+    try {
+      await waitForEditablePlayer(30000);
+    } catch {
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await visibleBox(
+        page.getByTestId("player-audio-action"),
+        "player audio action after readiness retry"
+      );
+      await waitForEditablePlayer(60000);
+    }
     await page.getByTestId("player-edit-action").click();
     await visibleBox(
       page.getByTestId("timeline-apply-edits"),

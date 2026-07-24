@@ -109,6 +109,7 @@ const storageSet = (value: Record<string, unknown>) =>
   chrome.storage.local.set(value);
 
 const now = () => Date.now();
+let entryWriteQueue: Promise<void> = Promise.resolve();
 
 export const localRecordingIdFromBackendRef = (
   backendRef: LocalRecordingBackendRef | null,
@@ -389,20 +390,44 @@ export const getLocalRecordingIndex =
     );
   };
 
-export const saveLocalRecordingEntry = async (
+export const saveLocalRecordingEntry = (
   entry: LocalRecordingEntryInput
 ): Promise<LocalRecordingEntry> => {
-  if (!entry?.id) throw new Error("local-recording-entry-missing-id");
-  const index = await getLocalRecordingIndex();
-  const existing = index[entry.id] || {};
-  const next = normalizeLocalRecordingEntry({
-    ...existing,
-    ...entry,
-    updatedAt: entry.updatedAt || now(),
-  });
-  index[next.id] = next;
-  await storageSet({ [INDEX_KEY]: index });
-  return next;
+  const write = entryWriteQueue
+    .catch(() => {})
+    .then(async () => {
+      if (!entry?.id) throw new Error("local-recording-entry-missing-id");
+      const index = await getLocalRecordingIndex();
+      const existing = index[entry.id] || {};
+      const writesMediaCheckpoint = Object.prototype.hasOwnProperty.call(
+        entry,
+        "editedBlobKey",
+      );
+      const existingSource = existing.project?.source;
+      const incomingSource = entry.project?.source;
+      const staleProjectSource =
+        existing.editedBlobKey &&
+        !writesMediaCheckpoint &&
+        existingSource &&
+        incomingSource &&
+        (existingSource.byteSize !== incomingSource.byteSize ||
+          existingSource.mimeType !== incomingSource.mimeType ||
+          existingSource.duration !== incomingSource.duration);
+      const next = normalizeLocalRecordingEntry({
+        ...existing,
+        ...entry,
+        ...(staleProjectSource ? { project: existing.project } : {}),
+        updatedAt: entry.updatedAt || now(),
+      });
+      index[next.id] = next;
+      await storageSet({ [INDEX_KEY]: index });
+      return next;
+    });
+  entryWriteQueue = write.then(
+    () => {},
+    () => {},
+  );
+  return write;
 };
 
 export const renameLocalRecording = async (
