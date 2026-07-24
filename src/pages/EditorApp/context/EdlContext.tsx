@@ -501,6 +501,9 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     const recordingId = contentState.localRecordingId;
     if (!recordingId || hydratedProjectIdRef.current !== recordingId) return;
+    // Applying edits resets the source and project fields in stages. Avoid
+    // persisting a mixed pre/post-apply snapshot over the durable checkpoint.
+    if (exporting) return;
     if (!timeline && !transcript && !selectedClipId) return;
     const revision = ++projectSaveRevisionRef.current;
     setProjectSaveStatus("pending");
@@ -560,6 +563,7 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
     crop,
     audioTrack,
     exportSettings,
+    exporting,
   ]);
 
   const updateCrop = useCallback((nextCrop: CropRegion | null) => {
