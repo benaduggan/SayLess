@@ -17,6 +17,7 @@ import { videoConverter } from "./videoConverter";
 
 const AAC_SAMPLE_RATE = 48000;
 const AAC_CHANNELS = 2;
+const AAC_BITRATE = 192000;
 
 export class VideoAudioMixer {
   async addAudio(
@@ -68,7 +69,7 @@ export class VideoAudioMixer {
 
       const audioSource = new AudioSampleSource({
         codec: "aac",
-        bitrate: 128000,
+        bitrate: AAC_BITRATE,
       });
       output.addAudioTrack(audioSource);
 
