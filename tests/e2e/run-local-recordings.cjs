@@ -155,13 +155,15 @@ const bundleHarness = (work) =>
   const browser = await chromium.launch({ channel: "chrome", headless });
   const context = await browser.newContext();
   const page = await context.newPage();
+  const forceTimelineAacUnsupported =
+    process.env.SAYLESS_TEST_FORCE_AAC_UNSUPPORTED === "1";
   page.on("pageerror", (e) => console.log("  [pageerror]", e.message));
   await page.goto(harnessUrl);
   await page.waitForFunction("window.LOCAL_RECORDINGS_READY === true", {
     timeout: 30000,
   });
 
-  const result = await page.evaluate(async () => {
+  const result = await page.evaluate(async (forceAacUnsupported) => {
     localStorage.clear();
     indexedDB.deleteDatabase("local-recordings");
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -255,22 +257,52 @@ const bundleHarness = (work) =>
       return new Blob(chunks, { type: "video/webm" });
     };
     const browserCanEncodeTimelineAac = async () => {
+      if (forceAacUnsupported) return false;
       if (
         typeof AudioEncoder === "undefined" ||
-        typeof AudioEncoder.isConfigSupported !== "function"
+        typeof AudioEncoder.isConfigSupported !== "function" ||
+        typeof AudioData === "undefined"
       ) {
         return false;
       }
+      const config = {
+        codec: "mp4a.40.2",
+        bitrate: 192000,
+        numberOfChannels: 2,
+        sampleRate: 48000,
+      };
+      let encoder = null;
       try {
-        const support = await AudioEncoder.isConfigSupported({
-          codec: "mp4a.40.2",
-          bitrate: 192000,
-          numberOfChannels: 2,
-          sampleRate: 48000,
+        const support = await AudioEncoder.isConfigSupported(config);
+        if (support.supported !== true) return false;
+
+        let encodedChunks = 0;
+        let encodeError = null;
+        encoder = new AudioEncoder({
+          output: () => {
+            encodedChunks += 1;
+          },
+          error: (error) => {
+            encodeError = error;
+          },
         });
-        return support.supported === true;
+        encoder.configure(config);
+        const sample = new AudioData({
+          format: "f32-planar",
+          sampleRate: config.sampleRate,
+          numberOfFrames: 1024,
+          numberOfChannels: config.numberOfChannels,
+          timestamp: 0,
+          data: new Float32Array(1024 * config.numberOfChannels),
+        });
+        encoder.encode(sample);
+        sample.close();
+        await encoder.flush();
+        return encodeError === null && encodedChunks > 0;
       } catch {
         return false;
+      } finally {
+        if (encoder && encoder.state !== "closed") encoder.close();
       }
     };
     const genSilenceAudioRecording = async (sec = 3.2) => {
@@ -1284,39 +1316,14 @@ const bundleHarness = (work) =>
     const mp3ProjectAudioProbe = await window.VALIDATE_PROJECT_AUDIO(
       mp3ProjectAudioBlob
     );
-    const mp3ProjectAudioRendered = await window.MIX_PROJECT_AUDIO(
-      projectAudioTimelineVideo,
-      mp3ProjectAudioBlob,
-      { ...projectAudioTrack, mode: "replace", volume: 1, loop: true }
-    );
-    const decodedMp3ProjectAudio =
-      await window.TRANSCRIPTION_AUDIO.blobToMono16k(mp3ProjectAudioRendered);
-    const mp3ProjectAudioRms = Math.sqrt(
-      decodedMp3ProjectAudio.pcm.reduce(
-        (sum, sample) => sum + sample * sample,
-        0
-      ) / Math.max(1, decodedMp3ProjectAudio.pcm.length)
-    );
+    let mp3ProjectAudioRenderedBytes = 0;
+    let mp3ProjectAudioRms = null;
     let m4aProjectAudioProbe = null;
     let m4aProjectAudioRenderedBytes = 0;
     let m4aProjectAudioRms = null;
     if (silenceAudioM4aResult.blob) {
       m4aProjectAudioProbe = await window.VALIDATE_PROJECT_AUDIO(
         silenceAudioM4aResult.blob
-      );
-      const m4aProjectAudioRendered = await window.MIX_PROJECT_AUDIO(
-        projectAudioTimelineVideo,
-        silenceAudioM4aResult.blob,
-        { ...projectAudioTrack, mode: "replace", volume: 1 }
-      );
-      const decodedM4aProjectAudio =
-        await window.TRANSCRIPTION_AUDIO.blobToMono16k(m4aProjectAudioRendered);
-      m4aProjectAudioRenderedBytes = m4aProjectAudioRendered.size;
-      m4aProjectAudioRms = Math.sqrt(
-        decodedM4aProjectAudio.pcm.reduce(
-          (sum, sample) => sum + sample * sample,
-          0
-        ) / Math.max(1, decodedM4aProjectAudio.pcm.length)
       );
     }
     let corruptProjectAudioError = null;
@@ -1327,14 +1334,6 @@ const bundleHarness = (work) =>
     } catch (error) {
       corruptProjectAudioError = String(error?.message || error);
     }
-    const projectAudioRendered = await window.MIX_PROJECT_AUDIO(
-      projectAudioTimelineVideo,
-      projectAudioBlob,
-      projectAudioTrack
-    );
-    const decodedProjectAudio = await window.TRANSCRIPTION_AUDIO.blobToMono16k(
-      projectAudioRendered
-    );
     const rmsWindow = (decoded, startSeconds, endSeconds) => {
       const start = Math.max(0, Math.floor(startSeconds * decoded.sampleRate));
       const end = Math.min(
@@ -1348,30 +1347,77 @@ const bundleHarness = (work) =>
       }
       return Math.sqrt(sum / (end - start));
     };
-    const projectAudioRms = Math.sqrt(
-      decodedProjectAudio.pcm.reduce(
-        (sum, sample) => sum + sample * sample,
-        0
-      ) / Math.max(1, decodedProjectAudio.pcm.length)
-    );
-    const projectAudioNonLoopLateRms = rmsWindow(decodedProjectAudio, 1.6, 2.6);
-    const loopedProjectAudioRendered = await window.MIX_PROJECT_AUDIO(
-      projectAudioTimelineVideo,
-      projectAudioBlob,
-      { ...projectAudioTrack, loop: true }
-    );
-    const decodedLoopedProjectAudio =
-      await window.TRANSCRIPTION_AUDIO.blobToMono16k(
-        loopedProjectAudioRendered
-      );
-    const projectAudioLoopLateRms = rmsWindow(
-      decodedLoopedProjectAudio,
-      1.6,
-      2.6
-    );
+    let projectAudioRenderedBytes = 0;
+    let projectAudioRenderedType = "";
+    let projectAudioDuration = null;
+    let projectAudioRms = null;
+    let projectAudioNonLoopLateRms = null;
+    let projectAudioLoopLateRms = null;
     let projectAudioMixRms = null;
     let projectAudioReplaceRms = null;
+    let abortProjectAudioErrorName = null;
+    let abortProjectAudioMaxProgress = 0;
+    let retryProjectAudioExportBytes = 0;
     if (timelineAacSupported) {
+      const mp3ProjectAudioRendered = await window.MIX_PROJECT_AUDIO(
+        projectAudioTimelineVideo,
+        mp3ProjectAudioBlob,
+        { ...projectAudioTrack, mode: "replace", volume: 1, loop: true }
+      );
+      const decodedMp3ProjectAudio =
+        await window.TRANSCRIPTION_AUDIO.blobToMono16k(mp3ProjectAudioRendered);
+      mp3ProjectAudioRenderedBytes = mp3ProjectAudioRendered.size;
+      mp3ProjectAudioRms = Math.sqrt(
+        decodedMp3ProjectAudio.pcm.reduce(
+          (sum, sample) => sum + sample * sample,
+          0
+        ) / Math.max(1, decodedMp3ProjectAudio.pcm.length)
+      );
+      if (silenceAudioM4aResult.blob) {
+        const m4aProjectAudioRendered = await window.MIX_PROJECT_AUDIO(
+          projectAudioTimelineVideo,
+          silenceAudioM4aResult.blob,
+          { ...projectAudioTrack, mode: "replace", volume: 1 }
+        );
+        const decodedM4aProjectAudio =
+          await window.TRANSCRIPTION_AUDIO.blobToMono16k(
+            m4aProjectAudioRendered
+          );
+        m4aProjectAudioRenderedBytes = m4aProjectAudioRendered.size;
+        m4aProjectAudioRms = Math.sqrt(
+          decodedM4aProjectAudio.pcm.reduce(
+            (sum, sample) => sum + sample * sample,
+            0
+          ) / Math.max(1, decodedM4aProjectAudio.pcm.length)
+        );
+      }
+      const projectAudioRendered = await window.MIX_PROJECT_AUDIO(
+        projectAudioTimelineVideo,
+        projectAudioBlob,
+        projectAudioTrack
+      );
+      const decodedProjectAudio =
+        await window.TRANSCRIPTION_AUDIO.blobToMono16k(projectAudioRendered);
+      projectAudioRenderedBytes = projectAudioRendered.size;
+      projectAudioRenderedType = projectAudioRendered.type;
+      projectAudioDuration = decodedProjectAudio.duration;
+      projectAudioRms = Math.sqrt(
+        decodedProjectAudio.pcm.reduce(
+          (sum, sample) => sum + sample * sample,
+          0
+        ) / Math.max(1, decodedProjectAudio.pcm.length)
+      );
+      projectAudioNonLoopLateRms = rmsWindow(decodedProjectAudio, 1.6, 2.6);
+      const loopedProjectAudioRendered = await window.MIX_PROJECT_AUDIO(
+        projectAudioTimelineVideo,
+        projectAudioBlob,
+        { ...projectAudioTrack, loop: true }
+      );
+      const decodedLoopedProjectAudio =
+        await window.TRANSCRIPTION_AUDIO.blobToMono16k(
+          loopedProjectAudioRendered
+        );
+      projectAudioLoopLateRms = rmsWindow(decodedLoopedProjectAudio, 1.6, 2.6);
       const silentProjectAudioBlob = makeWavBlob(new Float32Array(16000));
       const mixRendered = await window.MIX_PROJECT_AUDIO(
         projectAudioTimelineVideo,
@@ -1400,32 +1446,31 @@ const bundleHarness = (work) =>
       ]);
       projectAudioMixRms = rmsWindow(decodedMix, 0.25, 0.9);
       projectAudioReplaceRms = rmsWindow(decodedReplace, 0.25, 0.9);
-    }
-    const abortProjectAudioController = new AbortController();
-    let abortProjectAudioErrorName = null;
-    let abortProjectAudioMaxProgress = 0;
-    try {
-      await window.MIX_PROJECT_AUDIO(
+      const abortProjectAudioController = new AbortController();
+      try {
+        await window.MIX_PROJECT_AUDIO(
+          projectAudioTimelineVideo,
+          projectAudioBlob,
+          projectAudioTrack,
+          (progress) => {
+            abortProjectAudioMaxProgress = Math.max(
+              abortProjectAudioMaxProgress,
+              progress
+            );
+            if (progress >= 0.9) abortProjectAudioController.abort();
+          },
+          abortProjectAudioController.signal
+        );
+      } catch (error) {
+        abortProjectAudioErrorName = error?.name || String(error);
+      }
+      const retryProjectAudioExport = await window.MIX_PROJECT_AUDIO(
         projectAudioTimelineVideo,
         projectAudioBlob,
-        projectAudioTrack,
-        (progress) => {
-          abortProjectAudioMaxProgress = Math.max(
-            abortProjectAudioMaxProgress,
-            progress
-          );
-          if (progress >= 0.9) abortProjectAudioController.abort();
-        },
-        abortProjectAudioController.signal
+        projectAudioTrack
       );
-    } catch (error) {
-      abortProjectAudioErrorName = error?.name || String(error);
+      retryProjectAudioExportBytes = retryProjectAudioExport.size;
     }
-    const retryProjectAudioExport = await window.MIX_PROJECT_AUDIO(
-      projectAudioTimelineVideo,
-      projectAudioBlob,
-      projectAudioTrack
-    );
     const transcriptExport = await lib.getLocalRecordingTranscriptExport(
       "rec-b"
     );
@@ -1763,8 +1808,8 @@ const bundleHarness = (work) =>
       cropCenterPixel,
       cropZoomRenderedBytes: cropZoomRendered.size,
       cropZoomCenterPixel,
-      projectAudioRenderedBytes: projectAudioRendered.size,
-      projectAudioRenderedType: projectAudioRendered.type,
+      projectAudioRenderedBytes,
+      projectAudioRenderedType,
       projectAudioPreviewController,
       cancelledPostRenderWebm,
       retriedPostRenderWebm,
@@ -1772,13 +1817,13 @@ const bundleHarness = (work) =>
       retriedPostRenderGif,
       mp3ProjectAudioType: mp3ProjectAudioBlob.type,
       mp3ProjectAudioProbe,
-      mp3ProjectAudioRenderedBytes: mp3ProjectAudioRendered.size,
+      mp3ProjectAudioRenderedBytes,
       mp3ProjectAudioRms,
       m4aProjectAudioProbe,
       m4aProjectAudioRenderedBytes,
       m4aProjectAudioRms,
       corruptProjectAudioError,
-      projectAudioDuration: decodedProjectAudio.duration,
+      projectAudioDuration,
       projectAudioRms,
       projectAudioNonLoopLateRms,
       projectAudioLoopLateRms,
@@ -1786,7 +1831,7 @@ const bundleHarness = (work) =>
       projectAudioReplaceRms,
       abortProjectAudioErrorName,
       abortProjectAudioMaxProgress,
-      retryProjectAudioExportBytes: retryProjectAudioExport.size,
+      retryProjectAudioExportBytes,
       editedBeforeClose,
       afterActionIds: afterActions.map((item) => item.id),
       duplicateId: duplicate.id,
@@ -1956,7 +2001,7 @@ const bundleHarness = (work) =>
         { fileName: captionExport.fileName, text: captionVtt },
       ],
     };
-  });
+  }, forceTimelineAacUnsupported);
 
   await page.close();
   const reopened = await context.newPage();
@@ -2139,7 +2184,8 @@ const bundleHarness = (work) =>
     result.m4aProjectAudioProbe?.sampleRate > 0 &&
     result.m4aProjectAudioRenderedBytes > 0 &&
     result.m4aProjectAudioRms > 0.05;
-  const m4aProjectAudioSkipped = silenceM4aSkipped;
+  const m4aProjectAudioSkipped =
+    silenceM4aSkipped || !result.timelineAacSupported;
 
   const ok =
     result.newestIds.join(",") ===
@@ -2215,8 +2261,9 @@ const bundleHarness = (work) =>
     result.cropZoomCenterPixel.width === 160 &&
     result.cropZoomCenterPixel.height === 108 &&
     isRedPixel(result.cropZoomCenterPixel) &&
-    result.projectAudioRenderedBytes > 0 &&
-    result.projectAudioRenderedType === "video/mp4" &&
+    (!result.timelineAacSupported ||
+      (result.projectAudioRenderedBytes > 0 &&
+        result.projectAudioRenderedType === "video/mp4")) &&
     result.projectAudioPreviewController.previewSourceVolume === 0.4 &&
     result.projectAudioPreviewController.previewAfterPlay.currentTime === 0.5 &&
     result.projectAudioPreviewController.previewAfterPlay.playCalls === 1 &&
@@ -2251,21 +2298,22 @@ const bundleHarness = (work) =>
     result.mp3ProjectAudioProbe?.duration > 0 &&
     result.mp3ProjectAudioProbe?.numberOfChannels >= 1 &&
     result.mp3ProjectAudioProbe?.sampleRate > 0 &&
-    result.mp3ProjectAudioRenderedBytes > 0 &&
-    result.mp3ProjectAudioRms > 0.001 &&
+    (!result.timelineAacSupported ||
+      (result.mp3ProjectAudioRenderedBytes > 0 &&
+        result.mp3ProjectAudioRms > 0.001)) &&
     (m4aProjectAudioOk || m4aProjectAudioSkipped) &&
     result.corruptProjectAudioError === "project-audio-decode-unsupported" &&
-    result.projectAudioDuration >= 3 &&
-    result.projectAudioDuration <= 3.5 &&
-    result.projectAudioRms > 0.05 &&
-    result.projectAudioNonLoopLateRms < 0.01 &&
-    result.projectAudioLoopLateRms > 0.05 &&
     (!result.timelineAacSupported ||
-      (result.projectAudioMixRms > 0.1 &&
-        result.projectAudioReplaceRms < 0.01)) &&
-    result.abortProjectAudioMaxProgress >= 0.9 &&
-    result.abortProjectAudioErrorName === "AbortError" &&
-    result.retryProjectAudioExportBytes > 0 &&
+      (result.projectAudioDuration >= 3 &&
+        result.projectAudioDuration <= 3.5 &&
+        result.projectAudioRms > 0.05 &&
+        result.projectAudioNonLoopLateRms < 0.01 &&
+        result.projectAudioLoopLateRms > 0.05 &&
+        result.projectAudioMixRms > 0.1 &&
+        result.projectAudioReplaceRms < 0.01 &&
+        result.abortProjectAudioMaxProgress >= 0.9 &&
+        result.abortProjectAudioErrorName === "AbortError" &&
+        result.retryProjectAudioExportBytes > 0)) &&
     result.editedBeforeClose === "first-edited" &&
     result.afterActionIds.length === 4 &&
     result.afterActionIds.includes("rec-b") &&
