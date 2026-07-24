@@ -808,10 +808,16 @@ const seedRecording = async (page) => {
       seed.recordingId,
       { timeout: 20000 }
     );
-    await page.getByTestId("timeline-apply-edits").waitFor({
-      state: "detached",
-      timeout: 20000,
-    });
+    await page.waitForFunction(
+      () => {
+        const button = document.querySelector(
+          '[data-testid="timeline-apply-edits"]'
+        );
+        return button === null || !button.hasAttribute("disabled");
+      },
+      null,
+      { timeout: 20000 }
+    );
     await page.getByTestId("editor-save").click();
     await visibleBox(
       page.getByTestId("player-edit-action"),
