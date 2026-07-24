@@ -77,7 +77,7 @@ const CropperWrap = () => {
   }, [contentState.frame]);
 
   return (
-    <div>
+    <div data-testid="project-crop-preview">
       <Cropper
         src={image}
         ref={cropperRef}

@@ -4,26 +4,31 @@
 // timeline). Select a word span to delete/mute it (which splits + edits the
 // timeline). "Apply edits" bakes the timeline into the editor blob for download.
 
-import React, { type CSSProperties, useContext, useState } from "react";
+import React, { type CSSProperties, useContext, useRef, useState } from "react";
 import { useEditorContent } from "../../context/ContentState";
 import { EdlContext } from "../../context/EdlContext";
 import { TRANSCRIPTION_LANGUAGES } from "../../../../transcription/config";
 import type { TimelineWord } from "../../../../edl/timeline";
 import type { EditSuggestion } from "../../../../edl/suggestions";
+import {
+  selectedTranscriptWordIndexes,
+  updateTranscriptWordSelection,
+} from "../../../../edl/transcriptSelection";
+import type { TranscriptWordSelection } from "../../../../edl/transcriptSelection";
 
 interface TranscriptPanelProps {
   variant?: "drawer" | "inline";
 }
 
-interface WordSelection {
-  from: number;
-  to: number;
-}
-
 const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
   const [contentState, setContentState] = useEditorContent();
   const edlCtx = useContext(EdlContext);
-  const [sel, setSel] = useState<WordSelection | null>(null); // original word indices
+  const [sel, setSel] = useState<TranscriptWordSelection | null>(null);
+  const dragSelection = useRef<{
+    pointerId: number;
+    anchorWordIndex: number;
+    moved: boolean;
+  } | null>(null);
   const [open, setOpen] = useState(false); // start closed; opens via the launcher
 
   if (!edlCtx) return null;
@@ -40,7 +45,7 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
     runTranscription,
     regenerateTranscript,
     deleteTranscript,
-    editWords,
+    editWordIndexes,
     suggestions,
     audioSuggestionStatus,
     chapterMarkers,
@@ -56,6 +61,10 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
     hasEdits,
     error,
   } = edlCtx;
+  const displayWordIndexes = clipView.flatMap((group) => group.words.map((word) => word.index));
+  const selectedWordIndexes = selectedTranscriptWordIndexes(displayWordIndexes, sel);
+  const selectedWordIndexSet = new Set(selectedWordIndexes);
+  const hasSelection = selectedWordIndexes.length > 0;
 
   const seekSource = (seconds: number) =>
     setContentState((prev) => ({
@@ -64,21 +73,50 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
       updatePlayerTime: true,
     }));
 
-  const onWordClick = (event: { shiftKey: boolean }, word: TimelineWord) => {
-    if (event.shiftKey && sel) {
+  const selectWord = (word: TimelineWord, extend: boolean) => {
+    setSel((current) => updateTranscriptWordSelection(current, word.index, extend));
+    if (!extend) seekSource(word.start);
+  };
+
+  const onWordPointerDown = (event: React.PointerEvent<HTMLSpanElement>, word: TimelineWord) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    dragSelection.current = {
+      pointerId: event.pointerId,
+      anchorWordIndex: word.index,
+      moved: false,
+    };
+  };
+
+  const onWordPointerEnter = (event: React.PointerEvent<HTMLSpanElement>, word: TimelineWord) => {
+    const drag = dragSelection.current;
+    if (!drag || drag.pointerId !== event.pointerId || drag.anchorWordIndex === word.index) return;
+    event.preventDefault();
+    drag.moved = true;
+    setSel({
+      anchorWordIndex: drag.anchorWordIndex,
+      focusWordIndex: word.index,
+    });
+  };
+
+  const onWordPointerUp = (event: React.PointerEvent<HTMLSpanElement>, word: TimelineWord) => {
+    const drag = dragSelection.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    dragSelection.current = null;
+    if (drag.moved) {
       setSel({
-        from: Math.min(sel.from, word.index),
-        to: Math.max(sel.to, word.index),
+        anchorWordIndex: drag.anchorWordIndex,
+        focusWordIndex: word.index,
       });
-    } else {
-      setSel({ from: word.index, to: word.index });
-      seekSource(word.start);
+      return;
     }
+    selectWord(word, event.shiftKey);
   };
 
   const applyToSelection = (kind: "delete" | "mute") => {
-    if (!sel) return;
-    editWords(sel.from, sel.to, kind);
+    if (!selectedWordIndexes.length) return;
+    editWordIndexes(selectedWordIndexes, kind);
     setSel(null);
   };
 
@@ -98,8 +136,8 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
       Number.isInteger(suggestion.toIndex)
     ) {
       setSel({
-        from: suggestion.fromIndex,
-        to: suggestion.toIndex,
+        anchorWordIndex: suggestion.fromIndex,
+        focusWordIndex: suggestion.toIndex,
       });
     } else {
       setSel(null);
@@ -251,16 +289,50 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
       : modelStatus?.totalBytes
         ? `${Math.round((modelStatus.totalBytes / 1024 / 1024) * 10) / 10} MB bundled`
         : "";
-  const modelStatusPanel = (
+  const openModelDetails = () => {
+    const modelName =
+      modelStatus && "manifest" in modelStatus ? modelStatus.manifest?.defaultModel : null;
+    const status =
+      modelState === "ready"
+        ? "Ready"
+        : modelState === "checking"
+          ? "Checking bundled files"
+          : "Incomplete";
+    const fileDetail = modelStatus?.requiredCount
+      ? `${modelStatus.presentCount || 0} of ${modelStatus.requiredCount} bundled files available.`
+      : "";
+    const sizeDetail = modelStatus?.totalBytes
+      ? `${Math.round((modelStatus.totalBytes / 1024 / 1024) * 10) / 10} MB installed.`
+      : "";
+    const description = [
+      `Status: ${status}.`,
+      modelName ? `Model: ${modelName}.` : "",
+      fileDetail,
+      sizeDetail,
+      "This is the only transcription model included with SayLess. It runs on-device and does not send audio to a remote transcription service.",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    contentState.openModal?.(
+      "Transcription model",
+      description,
+      "Refresh status",
+      "Close",
+      () => {
+        void refreshModelStatus();
+      },
+      () => {},
+      null,
+      null,
+      null,
+      true,
+    );
+  };
+  const modelStatusPanel = modelReady ? null : (
     <div style={{ ...modelStatusBase, ...modelStatusStyle }}>
       <div style={modelStatusTopLine}>
-        <span>
-          {modelReady
-            ? "Model ready"
-            : modelState === "checking"
-              ? "Checking model"
-              : "Model incomplete"}
-        </span>
+        <span>{modelState === "checking" ? "Checking model" : "Model incomplete"}</span>
         <button
           style={miniButton}
           onClick={refreshModelStatus}
@@ -303,11 +375,23 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
       </select>
     </label>
   );
+  const transcriptionControls = (
+    <div style={transcriptionControlsStyle}>
+      {languageControl}
+      <button
+        style={modelDetailsButton}
+        onClick={openModelDetails}
+        data-testid="transcript-model-details"
+      >
+        Model details
+      </button>
+    </div>
+  );
 
   const body = !transcript ? (
     <div>
       {modelStatusPanel}
-      {languageControl}
+      {transcriptionControls}
       {audioSuggestionMessage && <div style={hintText}>{audioSuggestionMessage}</div>}
       {suggestionPanel}
       {chaptersPanel}
@@ -347,16 +431,16 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
       {modelStatusPanel}
       <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
         <button
-          style={sel ? btnDanger : btnDisabled}
-          disabled={!sel}
+          style={hasSelection ? btnDanger : btnDisabled}
+          disabled={!hasSelection}
           onClick={() => applyToSelection("delete")}
           data-testid="transcript-delete-words"
         >
           Delete words
         </button>
         <button
-          style={sel ? btn : btnDisabled}
-          disabled={!sel}
+          style={hasSelection ? btn : btnDisabled}
+          disabled={!hasSelection}
           onClick={() => applyToSelection("mute")}
           data-testid="transcript-mute-words"
         >
@@ -395,8 +479,11 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
           </>
         )}
       </div>
-      {languageControl}
-      <div style={hintText}>click a word to seek · shift-click to extend selection</div>
+      {transcriptionControls}
+      <div style={hintText}>
+        click the first and last word, or drag to select · shift-click also extends · Esc clears
+        {selectedWordIndexes.length > 1 ? ` · ${selectedWordIndexes.length} words selected` : ""}
+      </div>
       {cacheMessage && <div style={hintText}>{cacheMessage}</div>}
       {audioSuggestionMessage && <div style={hintText}>{audioSuggestionMessage}</div>}
       {suggestionPanel}
@@ -410,25 +497,44 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
               clip {gi + 1}
               {group.muted ? " · muted" : ""}
             </div>
-            <div style={wordsWrap}>
+            <div
+              style={wordsWrap}
+              onPointerUp={() => {
+                dragSelection.current = null;
+              }}
+              onPointerCancel={() => {
+                dragSelection.current = null;
+              }}
+            >
               {group.words.length === 0 ? (
                 <span style={{ color: "#bbb" }}>(no words)</span>
               ) : (
                 group.words.map((w) => {
-                  const selected = sel && w.index >= sel.from && w.index <= sel.to;
+                  const selected = selectedWordIndexSet.has(w.index);
                   const current = curSource >= w.start && curSource < w.end;
                   return (
                     <span
                       key={w.index}
-                      onClick={(e) => onWordClick(e, w)}
+                      onPointerDown={(event) => onWordPointerDown(event, w)}
+                      onPointerEnter={(event) => onWordPointerEnter(event, w)}
+                      onPointerUp={(event) => onWordPointerUp(event, w)}
+                      onClick={(event) => event.preventDefault()}
+                      onDragStart={(event) => event.preventDefault()}
                       role="button"
                       tabIndex={0}
                       data-testid="transcript-word"
+                      data-word-index={w.index}
+                      aria-pressed={selected}
                       aria-label={`Select transcript word ${w.text}`}
                       onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          setSel(null);
+                          return;
+                        }
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          onWordClick(e, w);
+                          selectWord(w, e.shiftKey);
                         }
                       }}
                       style={{
@@ -554,7 +660,11 @@ const closeBtn = {
   color: "#666",
   lineHeight: 1,
 };
-const wordsWrap = { whiteSpace: "pre-wrap" };
+const wordsWrap: CSSProperties = {
+  whiteSpace: "pre-wrap",
+  userSelect: "none",
+  WebkitUserSelect: "none",
+};
 const clipBlock = {
   border: "1px solid #eee",
   borderRadius: 8,
@@ -563,7 +673,13 @@ const clipBlock = {
 };
 const clipBlockMuted = { background: "#fffaf0", borderColor: "#f0e0b0" };
 const clipBadge = { fontSize: 11, color: "#888", marginBottom: 4, fontWeight: 600 };
-const wordStyle = { cursor: "pointer", borderRadius: 4, padding: "0 1px" };
+const wordStyle: CSSProperties = {
+  cursor: "pointer",
+  borderRadius: 4,
+  padding: "0 1px",
+  userSelect: "none",
+  WebkitUserSelect: "none",
+};
 const mutedStyle = { color: "#a98800" };
 const selectedStyle = { background: "#cfe3ff" };
 const currentStyle = { boxShadow: "inset 0 -2px 0 #4597F7" };
@@ -578,7 +694,14 @@ const btnDisabled = { ...btn, color: "#bbb", cursor: "default" };
 const btnPrimary = { ...btn, background: "#4597F7", color: "#fff", border: "none" };
 const btnDanger = { ...btn, background: "#ffe2e2", color: "#b00020", border: "1px solid #f3c2c2" };
 const miniButton = { ...btn, padding: "3px 8px", fontSize: 12, borderRadius: 6 };
-const languageLabel = { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 };
+const transcriptionControlsStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+  marginBottom: 10,
+};
+const languageLabel = { display: "flex", alignItems: "center", gap: 8 };
 const labelText = { fontSize: 12, color: "#666", fontWeight: 700 };
 const selectStyle = {
   border: "1px solid #ddd",
@@ -586,6 +709,15 @@ const selectStyle = {
   padding: "6px 8px",
   background: "#fff",
   fontSize: 13,
+};
+const modelDetailsButton = {
+  border: "none",
+  background: "transparent",
+  color: "#54708f",
+  cursor: "pointer",
+  fontSize: 12,
+  padding: "4px 0",
+  whiteSpace: "nowrap",
 };
 const barOuter = { height: 6, background: "#eee", borderRadius: 4, marginTop: 6 };
 const barInner = { height: 6, background: "#4597F7", borderRadius: 4 };

@@ -126,6 +126,100 @@ const visibleBox = async (locator, name) => {
   return box;
 };
 
+const waitForDecodedPlayerFrame = async (page, name) => {
+  const video = page.getByTestId("player-video");
+  const shell = page.getByTestId("player-video-shell");
+  await video.waitFor({ state: "visible", timeout: 30000 });
+  await page.waitForFunction(
+    () => {
+      const element = document.querySelector('[data-testid="player-video"]');
+      return (
+        element instanceof HTMLVideoElement &&
+        element.readyState >= HTMLMediaElement.HAVE_METADATA &&
+        element.videoWidth > 0 &&
+        element.videoHeight > 0
+      );
+    },
+    null,
+    { timeout: 30000 },
+  );
+  await page.evaluate(() => {
+    const element = document.querySelector('[data-testid="player-video"]');
+    if (!(element instanceof HTMLVideoElement)) return;
+    const seekTime = Number.isFinite(element.duration)
+      ? Math.min(0.1, Math.max(0, element.duration / 2))
+      : 0;
+    if (Math.abs(element.currentTime - seekTime) > 0.001) {
+      element.currentTime = seekTime;
+    }
+  });
+  await page.waitForFunction(
+    () => {
+      const element = document.querySelector('[data-testid="player-video"]');
+      return (
+        element instanceof HTMLVideoElement &&
+        element.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+      );
+    },
+    null,
+    { timeout: 30000 },
+  );
+  const [videoBox, shellBox, state] = await Promise.all([
+    video.boundingBox(),
+    shell.boundingBox(),
+    page.evaluate(() => {
+      const element = document.querySelector('[data-testid="player-video"]');
+      if (!(element instanceof HTMLVideoElement)) return null;
+      return {
+        readyState: element.readyState,
+        videoWidth: element.videoWidth,
+        videoHeight: element.videoHeight,
+      };
+    }),
+  ]);
+  assert(
+    videoBox &&
+      shellBox &&
+      videoBox.width > 0 &&
+      videoBox.height > 0 &&
+      shellBox.width > 0 &&
+      shellBox.height > 0 &&
+      state?.readyState >= 2 &&
+      state.videoWidth > 0 &&
+      state.videoHeight > 0,
+    `${name} did not display a decoded video frame`,
+    { videoBox, shellBox, state },
+  );
+};
+
+const waitForCropPreviewFrame = async (page) => {
+  await page.waitForFunction(
+    () =>
+      Array.from(
+        document.querySelectorAll(
+          '[data-testid="project-crop-preview"] .advanced-cropper-background-image',
+        ),
+      ).some(
+        (element) =>
+          element instanceof HTMLImageElement &&
+          element.complete &&
+          element.naturalWidth > 0 &&
+          element.naturalHeight > 0 &&
+          element.getBoundingClientRect().width > 0 &&
+          element.getBoundingClientRect().height > 0,
+      ),
+    null,
+    { timeout: 30000 },
+  );
+};
+
+const revealExportJobPanel = async (page) => {
+  const panel = page.getByTestId("export-job-panel");
+  await panel.waitFor({ state: "visible", timeout: 30000 });
+  await panel.scrollIntoViewIfNeeded();
+  await visibleBox(panel, "export job panel");
+};
+
 const seedRecording = async (page) => {
   return page.evaluate(async () => {
     const duration = 3.2;
@@ -355,6 +449,7 @@ const seedRecording = async (page) => {
     );
 
     await visibleBox(page.getByTestId("player-edit-action"), "player edit action");
+    await waitForDecodedPlayerFrame(page, "initial player preview");
     await screenshot(page, "01-player-edit-entry-visible.png");
 
     await page.getByTestId("player-edit-action").click();
@@ -449,7 +544,61 @@ const seedRecording = async (page) => {
 
     const words = page.getByTestId("transcript-word");
     await words.nth(0).click();
+    await words.nth(1).click();
+    const clickSelection = await page.evaluate(() => ({
+      selectedWords: Array.from(
+        document.querySelectorAll('[data-testid="transcript-word"][aria-pressed="true"]'),
+      ).map((node) => node.textContent.trim()),
+      nativeSelection: window.getSelection()?.toString() || "",
+    }));
+    assert(
+      clickSelection.selectedWords.length === 2 && clickSelection.nativeSelection === "",
+      "clicking selection endpoints should select exactly the displayed range without native text highlighting",
+      clickSelection,
+    );
+
+    await words.nth(2).click();
     await words.nth(1).click({ modifiers: ["Shift"] });
+    const shiftSelection = await page.evaluate(() => ({
+      selectedCount: document.querySelectorAll(
+        '[data-testid="transcript-word"][aria-pressed="true"]',
+      ).length,
+      nativeSelection: window.getSelection()?.toString() || "",
+    }));
+    assert(
+      shiftSelection.selectedCount === 2 && shiftSelection.nativeSelection === "",
+      "shift-click should extend transcript selection without native text highlighting",
+      shiftSelection,
+    );
+
+    await words.nth(0).click();
+    const firstWordBox = await visibleBox(words.nth(0), "first transcript word for drag selection");
+    const secondWordBox = await visibleBox(
+      words.nth(1),
+      "second transcript word for drag selection",
+    );
+    await page.mouse.move(
+      firstWordBox.x + firstWordBox.width / 2,
+      firstWordBox.y + firstWordBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      secondWordBox.x + secondWordBox.width / 2,
+      secondWordBox.y + secondWordBox.height / 2,
+      { steps: 4 },
+    );
+    await page.mouse.up();
+    const dragSelection = await page.evaluate(() => ({
+      selectedCount: document.querySelectorAll(
+        '[data-testid="transcript-word"][aria-pressed="true"]',
+      ).length,
+      nativeSelection: window.getSelection()?.toString() || "",
+    }));
+    assert(
+      dragSelection.selectedCount === 2 && dragSelection.nativeSelection === "",
+      "dragging across transcript words should select the displayed range without native text highlighting",
+      dragSelection,
+    );
     await visibleBox(page.getByTestId("transcript-delete-words"), "transcript delete words");
     await screenshot(page, "05-transcript-word-selection-visible.png");
 
@@ -471,14 +620,21 @@ const seedRecording = async (page) => {
         document.querySelector('[data-testid="transcript-delete-words"]'),
       ),
     }));
+    assert(
+      editorSummary.transcriptWords.length === 1 && editorSummary.transcriptWords[0] === "remove",
+      "deleting a displayed selection after clip reorder should preserve unselected source words",
+      editorSummary,
+    );
 
     await page.getByTestId("editor-save").click();
     await visibleBox(page.getByTestId("export-selected-action"), "export selected action");
+    await waitForDecodedPlayerFrame(page, "player preview after leaving editor");
     await screenshot(page, "07-player-export-after-edit-visible.png");
 
     await page.getByTestId("player-crop-action").click();
     const cropWidthInput = page.getByTestId("project-crop-width");
     await cropWidthInput.waitFor({ state: "visible", timeout: 20000 });
+    await waitForCropPreviewFrame(page);
     const cropInputs = {
       width: cropWidthInput,
       height: page.getByTestId("project-crop-height"),
@@ -561,6 +717,7 @@ const seedRecording = async (page) => {
     );
     await page.reload({ waitUntil: "domcontentloaded" });
     await visibleBox(page.getByTestId("player-crop-action"), "player crop action after reopen");
+    await waitForDecodedPlayerFrame(page, "cropped player preview after reopen");
     await page.waitForFunction(
       () => document.body?.innerText?.includes("Crop") && document.body?.innerText?.includes("Yes"),
       null,
@@ -890,6 +1047,7 @@ const seedRecording = async (page) => {
     );
     await page.reload({ waitUntil: "domcontentloaded" });
     await visibleBox(page.getByTestId("player-edit-action"), "player after applied project reopen");
+    await waitForDecodedPlayerFrame(page, "applied player preview after reopen");
     await page.waitForFunction(
       () =>
         document.body?.innerText?.includes("Clips") &&
@@ -933,6 +1091,7 @@ const seedRecording = async (page) => {
       "save picker cancellation was misreported as a completed export",
       cancelledSaveSummary,
     );
+    await revealExportJobPanel(page);
     await screenshot(page, "14-save-picker-cancelled-retry-visible.png");
 
     await page.evaluate(() => {
@@ -963,6 +1122,7 @@ const seedRecording = async (page) => {
       "retry did not save the packaged MP4 through the File System Access path",
       savePickerSummary,
     );
+    await revealExportJobPanel(page);
     await screenshot(page, "15-save-picker-retry-complete.png");
 
     await page.getByTestId("export-dismiss-action").click();
@@ -1030,6 +1190,7 @@ const seedRecording = async (page) => {
         suggestedFilename: browserDownload.suggestedFilename(),
       },
     );
+    await revealExportJobPanel(page);
     await screenshot(page, "16-chrome-download-reveal-visible.png");
     await browserDownload.delete();
 

@@ -60,6 +60,7 @@ import {
 } from "../../../edl/suggestions";
 import type { EditSuggestion } from "../../../edl/suggestions";
 import { wordRange } from "../../../edl/fromTranscript";
+import { contiguousTranscriptWordIndexRanges } from "../../../edl/transcriptSelection";
 import {
   classifyTranscriptionError,
   formatTranscriptionError,
@@ -234,6 +235,7 @@ export interface EdlContextValue {
   moveClip: (from: number, to: number) => Timeline;
   toggleMuteClip: (id: string) => Timeline;
   editWords: (fromIndex: number, toIndex: number, kind: EditKind) => void;
+  editWordIndexes: (wordIndexes: number[], kind: EditKind) => void;
   resetTimeline: () => void;
   applyEdits: () => Promise<void>;
   renderTimelineForExport: (
@@ -939,11 +941,33 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
     [withTimeline],
   );
 
+  const editWordIndexes = useCallback(
+    (wordIndexes: number[], kind: EditKind) => {
+      if (!transcript) return;
+      const ranges = contiguousTranscriptWordIndexRanges(wordIndexes)
+        .filter(({ toIndex }) => toIndex < transcript.words.length)
+        .map(({ fromIndex, toIndex }) => wordRange(transcript.words, fromIndex, toIndex))
+        .sort((left, right) => right.start - left.start);
+      if (!ranges.length) return;
+
+      withTimeline((current) =>
+        ranges.reduce(
+          (next, { start, end }) =>
+            kind === "delete"
+              ? deleteSourceRange(next, start, end)
+              : muteSourceRange(next, start, end),
+          current,
+        ),
+      );
+    },
+    [transcript, withTimeline],
+  );
+
   const editWords = useCallback(
     (fromIndex: number, toIndex: number, kind: EditKind) => {
-      if (!transcript) return;
       const lo = Math.min(fromIndex, toIndex);
       const hi = Math.max(fromIndex, toIndex);
+      if (!transcript) return;
       const { start, end } = wordRange(transcript.words, lo, hi);
       withTimeline((current) =>
         kind === "delete"
@@ -1375,6 +1399,7 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
       moveClip,
       toggleMuteClip,
       editWords,
+      editWordIndexes,
       resetTimeline,
       applyEdits,
       renderTimelineForExport,
@@ -1430,6 +1455,7 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
       moveClip,
       toggleMuteClip,
       editWords,
+      editWordIndexes,
       resetTimeline,
       applyEdits,
       renderTimelineForExport,

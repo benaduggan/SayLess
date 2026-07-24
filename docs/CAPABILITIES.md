@@ -142,7 +142,7 @@ Implemented foundations:
 - Release defaults disable remote model downloads and point the local provider at `assets/whisper/models/` inside the extension package.
 - The release package includes the required `onnx-community/whisper-base_timestamped` model files; `npm run verify:whisper-assets` passes for both `src` and the built extension. The bundled Whisper assets add about 76 MB to the package.
 - `src/assets/whisper/model-manifest.json` defines the required local model payload with byte-size and SHA-256 integrity metadata, and `npm run verify:whisper-assets` checks it before packaging an offline release.
-- The transcript drawer checks the bundled Whisper manifest at runtime, shows whether required model files are ready or missing, exposes refresh, and shows approximate bundled bytes when available.
+- The transcript drawer checks the bundled Whisper manifest at runtime, keeps missing/incomplete model warnings visible, and puts healthy model status, model identity, approximate bundled bytes, and refresh in a compact Model details modal.
 - Local transcription failures are classified into user-facing offline recovery states for unsupported browser/audio decode, missing bundled model assets, storage quota exhaustion, privacy-mode network blocks, unsupported media, and recordings too large for the current in-browser path.
 - Transcription language selection is persisted in local extension settings.
 - Transcript results are cached locally by recording id, provider, model, language, and source hash.

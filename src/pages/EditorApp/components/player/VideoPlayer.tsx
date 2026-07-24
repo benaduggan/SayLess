@@ -49,6 +49,11 @@ const VideoPlayer = () => {
       edlCtx?.crop,
     ],
   );
+  const sourceAspectRatio = useMemo(() => {
+    const width = Number(contentState.prevWidth || contentState.width);
+    const height = Number(contentState.prevHeight || contentState.height);
+    return width > 0 && height > 0 ? width / height : 16 / 9;
+  }, [contentState.height, contentState.prevHeight, contentState.prevWidth, contentState.width]);
   useProjectAudioPreview(videoRef, edlCtx?.audioAsset, edlCtx?.audioTrack, edlCtx?.timeline);
 
   useEffect(() => {
@@ -226,8 +231,9 @@ const VideoPlayer = () => {
           <div
             ref={playerRef}
             className="plyr plyr--video sayless-native-player-shell"
+            data-testid="player-video-shell"
             style={{
-              aspectRatio: cropLayout?.aspectRatio,
+              aspectRatio: cropLayout?.aspectRatio ?? sourceAspectRatio,
               position: "relative",
               overflow: "hidden",
             }}
@@ -236,6 +242,7 @@ const VideoPlayer = () => {
               <video
                 ref={videoRef}
                 id="plyr-player"
+                data-testid="player-video"
                 className="sayless-native-player"
                 src={url}
                 controls

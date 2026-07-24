@@ -659,7 +659,7 @@ const RightPanel = () => {
               </div>
             )}
           {exportJob && (
-            <div className={styles.exportJobPanel}>
+            <div className={styles.exportJobPanel} data-testid="export-job-panel">
               <div className={styles.exportJobMain}>
                 <div className={styles.exportJobTitle}>{exportJobTitle}</div>
                 <div className={styles.exportJobDescription}>
