@@ -5,10 +5,7 @@ import { buildDiagnosticZip } from "../../src/pages/utils/buildDiagnosticZip.ts"
 
 const originalChrome = globalThis.chrome;
 const originalWindow = globalThis.window;
-const originalNavigatorDescriptor = Object.getOwnPropertyDescriptor(
-  globalThis,
-  "navigator",
-);
+const originalNavigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
 
 const installBrowserMocks = ({ storage = {}, runtimeMessages = [] } = {}) => {
   Object.defineProperty(globalThis, "navigator", {
@@ -54,9 +51,7 @@ const installBrowserMocks = ({ storage = {}, runtimeMessages = [] } = {}) => {
           if (keys == null) return resolve({ ...storage });
           if (typeof keys === "string") return resolve({ [keys]: storage[keys] });
           if (Array.isArray(keys)) {
-            return resolve(
-              Object.fromEntries(keys.map((key) => [key, storage[key]])),
-            );
+            return resolve(Object.fromEntries(keys.map((key) => [key, storage[key]])));
           }
           return resolve({ ...storage });
         },
@@ -132,9 +127,7 @@ test("buildDiagnosticZip includes sanitized audio diagnostics in config", async 
     const result = await buildDiagnosticZip({ source: "unit-test" });
     assert.equal(result.filename.endsWith(".zip"), true);
 
-    const makeZipMessage = runtimeMessages.find(
-      (message) => message.type === "make-zip",
-    );
+    const makeZipMessage = runtimeMessages.find((message) => message.type === "make-zip");
     assert.ok(makeZipMessage);
     const config = JSON.parse(makeZipMessage.files["config.json"]);
 
@@ -143,15 +136,9 @@ test("buildDiagnosticZip includes sanitized audio diagnostics in config", async 
     assert.equal(config.audioDiagnostics.mainRoute.mode, "direct-mic");
     assert.equal(config.audioDiagnostics.encoder.encoderSampleRate, 16000);
     assert.equal(config.audioDiagnostics.encoder.finalAudioElapsedUs, 3_050_000);
-    assert.equal(
-      config.audioDiagnostics.encoder.finalDroppedAudioForBackpressure,
-      0,
-    );
+    assert.equal(config.audioDiagnostics.encoder.finalDroppedAudioForBackpressure, 0);
     assert.equal(config.audioDiagnostics.encoder.finalPeakAudioEncodeQueueSize, 2);
-    assert.equal(
-      config.audioDiagnostics.encoder.finalAudioSampleRateMismatchRebuilds,
-      1,
-    );
+    assert.equal(config.audioDiagnostics.encoder.finalAudioSampleRateMismatchRebuilds, 1);
 
     const json = JSON.stringify(config.audioDiagnostics);
     assert.doesNotMatch(json, /Private Mic Label/);

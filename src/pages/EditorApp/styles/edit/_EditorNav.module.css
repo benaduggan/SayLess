@@ -1,0 +1,102 @@
+@font-face {
+  font-family: "Satoshi-Light";
+  src: url("/assets/fonts/Satoshi-Light.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Satoshi-Medium";
+  src: url("/assets/fonts/Satoshi-Medium.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Satoshi-Bold";
+  src: url("/assets/fonts/Satoshi-Bold.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+/* Colors */
+/* Font */
+/* Spacing */
+/*
+$spacing-01: 0.125rem;
+$spacing-02: 0.25rem;
+$spacing-03: 0.5rem;
+$spacing-04: 0.75rem;
+$spacing-05: 1rem;
+*/
+/* Container */
+/* Gradients */
+/* Events */
+/* Z-index */
+.editorNav {
+  width: 100%;
+  margin: auto;
+  height: var(--editor-nav-height, 80px);
+  left: 0px;
+  top: 0px;
+  position: fixed;
+  z-index: 999999999999;
+  background-color: #fff;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.navWrap {
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+  width: 95%;
+}
+
+.editorNavCenter {
+  position: absolute;
+  left: 0px;
+  right: 0px;
+  margin: auto;
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editorNavTitle {
+  font-size: 14px;
+  color: #29292f;
+  font-weight: 600;
+  text-align: center;
+  margin: auto;
+}
+.editorNavTitle span {
+  margin-left: 4px;
+  font-weight: 400;
+  font-size: 12px;
+  color: #fff;
+  background-color: #3080f8;
+  border-radius: 30px;
+  padding: 4px 8px;
+}
+
+.editorNavRight {
+  display: flex;
+  height: fit-content;
+  align-items: center;
+  gap: 8px;
+}
+
+.editorNavLeft {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.editorNavLeft img {
+  height: 30px;
+}
+
+@media (max-width: 1000px) {
+  .editorNavCenter {
+    display: none;
+  }
+}

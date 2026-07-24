@@ -6,8 +6,7 @@ const REQUIRED_PROJECT_AUDIO_FORMATS = ["wav", "m4a", "mp3"];
 const uniqueSorted = (values) => [...new Set(values)].sort();
 
 export const buildReleaseThresholds = ({ durationSeconds, byteSize }) => ({
-  durationAtLeast180Seconds:
-    durationSeconds >= MIN_LONG_RECORDING_DURATION_SECONDS,
+  durationAtLeast180Seconds: durationSeconds >= MIN_LONG_RECORDING_DURATION_SECONDS,
   byteSizeAtLeast25MiB: byteSize >= MIN_LARGE_RECORDING_BYTE_SIZE,
   longAndLarge:
     durationSeconds >= MIN_LONG_RECORDING_DURATION_SECONDS &&
@@ -16,28 +15,18 @@ export const buildReleaseThresholds = ({ durationSeconds, byteSize }) => ({
 
 export const buildReleaseCoverage = (files) => {
   const recordingCandidates = files.filter((file) => file.recordingFields);
-  const projectAudioCandidates = files.filter(
-    (file) => file.projectAudioInputFields
-  );
-  const recordingFormats = uniqueSorted(
-    recordingCandidates.map((file) => file.format)
-  );
+  const projectAudioCandidates = files.filter((file) => file.projectAudioInputFields);
+  const recordingFormats = uniqueSorted(recordingCandidates.map((file) => file.format));
   const dimensionPairs = uniqueSorted(
-    recordingCandidates.map(
-      (file) => `${file.video.width}x${file.video.height}`
-    )
+    recordingCandidates.map((file) => `${file.video.width}x${file.video.height}`),
   );
   const aspectRatios = uniqueSorted(
-    recordingCandidates.map((file) =>
-      Number((file.video.width / file.video.height).toFixed(4))
-    )
+    recordingCandidates.map((file) => Number((file.video.width / file.video.height).toFixed(4))),
   );
   const longAndLargeCandidates = recordingCandidates
     .filter((file) => file.releaseThresholds.longAndLarge)
     .map((file) => file.fileName);
-  const projectAudioFormats = uniqueSorted(
-    projectAudioCandidates.map((file) => file.format)
-  );
+  const projectAudioFormats = uniqueSorted(projectAudioCandidates.map((file) => file.format));
   const checks = [
     {
       id: "source-recording-count",
@@ -47,9 +36,7 @@ export const buildReleaseCoverage = (files) => {
     {
       id: "source-container-coverage",
       label: "MP4 and WebM source-container candidates",
-      passed: REQUIRED_RECORDING_FORMATS.every((format) =>
-        recordingFormats.includes(format)
-      ),
+      passed: REQUIRED_RECORDING_FORMATS.every((format) => recordingFormats.includes(format)),
     },
     {
       id: "long-and-large-source",
@@ -65,16 +52,13 @@ export const buildReleaseCoverage = (files) => {
       id: "project-audio-formats",
       label: "WAV, M4A, and MP3 project-audio candidates",
       passed: REQUIRED_PROJECT_AUDIO_FORMATS.every((format) =>
-        projectAudioFormats.includes(format)
+        projectAudioFormats.includes(format),
       ),
     },
   ];
   const passedCheckCount = checks.filter((check) => check.passed).length;
   return {
-    status:
-      passedCheckCount === checks.length
-        ? "measurable-set-complete"
-        : "incomplete",
+    status: passedCheckCount === checks.length ? "measurable-set-complete" : "incomplete",
     passedCheckCount,
     totalCheckCount: checks.length,
     recordingCandidateCount: recordingCandidates.length,

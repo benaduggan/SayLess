@@ -19,47 +19,27 @@ export interface RecordingChromeApi {
   storage: {
     local: {
       get(keys: string[]): Promise<Record<string, unknown>>;
-      get(
-        keys: string[],
-        callback: (result: Record<string, unknown>) => void,
-      ): void;
+      get(keys: string[], callback: (result: Record<string, unknown>) => void): void;
       set(values: Record<string, unknown>): Promise<void>;
       remove(keys: string[]): Promise<void>;
     };
     onChanged: {
       addListener(
-        listener: (
-          changes: Record<string, RecordingStorageChange>,
-          area: string,
-        ) => void,
+        listener: (changes: Record<string, RecordingStorageChange>, area: string) => void,
       ): void;
     };
   };
   tabs: {
     get(tabId: number): Promise<RecordingTab & { status?: string }>;
-    create(
-      options: { url: string; active: boolean },
-      callback: (tab?: RecordingTab) => void,
-    ): void;
+    create(options: { url: string; active: boolean }, callback: (tab?: RecordingTab) => void): void;
     query(options: Record<string, unknown>): Promise<RecordingTab[]>;
-    query(
-      options: Record<string, unknown>,
-      callback: (tabs: RecordingTab[]) => void,
-    ): void;
+    query(options: Record<string, unknown>, callback: (tabs: RecordingTab[]) => void): void;
     onUpdated: {
       addListener(
-        listener: (
-          tabId: number,
-          changeInfo: { status?: string },
-          tab: RecordingTab,
-        ) => void,
+        listener: (tabId: number, changeInfo: { status?: string }, tab: RecordingTab) => void,
       ): void;
       removeListener(
-        listener: (
-          tabId: number,
-          changeInfo: { status?: string },
-          tab: RecordingTab,
-        ) => void,
+        listener: (tabId: number, changeInfo: { status?: string }, tab: RecordingTab) => void,
       ): void;
     };
     onRemoved: {

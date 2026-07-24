@@ -40,20 +40,10 @@ const TooltipWrap = (props: TooltipWrapProps) => {
         <Tooltip.Provider>
           <Tooltip.Root delayDuration={700} defaultOpen={false}>
             <Tooltip.Trigger asChild>{props.children}</Tooltip.Trigger>
-            <Tooltip.Portal
-              container={
-                document.getElementsByClassName("screenity-shadow-dom")[0]
-              }
-            >
+            <Tooltip.Portal container={document.getElementsByClassName("screenity-shadow-dom")[0]}>
               <Tooltip.Content
                 className={
-                  "TooltipContent" +
-                  " " +
-                  props.override +
-                  " " +
-                  props.hide +
-                  " " +
-                  override
+                  "TooltipContent" + " " + props.override + " " + props.hide + " " + override
                 }
                 style={{
                   display: override === "override" ? "none" : "block",

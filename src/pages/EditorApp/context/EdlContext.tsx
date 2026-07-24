@@ -33,20 +33,13 @@ import {
   outputToSource,
   clipWords,
 } from "../../../edl/timeline";
-import type {
-  ClipWordGroup,
-  ResolvedTimeline,
-  Timeline,
-} from "../../../edl/timeline";
+import type { ClipWordGroup, ResolvedTimeline, Timeline } from "../../../edl/timeline";
 import {
   pushTimelineHistory,
   redoTimelineHistory,
   undoTimelineHistory,
 } from "../../../edl/timelineHistory";
-import {
-  buildCaptionCues,
-  normalizeCaptionWords,
-} from "../../../edl/captions";
+import { buildCaptionCues, normalizeCaptionWords } from "../../../edl/captions";
 import { buildChapterMarkers } from "../../../edl/chapters";
 import type { ChapterMarker } from "../../../edl/chapters";
 import {
@@ -57,14 +50,8 @@ import {
 import type { ZoomKeyframe } from "../../../edl/zoom";
 import { normalizeCropRegion } from "../../../edl/crop";
 import type { CropRegion } from "../../../edl/crop";
-import {
-  normalizeProjectAudioTrack,
-  updateProjectAudioTrack,
-} from "../../../edl/projectAudio";
-import type {
-  ProjectAudioMode,
-  ProjectAudioTrack,
-} from "../../../edl/projectAudio";
+import { normalizeProjectAudioTrack, updateProjectAudioTrack } from "../../../edl/projectAudio";
+import type { ProjectAudioMode, ProjectAudioTrack } from "../../../edl/projectAudio";
 import { validateProjectAudioBlob } from "../../Editor/utils/validateProjectAudio";
 import {
   buildAudioSilenceSuggestions,
@@ -309,9 +296,7 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
     "idle" | "loading" | "ready" | "missing" | "saving"
   >("idle");
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
-  const [exportSettings, setExportSettings] = useState(() =>
-    normalizeExportSettings(),
-  );
+  const [exportSettings, setExportSettings] = useState(() => normalizeExportSettings());
   const [editSource, setEditSource] = useState<Blob | null>(null); // baked source after Apply
   const [transcribing, setTranscribing] = useState(false);
   const [transcribeProgress, setTranscribeProgress] = useState(0);
@@ -399,9 +384,7 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
     resolveConfig()
       .then((config) => {
         if (!cancelled) {
-          setTranscriptionLanguage(
-            normalizeTranscriptionLanguage(config.defaultLanguage),
-          );
+          setTranscriptionLanguage(normalizeTranscriptionLanguage(config.defaultLanguage));
         }
       })
       .catch(() => {});
@@ -457,9 +440,7 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
         setTimelinePast([]);
         setTimelineFuture([]);
         setTranscript(isValidTranscript(project?.transcript) ? project.transcript : null);
-        setZoomKeyframes(
-          normalizeZoomKeyframes(project?.zoomKeyframes, project?.source),
-        );
+        setZoomKeyframes(normalizeZoomKeyframes(project?.zoomKeyframes, project?.source));
         setCrop(normalizeCropRegion(project?.crop));
         const nextAudioTrack = normalizeProjectAudioTrack(project?.audioTrack);
         setAudioTrack(nextAudioTrack);
@@ -479,9 +460,7 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
           setAudioAssetStatus("idle");
         }
         setSelectedClipId(
-          typeof project?.selectedClipId === "string"
-            ? project.selectedClipId
-            : null,
+          typeof project?.selectedClipId === "string" ? project.selectedClipId : null,
         );
         setExportSettings(normalizeExportSettings(project?.exportSettings, project?.source));
         hydratedProjectIdRef.current = recordingId;
@@ -570,95 +549,14 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
     setCrop(normalizeCropRegion(nextCrop));
   }, []);
 
-  const saveProjectCrop = useCallback(async (nextCrop: CropRegion | null) => {
-    const normalizedCrop = normalizeCropRegion(nextCrop);
-    const recordingId = contentState.localRecordingId;
-    if (!recordingId) {
-      setCrop(normalizedCrop);
-      return normalizedCrop;
-    }
-    const revision = ++projectSaveRevisionRef.current;
-    if (projectSaveTimerRef.current) {
-      clearTimeout(projectSaveTimerRef.current);
-      projectSaveTimerRef.current = null;
-    }
-    const projectSave = projectSaveQueueRef.current
-      .catch(() => {})
-      .then(async () => {
-        setProjectSaveStatus("saving");
-        await saveLocalRecordingProject(recordingId, {
-          source: {
-            duration: duration || 0,
-            mimeType: sourceBlob?.type || contentState.mimeType || null,
-            byteSize: sourceBlob?.size || 0,
-            width: contentState.prevWidth || contentState.width || 0,
-            height: contentState.prevHeight || contentState.height || 0,
-          },
-          timeline,
-          transcript,
-          chapterMarkers,
-          zoomKeyframes,
-          crop: normalizedCrop,
-          audioTrack,
-          selectedClipId,
-          exportSettings,
-        });
-        if (revision === projectSaveRevisionRef.current) {
-          setProjectSaveStatus("saved");
-        }
-      });
-    projectSaveQueueRef.current = projectSave;
-    try {
-      await projectSave;
-      setCrop(normalizedCrop);
-      return normalizedCrop;
-    } catch (error) {
-      if (revision === projectSaveRevisionRef.current) {
-        setProjectSaveStatus("error");
+  const saveProjectCrop = useCallback(
+    async (nextCrop: CropRegion | null) => {
+      const normalizedCrop = normalizeCropRegion(nextCrop);
+      const recordingId = contentState.localRecordingId;
+      if (!recordingId) {
+        setCrop(normalizedCrop);
+        return normalizedCrop;
       }
-      throw error;
-    }
-  }, [
-    audioTrack,
-    chapterMarkers,
-    contentState.height,
-    contentState.localRecordingId,
-    contentState.mimeType,
-    contentState.prevHeight,
-    contentState.prevWidth,
-    contentState.width,
-    duration,
-    exportSettings,
-    selectedClipId,
-    sourceBlob,
-    timeline,
-    transcript,
-    zoomKeyframes,
-  ]);
-
-  const saveProjectAudio = useCallback(async (
-    blob: Blob,
-    options: {
-      fileName?: string;
-      volume?: number;
-      mode?: ProjectAudioMode;
-      loop?: boolean;
-    },
-  ) => {
-    const recordingId = contentState.localRecordingId;
-    if (!recordingId) throw new Error("project-audio-requires-local-recording");
-    setAudioAssetStatus("saving");
-    try {
-      await validateProjectAudioBlob(blob);
-      const nextTrack = await saveLocalRecordingAudioAsset(recordingId, blob, {
-        ...options,
-        sourceVolume: 0.7,
-        loop: options.loop === true,
-      });
-      // The audio picker has an explicit Save action, so do not leave its
-      // durability to the debounced autosave. Serialize behind any in-flight
-      // project write, then persist the complete current snapshot with the new
-      // track before returning to the player.
       const revision = ++projectSaveRevisionRef.current;
       if (projectSaveTimerRef.current) {
         clearTimeout(projectSaveTimerRef.current);
@@ -680,8 +578,8 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
             transcript,
             chapterMarkers,
             zoomKeyframes,
-            crop,
-            audioTrack: nextTrack,
+            crop: normalizedCrop,
+            audioTrack,
             selectedClipId,
             exportSettings,
           });
@@ -690,42 +588,130 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
           }
         });
       projectSaveQueueRef.current = projectSave;
-      await projectSave;
-      if (audioTrack && audioTrack.assetId !== nextTrack.assetId) {
-        await deleteLocalRecordingAudioAsset(recordingId, audioTrack).catch(() => false);
+      try {
+        await projectSave;
+        setCrop(normalizedCrop);
+        return normalizedCrop;
+      } catch (error) {
+        if (revision === projectSaveRevisionRef.current) {
+          setProjectSaveStatus("error");
+        }
+        throw error;
       }
-      setAudioTrack(nextTrack);
-      setAudioAsset(blob);
-      setAudioAssetStatus("ready");
-      return nextTrack;
-    } catch (error) {
-      setAudioAssetStatus(audioTrack ? "missing" : "idle");
-      throw error;
-    }
-  }, [
-    audioTrack,
-    chapterMarkers,
-    contentState.height,
-    contentState.localRecordingId,
-    contentState.mimeType,
-    contentState.prevHeight,
-    contentState.prevWidth,
-    contentState.width,
-    crop,
-    duration,
-    exportSettings,
-    selectedClipId,
-    sourceBlob,
-    timeline,
-    transcript,
-    zoomKeyframes,
-  ]);
+    },
+    [
+      audioTrack,
+      chapterMarkers,
+      contentState.height,
+      contentState.localRecordingId,
+      contentState.mimeType,
+      contentState.prevHeight,
+      contentState.prevWidth,
+      contentState.width,
+      duration,
+      exportSettings,
+      selectedClipId,
+      sourceBlob,
+      timeline,
+      transcript,
+      zoomKeyframes,
+    ],
+  );
 
-  const updateProjectAudio = useCallback((patch: Partial<
-    Pick<ProjectAudioTrack, "volume" | "sourceVolume" | "mode" | "loop">
-  >) => {
-    setAudioTrack((current) => current ? updateProjectAudioTrack(current, patch) : null);
-  }, []);
+  const saveProjectAudio = useCallback(
+    async (
+      blob: Blob,
+      options: {
+        fileName?: string;
+        volume?: number;
+        mode?: ProjectAudioMode;
+        loop?: boolean;
+      },
+    ) => {
+      const recordingId = contentState.localRecordingId;
+      if (!recordingId) throw new Error("project-audio-requires-local-recording");
+      setAudioAssetStatus("saving");
+      try {
+        await validateProjectAudioBlob(blob);
+        const nextTrack = await saveLocalRecordingAudioAsset(recordingId, blob, {
+          ...options,
+          sourceVolume: 0.7,
+          loop: options.loop === true,
+        });
+        // The audio picker has an explicit Save action, so do not leave its
+        // durability to the debounced autosave. Serialize behind any in-flight
+        // project write, then persist the complete current snapshot with the new
+        // track before returning to the player.
+        const revision = ++projectSaveRevisionRef.current;
+        if (projectSaveTimerRef.current) {
+          clearTimeout(projectSaveTimerRef.current);
+          projectSaveTimerRef.current = null;
+        }
+        const projectSave = projectSaveQueueRef.current
+          .catch(() => {})
+          .then(async () => {
+            setProjectSaveStatus("saving");
+            await saveLocalRecordingProject(recordingId, {
+              source: {
+                duration: duration || 0,
+                mimeType: sourceBlob?.type || contentState.mimeType || null,
+                byteSize: sourceBlob?.size || 0,
+                width: contentState.prevWidth || contentState.width || 0,
+                height: contentState.prevHeight || contentState.height || 0,
+              },
+              timeline,
+              transcript,
+              chapterMarkers,
+              zoomKeyframes,
+              crop,
+              audioTrack: nextTrack,
+              selectedClipId,
+              exportSettings,
+            });
+            if (revision === projectSaveRevisionRef.current) {
+              setProjectSaveStatus("saved");
+            }
+          });
+        projectSaveQueueRef.current = projectSave;
+        await projectSave;
+        if (audioTrack && audioTrack.assetId !== nextTrack.assetId) {
+          await deleteLocalRecordingAudioAsset(recordingId, audioTrack).catch(() => false);
+        }
+        setAudioTrack(nextTrack);
+        setAudioAsset(blob);
+        setAudioAssetStatus("ready");
+        return nextTrack;
+      } catch (error) {
+        setAudioAssetStatus(audioTrack ? "missing" : "idle");
+        throw error;
+      }
+    },
+    [
+      audioTrack,
+      chapterMarkers,
+      contentState.height,
+      contentState.localRecordingId,
+      contentState.mimeType,
+      contentState.prevHeight,
+      contentState.prevWidth,
+      contentState.width,
+      crop,
+      duration,
+      exportSettings,
+      selectedClipId,
+      sourceBlob,
+      timeline,
+      transcript,
+      zoomKeyframes,
+    ],
+  );
+
+  const updateProjectAudio = useCallback(
+    (patch: Partial<Pick<ProjectAudioTrack, "volume" | "sourceVolume" | "mode" | "loop">>) => {
+      setAudioTrack((current) => (current ? updateProjectAudioTrack(current, patch) : null));
+    },
+    [],
+  );
 
   const removeProjectAudio = useCallback(async () => {
     const recordingId = contentState.localRecordingId;
@@ -765,10 +751,7 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
     setTimelinePast(history.past);
     setTimelineFuture(history.future);
     setTimeline(history.timeline);
-    if (
-      selectedClipId &&
-      !history.timeline?.clips.some((clip) => clip.id === selectedClipId)
-    ) {
+    if (selectedClipId && !history.timeline?.clips.some((clip) => clip.id === selectedClipId)) {
       setSelectedClipId(history.timeline?.clips[0]?.id || null);
     }
   }, [selectedClipId, timeline, timelineFuture, timelinePast]);
@@ -782,10 +765,7 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
     setTimelinePast(history.past);
     setTimelineFuture(history.future);
     setTimeline(history.timeline);
-    if (
-      selectedClipId &&
-      !history.timeline?.clips.some((clip) => clip.id === selectedClipId)
-    ) {
+    if (selectedClipId && !history.timeline?.clips.some((clip) => clip.id === selectedClipId)) {
       setSelectedClipId(history.timeline?.clips[0]?.id || null);
     }
   }, [selectedClipId, timeline, timelineFuture, timelinePast]);
@@ -807,10 +787,10 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
         const merged = {
           ...prev,
           ...patch,
-          gif: { ...(prev.gif || {}), ...(patch.gif || {}) },
+          gif: { ...prev.gif, ...patch.gif },
           captionStyle: {
-            ...(prev.captionStyle || {}),
-            ...(patch.captionStyle || {}),
+            ...prev.captionStyle,
+            ...patch.captionStyle,
           },
         };
         return normalizeExportSettings(merged, { duration: duration || 0 });
@@ -819,90 +799,91 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
     [duration],
   );
 
-  const runTranscription = useCallback(async (options: { force?: boolean } = {}) => {
-    if (!sourceBlob) {
-      setError("No recording to transcribe yet.");
-      return;
-    }
-    const force = options?.force === true;
-    const language = normalizeTranscriptionLanguage(transcriptionLanguage);
-    setError(null);
-    setTranscribing(true);
-    setTranscribeProgress(0);
-    setTranscriptCacheStatus(force ? "refreshing" : "checking");
-    try {
-      const config = await resolveConfig();
-      const cacheMetadata = contentState.localRecordingId
-        ? await buildTranscriptCacheMetadata({
-            blob: sourceBlob,
-            recordingId: contentState.localRecordingId,
-            config,
-            language,
-          })
-        : null;
-      lastTranscriptCacheKeyRef.current = cacheMetadata?.key || null;
+  const runTranscription = useCallback(
+    async (options: { force?: boolean } = {}) => {
+      if (!sourceBlob) {
+        setError("No recording to transcribe yet.");
+        return;
+      }
+      const force = options?.force === true;
+      const language = normalizeTranscriptionLanguage(transcriptionLanguage);
+      setError(null);
+      setTranscribing(true);
+      setTranscribeProgress(0);
+      setTranscriptCacheStatus(force ? "refreshing" : "checking");
+      try {
+        const config = await resolveConfig();
+        const cacheMetadata = contentState.localRecordingId
+          ? await buildTranscriptCacheMetadata({
+              blob: sourceBlob,
+              recordingId: contentState.localRecordingId,
+              config,
+              language,
+            })
+          : null;
+        lastTranscriptCacheKeyRef.current = cacheMetadata?.key || null;
 
-      if (cacheMetadata && !force) {
-        const cached = await getCachedTranscript(cacheMetadata.key);
-        if (cached?.transcript) {
-          setTranscript(cached.transcript);
-          setTranscribeProgress(1);
-          setTranscriptCacheStatus("hit");
-          return;
+        if (cacheMetadata && !force) {
+          const cached = await getCachedTranscript(cacheMetadata.key);
+          if (cached?.transcript) {
+            setTranscript(cached.transcript);
+            setTranscribeProgress(1);
+            setTranscriptCacheStatus("hit");
+            return;
+          }
         }
-      }
 
-      const latestModelStatus =
-        modelStatus.state === "checking"
-          ? await refreshModelStatus()
-          : modelStatus;
-      if (!latestModelStatus.ready) {
-        const missingSummary = latestModelStatus.missingFiles?.length
-          ? ` Missing: ${latestModelStatus.missingFiles.slice(0, 3).join(", ")}${
-              latestModelStatus.missingFiles.length > 3 ? ", ..." : ""
-            }`
-          : "";
-        throw classifyTranscriptionError(
-          new Error(
-            `${latestModelStatus.message || "Bundled Whisper model is not ready."}${missingSummary}`,
-          ),
-          { phase: "model-load" },
-        );
-      }
+        const latestModelStatus =
+          modelStatus.state === "checking" ? await refreshModelStatus() : modelStatus;
+        if (!latestModelStatus.ready) {
+          const missingSummary = latestModelStatus.missingFiles?.length
+            ? ` Missing: ${latestModelStatus.missingFiles.slice(0, 3).join(", ")}${
+                latestModelStatus.missingFiles.length > 3 ? ", ..." : ""
+              }`
+            : "";
+          throw classifyTranscriptionError(
+            new Error(
+              `${latestModelStatus.message || "Bundled Whisper model is not ready."}${missingSummary}`,
+            ),
+            { phase: "model-load" },
+          );
+        }
 
-      setTranscriptCacheStatus("miss");
-      const t = await transcribe({
-        blob: sourceBlob,
-        language,
-        onProgress: setTranscribeProgress,
-      });
-      const transcriptWithLanguage = {
-        ...t,
-        language: t.language || language,
-      };
-      setTranscript(transcriptWithLanguage);
-      if (cacheMetadata) {
-        await saveCachedTranscript(cacheMetadata.key, {
-          ...cacheMetadata,
-          transcript: transcriptWithLanguage,
+        setTranscriptCacheStatus("miss");
+        const t = await transcribe({
+          blob: sourceBlob,
+          language,
+          onProgress: setTranscribeProgress,
         });
-        setTranscriptCacheStatus("saved");
-      } else {
-        setTranscriptCacheStatus("uncached");
+        const transcriptWithLanguage = {
+          ...t,
+          language: t.language || language,
+        };
+        setTranscript(transcriptWithLanguage);
+        if (cacheMetadata) {
+          await saveCachedTranscript(cacheMetadata.key, {
+            ...cacheMetadata,
+            transcript: transcriptWithLanguage,
+          });
+          setTranscriptCacheStatus("saved");
+        } else {
+          setTranscriptCacheStatus("uncached");
+        }
+      } catch (e) {
+        setError(formatTranscriptionError(e));
+        setTranscriptCacheStatus("error");
+      } finally {
+        setTranscribing(false);
       }
-    } catch (e) {
-      setError(formatTranscriptionError(e));
-      setTranscriptCacheStatus("error");
-    } finally {
-      setTranscribing(false);
-    }
-  }, [
-    contentState.localRecordingId,
-    modelStatus,
-    refreshModelStatus,
-    sourceBlob,
-    transcriptionLanguage,
-  ]);
+    },
+    [
+      contentState.localRecordingId,
+      modelStatus,
+      refreshModelStatus,
+      sourceBlob,
+      transcriptionLanguage,
+    ],
+  );
 
   const regenerateTranscript = useCallback(
     () => runTranscription({ force: true }),
@@ -936,18 +917,17 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
         const hit = outputToSource(current, outTime);
         return hit ? splitAtSource(current, hit.sourceTime) : current;
       }),
-    [withTimeline]
+    [withTimeline],
   );
   const deleteClipById = useCallback(
     (id: string) => {
       withTimeline((current) => tlDeleteClip(current, id));
       setSelectedClipId((s) => (s === id ? null : s));
     },
-    [withTimeline]
+    [withTimeline],
   );
   const moveClip = useCallback(
-    (from: number, to: number) =>
-      withTimeline((current) => tlMoveClip(current, from, to)),
+    (from: number, to: number) => withTimeline((current) => tlMoveClip(current, from, to)),
     [withTimeline],
   );
   const toggleMuteClip = useCallback(
@@ -956,7 +936,7 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
         const clip = current.clips.find((candidate) => candidate.id === id);
         return setClipMuted(current, id, !clip?.muted);
       }),
-    [withTimeline]
+    [withTimeline],
   );
 
   const editWords = useCallback(
@@ -971,15 +951,11 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
           : muteSourceRange(current, start, end),
       );
     },
-    [transcript, withTimeline]
+    [transcript, withTimeline],
   );
 
   const suggestions = useMemo(
-    () =>
-      mergeEditSuggestions(
-        buildTranscriptSuggestions(transcript),
-        audioSuggestions,
-      ),
+    () => mergeEditSuggestions(buildTranscriptSuggestions(transcript), audioSuggestions),
     [audioSuggestions, transcript],
   );
 
@@ -1026,18 +1002,18 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
     setZoomKeyframes((prev) => prev.filter((keyframe) => keyframe.id !== id));
   }, []);
 
-  const resetTimeline = useCallback(
-    () => {
-      withTimeline(() => createTimeline(duration || 0));
-      setSelectedClipId(null);
-    },
-    [duration, withTimeline],
-  );
+  const resetTimeline = useCallback(() => {
+    withTimeline(() => createTimeline(duration || 0));
+    setSelectedClipId(null);
+  }, [duration, withTimeline]);
 
-  const resolved = useMemo(() => (timeline ? resolveTimeline(timeline) : { segments: [], outputDuration: 0 }), [timeline]);
+  const resolved = useMemo(
+    () => (timeline ? resolveTimeline(timeline) : { segments: [], outputDuration: 0 }),
+    [timeline],
+  );
   const clipView = useMemo(
     () => (timeline && transcript ? clipWords(timeline, transcript.words) : []),
-    [timeline, transcript]
+    [timeline, transcript],
   );
 
   const hasEdits = useMemo(() => {
@@ -1047,9 +1023,7 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
     return c.muted || c.sourceStart > 0.01 || Math.abs(c.sourceEnd - (duration || 0)) > 0.01;
   }, [timeline, duration]);
 
-  const burnInCaptions = Boolean(
-    exportSettings.captionStyle?.burnIn && transcript?.words?.length,
-  );
+  const burnInCaptions = Boolean(exportSettings.captionStyle?.burnIn && transcript?.words?.length);
   const hasZoomKeyframes = zoomKeyframes.length > 0;
   const needsTimelineRender =
     hasEdits || burnInCaptions || hasZoomKeyframes || Boolean(crop) || Boolean(audioTrack);
@@ -1116,14 +1090,11 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
     ) => {
       if (!sourceBlob || !timeline) return null;
       if (audioTrack) {
-        const mixed = await renderTimelineForExport(
-          (progress) => onProgress(progress * 0.85),
-          {
-            burnInCaptions: false,
-            renderZoomKeyframes: false,
-            signal: options.signal,
-          },
-        );
+        const mixed = await renderTimelineForExport((progress) => onProgress(progress * 0.85), {
+          burnInCaptions: false,
+          renderZoomKeyframes: false,
+          signal: options.signal,
+        });
         if (!mixed) return null;
         return lazyRenderTimelineAudio(
           mixed,
@@ -1212,10 +1183,9 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
       setZoomKeyframes([]);
       setCrop(null);
       if (contentState.localRecordingId && audioTrack) {
-        await deleteLocalRecordingAudioAsset(
-          contentState.localRecordingId,
-          audioTrack,
-        ).catch(() => false);
+        await deleteLocalRecordingAudioAsset(contentState.localRecordingId, audioTrack).catch(
+          () => false,
+        );
       }
       setAudioTrack(null);
       setAudioAsset(null);
@@ -1355,43 +1325,116 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
 
   const value = useMemo(
     () => ({
-      timeline, resolved, transcript, clipView, selectedClipId, setSelectedClipId,
-      canUndoTimeline, canRedoTimeline, undoTimeline, redoTimeline,
-      transcribing, transcribeProgress, transcriptionLanguage,
-      updateTranscriptionLanguage, transcriptCacheStatus, modelStatus,
+      timeline,
+      resolved,
+      transcript,
+      clipView,
+      selectedClipId,
+      setSelectedClipId,
+      canUndoTimeline,
+      canRedoTimeline,
+      undoTimeline,
+      redoTimeline,
+      transcribing,
+      transcribeProgress,
+      transcriptionLanguage,
+      updateTranscriptionLanguage,
+      transcriptCacheStatus,
+      modelStatus,
       refreshModelStatus,
-      exportSettings, updateExportSettings,
+      exportSettings,
+      updateExportSettings,
       projectSaveStatus,
-      suggestions, audioSuggestionStatus, chapterMarkers,
-      zoomSuggestions, zoomKeyframes, saveZoomSuggestion, removeZoomKeyframe,
-      crop, updateCrop, saveProjectCrop,
-      audioTrack, audioAsset, audioAssetStatus,
-      saveProjectAudio, updateProjectAudio, removeProjectAudio,
+      suggestions,
+      audioSuggestionStatus,
+      chapterMarkers,
+      zoomSuggestions,
+      zoomKeyframes,
+      saveZoomSuggestion,
+      removeZoomKeyframe,
+      crop,
+      updateCrop,
+      saveProjectCrop,
+      audioTrack,
+      audioAsset,
+      audioAssetStatus,
+      saveProjectAudio,
+      updateProjectAudio,
+      removeProjectAudio,
       applySuggestion,
-      exporting, exportProgress, error, hasEdits,
-      runTranscription, regenerateTranscript, deleteTranscript,
-      splitAtSourceTime, splitAtOutputTime, deleteClip: deleteClipById,
-      moveClip, toggleMuteClip, editWords, resetTimeline, applyEdits,
-      renderTimelineForExport, renderTimelineAudioForExport,
+      exporting,
+      exportProgress,
+      error,
+      hasEdits,
+      runTranscription,
+      regenerateTranscript,
+      deleteTranscript,
+      splitAtSourceTime,
+      splitAtOutputTime,
+      deleteClip: deleteClipById,
+      moveClip,
+      toggleMuteClip,
+      editWords,
+      resetTimeline,
+      applyEdits,
+      renderTimelineForExport,
+      renderTimelineAudioForExport,
     }),
     [
-      timeline, resolved, transcript, clipView, selectedClipId, transcribing,
-      canUndoTimeline, canRedoTimeline, undoTimeline, redoTimeline,
-      transcribeProgress, transcriptionLanguage, updateTranscriptionLanguage,
-      transcriptCacheStatus, modelStatus, refreshModelStatus,
-      exportSettings, updateExportSettings, projectSaveStatus,
-      suggestions, audioSuggestionStatus, chapterMarkers,
-      zoomSuggestions, zoomKeyframes, saveZoomSuggestion, removeZoomKeyframe,
-      crop, updateCrop, saveProjectCrop,
-      audioTrack, audioAsset, audioAssetStatus,
-      saveProjectAudio, updateProjectAudio, removeProjectAudio,
+      timeline,
+      resolved,
+      transcript,
+      clipView,
+      selectedClipId,
+      transcribing,
+      canUndoTimeline,
+      canRedoTimeline,
+      undoTimeline,
+      redoTimeline,
+      transcribeProgress,
+      transcriptionLanguage,
+      updateTranscriptionLanguage,
+      transcriptCacheStatus,
+      modelStatus,
+      refreshModelStatus,
+      exportSettings,
+      updateExportSettings,
+      projectSaveStatus,
+      suggestions,
+      audioSuggestionStatus,
+      chapterMarkers,
+      zoomSuggestions,
+      zoomKeyframes,
+      saveZoomSuggestion,
+      removeZoomKeyframe,
+      crop,
+      updateCrop,
+      saveProjectCrop,
+      audioTrack,
+      audioAsset,
+      audioAssetStatus,
+      saveProjectAudio,
+      updateProjectAudio,
+      removeProjectAudio,
       applySuggestion,
-      exporting, exportProgress, error, hasEdits,
-      runTranscription, regenerateTranscript, deleteTranscript,
-      splitAtSourceTime, splitAtOutputTime, deleteClipById,
-      moveClip, toggleMuteClip, editWords, resetTimeline, applyEdits,
-      renderTimelineForExport, renderTimelineAudioForExport,
-    ]
+      exporting,
+      exportProgress,
+      error,
+      hasEdits,
+      runTranscription,
+      regenerateTranscript,
+      deleteTranscript,
+      splitAtSourceTime,
+      splitAtOutputTime,
+      deleteClipById,
+      moveClip,
+      toggleMuteClip,
+      editWords,
+      resetTimeline,
+      applyEdits,
+      renderTimelineForExport,
+      renderTimelineAudioForExport,
+    ],
   );
 
   return <EdlContext.Provider value={value}>{children}</EdlContext.Provider>;

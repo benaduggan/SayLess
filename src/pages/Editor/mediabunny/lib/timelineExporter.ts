@@ -41,7 +41,7 @@ export class TimelineExporter {
       zoomKeyframes = [],
       crop = null,
       signal,
-    }
+    },
   ) {
     throwIfAborted(signal);
     const input = new Input({
@@ -60,9 +60,7 @@ export class TimelineExporter {
     try {
       const videoTrack = await input.getPrimaryVideoTrack();
       const audioTrack = await input.getPrimaryAudioTrack().catch(() => null);
-      const audioDecodable = audioTrack
-        ? await audioTrack.canDecode().catch(() => false)
-        : false;
+      const audioDecodable = audioTrack ? await audioTrack.canDecode().catch(() => false) : false;
 
       const codecInfo = await videoConverter.detectBestCodec("mp4");
       const videoSource = new VideoSampleSource({
@@ -84,11 +82,7 @@ export class TimelineExporter {
       outputStarted = true;
       await output.start();
 
-      const totalDur =
-        clips.reduce(
-          (a, c) => a + Math.max(0, c.sourceEnd - c.sourceStart),
-          0
-        ) || 1;
+      const totalDur = clips.reduce((a, c) => a + Math.max(0, c.sourceEnd - c.sourceStart), 0) || 1;
       let outPts = 0; // microseconds
       let processed = 0;
       const frameRenderer = createFrameRenderer({
@@ -112,9 +106,7 @@ export class TimelineExporter {
             const timestamp = Math.max(0, base + (sample.timestamp - start));
             const sampleDuration = sample.duration ?? 1 / 30;
             sample.setTimestamp(timestamp);
-            outSample = frameRenderer
-              ? frameRenderer.render(sample, timestamp)
-              : sample;
+            outSample = frameRenderer ? frameRenderer.render(sample, timestamp) : sample;
             await videoSource.add(outSample);
             processed += sampleDuration;
             onProgress?.(Math.min(1, processed / totalDur));
@@ -134,9 +126,7 @@ export class TimelineExporter {
               throwIfAborted(signal);
               const adjusted = Math.max(0, clipAudioPts);
               const sampleDuration =
-                sample.duration ||
-                sample.numberOfFrames / sample.sampleRate ||
-                0;
+                sample.duration || sample.numberOfFrames / sample.sampleRate || 0;
               clipAudioPts += sampleDuration;
               if (clip.muted) {
                 // Replace with a silent sample of the same shape (true silence).
@@ -193,9 +183,7 @@ export class TimelineExporter {
       formats: ALL_FORMATS,
     });
     const audioTrack = await input.getPrimaryAudioTrack().catch(() => null);
-    const audioDecodable = audioTrack
-      ? await audioTrack.canDecode().catch(() => false)
-      : false;
+    const audioDecodable = audioTrack ? await audioTrack.canDecode().catch(() => false) : false;
     if (!audioTrack || !audioDecodable) {
       throw new Error("audio-export-track-unavailable");
     }
@@ -222,11 +210,7 @@ export class TimelineExporter {
       outputStarted = true;
       await output.start();
 
-      const totalDur =
-        clips.reduce(
-          (a, c) => a + Math.max(0, c.sourceEnd - c.sourceStart),
-          0
-        ) || 1;
+      const totalDur = clips.reduce((a, c) => a + Math.max(0, c.sourceEnd - c.sourceStart), 0) || 1;
       let outPts = 0;
       let processed = 0;
 
@@ -313,10 +297,7 @@ function createFrameRenderer({ captions, captionStyle, zoomKeyframes, crop }) {
     }))
     .filter(
       (cue) =>
-        cue.text &&
-        Number.isFinite(cue.start) &&
-        Number.isFinite(cue.end) &&
-        cue.end > cue.start
+        cue.text && Number.isFinite(cue.start) && Number.isFinite(cue.end) && cue.end > cue.start,
     );
   const zooms = (zoomKeyframes || [])
     .map((keyframe) => ({
@@ -334,53 +315,34 @@ function createFrameRenderer({ captions, captionStyle, zoomKeyframes, crop }) {
         Number.isFinite(keyframe.scale) &&
         keyframe.scale > 1 &&
         Number.isFinite(keyframe.xRatio) &&
-        Number.isFinite(keyframe.yRatio)
+        Number.isFinite(keyframe.yRatio),
     );
   const normalizedCrop =
-    crop && Number(crop.widthRatio) > 0 && Number(crop.heightRatio) > 0
-      ? crop
-      : null;
+    crop && Number(crop.widthRatio) > 0 && Number(crop.heightRatio) > 0 ? crop : null;
   if (!cues.length && !zooms.length && !normalizedCrop) return null;
 
   const preset =
-    CAPTION_STYLE_PRESET_DETAILS[captionStyle?.preset] ||
-    CAPTION_STYLE_PRESET_DETAILS.clean;
+    CAPTION_STYLE_PRESET_DETAILS[captionStyle?.preset] || CAPTION_STYLE_PRESET_DETAILS.clean;
   let canvas = null;
   let context = null;
   let cropCanvas = null;
   let cropContext = null;
 
   const ensureCanvas = (sample) => {
-    const sourceWidth = Math.max(
-      1,
-      Math.round(sample.displayWidth || sample.codedWidth || 1)
-    );
-    const sourceHeight = Math.max(
-      1,
-      Math.round(sample.displayHeight || sample.codedHeight || 1)
-    );
-    const cropX = normalizedCrop
-      ? Math.round(normalizedCrop.xRatio * sourceWidth)
-      : 0;
-    const cropY = normalizedCrop
-      ? Math.round(normalizedCrop.yRatio * sourceHeight)
-      : 0;
+    const sourceWidth = Math.max(1, Math.round(sample.displayWidth || sample.codedWidth || 1));
+    const sourceHeight = Math.max(1, Math.round(sample.displayHeight || sample.codedHeight || 1));
+    const cropX = normalizedCrop ? Math.round(normalizedCrop.xRatio * sourceWidth) : 0;
+    const cropY = normalizedCrop ? Math.round(normalizedCrop.yRatio * sourceHeight) : 0;
     const width = normalizedCrop
       ? Math.max(
           1,
-          Math.min(
-            sourceWidth - cropX,
-            Math.round(normalizedCrop.widthRatio * sourceWidth)
-          )
+          Math.min(sourceWidth - cropX, Math.round(normalizedCrop.widthRatio * sourceWidth)),
         )
       : sourceWidth;
     const height = normalizedCrop
       ? Math.max(
           1,
-          Math.min(
-            sourceHeight - cropY,
-            Math.round(normalizedCrop.heightRatio * sourceHeight)
-          )
+          Math.min(sourceHeight - cropY, Math.round(normalizedCrop.heightRatio * sourceHeight)),
         )
       : sourceHeight;
     if (canvas && canvas.width === width && canvas.height === height) {
@@ -416,11 +378,7 @@ function createFrameRenderer({ captions, captionStyle, zoomKeyframes, crop }) {
   };
 
   const ensureCropCanvas = (width, height) => {
-    if (
-      cropCanvas &&
-      cropCanvas.width === width &&
-      cropCanvas.height === height
-    ) {
+    if (cropCanvas && cropCanvas.width === width && cropCanvas.height === height) {
       return { canvas: cropCanvas, context: cropContext };
     }
     cropCanvas =
@@ -436,11 +394,9 @@ function createFrameRenderer({ captions, captionStyle, zoomKeyframes, crop }) {
 
   return {
     render(sample, timestamp) {
-      const active = cues.find(
-        (cue) => timestamp >= cue.start && timestamp < cue.end
-      );
+      const active = cues.find((cue) => timestamp >= cue.start && timestamp < cue.end);
       const activeZoom = zooms.find(
-        (keyframe) => timestamp >= keyframe.time && timestamp < keyframe.end
+        (keyframe) => timestamp >= keyframe.time && timestamp < keyframe.end,
       );
       if (!active && !activeZoom && !normalizedCrop) return sample;
       const target = ensureCanvas(sample);
@@ -453,7 +409,7 @@ function createFrameRenderer({ captions, captionStyle, zoomKeyframes, crop }) {
           -target.cropX,
           -target.cropY,
           target.sourceWidth,
-          target.sourceHeight
+          target.sourceHeight,
         );
         frame = cropped.canvas;
       }
@@ -461,28 +417,12 @@ function createFrameRenderer({ captions, captionStyle, zoomKeyframes, crop }) {
         activeZoom && normalizedCrop
           ? {
               ...activeZoom,
-              ...cropRelativePoint(
-                normalizedCrop,
-                activeZoom.xRatio,
-                activeZoom.yRatio
-              ),
+              ...cropRelativePoint(normalizedCrop, activeZoom.xRatio, activeZoom.yRatio),
             }
           : activeZoom;
-      drawVideoFrame(
-        frame,
-        target.context,
-        target.width,
-        target.height,
-        viewportZoom
-      );
+      drawVideoFrame(frame, target.context, target.width, target.height, viewportZoom);
       if (active) {
-        drawCaptionOverlay(
-          target.context,
-          target.width,
-          target.height,
-          active.text,
-          preset
-        );
+        drawCaptionOverlay(target.context, target.width, target.height, active.text, preset);
       }
       return new VideoSample(target.canvas, {
         timestamp,
@@ -516,15 +456,12 @@ function drawCaptionOverlay(context, width, height, text, preset) {
   const horizontalPadding = Math.round(fontSize * 0.7);
   const verticalPadding = Math.round(fontSize * 0.42);
   const maxTextWidth = Math.round(width * 0.78);
-  const lines = wrapCaptionText(context, text, maxTextWidth, fontSize).slice(
-    0,
-    3
-  );
+  const lines = wrapCaptionText(context, text, maxTextWidth, fontSize).slice(0, 3);
   if (!lines.length) return;
 
   const textWidth = Math.min(
     maxTextWidth,
-    Math.max(...lines.map((line) => context.measureText(line).width))
+    Math.max(...lines.map((line) => context.measureText(line).width)),
   );
   const boxWidth = Math.ceil(textWidth + horizontalPadding * 2);
   const boxHeight = Math.ceil(lines.length * lineHeight + verticalPadding * 2);
@@ -534,14 +471,7 @@ function drawCaptionOverlay(context, width, height, text, preset) {
   context.save();
   context.globalAlpha = preset.boxAlpha;
   context.fillStyle = preset.boxColor;
-  roundedRect(
-    context,
-    x,
-    y,
-    boxWidth,
-    boxHeight,
-    Math.max(6, Math.round(fontSize * 0.25))
-  );
+  roundedRect(context, x, y, boxWidth, boxHeight, Math.max(6, Math.round(fontSize * 0.25)));
   context.fill();
   context.globalAlpha = 1;
   context.font = `700 ${fontSize}px Inter, Arial, sans-serif`;

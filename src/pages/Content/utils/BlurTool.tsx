@@ -1,10 +1,4 @@
-import React, {
-  useLayoutEffect,
-  useState,
-  useRef,
-  useContext,
-  useEffect,
-} from "react";
+import React, { useLayoutEffect, useState, useRef, useContext, useEffect } from "react";
 
 // Context
 import { contentStateContext } from "../context/ContentState";

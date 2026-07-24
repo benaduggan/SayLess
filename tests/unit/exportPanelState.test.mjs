@@ -14,21 +14,18 @@ import {
 
 test("export job title reflects terminal states", () => {
   assert.equal(buildExportJobTitle(null), "Export");
-  assert.equal(
-    buildExportJobTitle({ label: "MP4 export", status: "running" }),
-    "MP4 export"
-  );
+  assert.equal(buildExportJobTitle({ label: "MP4 export", status: "running" }), "MP4 export");
   assert.equal(
     buildExportJobTitle({ label: "MP4 export", status: "completed" }),
-    "MP4 export complete"
+    "MP4 export complete",
   );
   assert.equal(
     buildExportJobTitle({ label: "WebM export", status: "failed" }),
-    "WebM export failed"
+    "WebM export failed",
   );
   assert.equal(
     buildExportJobTitle({ label: "GIF export", status: "cancelled" }),
-    "GIF export cancelled"
+    "GIF export cancelled",
   );
 });
 
@@ -36,32 +33,23 @@ test("export job description covers progress and terminal copy", () => {
   assert.equal(buildExportJobDescription(null), "");
   assert.equal(
     buildExportJobDescription({ status: "running", progress: 0 }, 0),
-    "Rendering locally."
+    "Rendering locally.",
   );
   assert.equal(
     buildExportJobDescription({ status: "running", progress: 0 }, 24.6),
-    "Rendering locally (25%)"
+    "Rendering locally (25%)",
   );
   assert.equal(
     buildExportJobDescription({ status: "running", progress: 49.4 }, 10),
-    "Rendering locally (49%)"
+    "Rendering locally (49%)",
   );
-  assert.equal(
-    buildExportJobDescription({ status: "completed" }),
-    "Export finished."
-  );
+  assert.equal(buildExportJobDescription({ status: "completed" }), "Export finished.");
   assert.equal(
     buildExportJobDescription({ status: "failed", error: "No disk space." }),
-    "No disk space."
+    "No disk space.",
   );
-  assert.equal(
-    buildExportJobDescription({ status: "failed" }),
-    "Export failed."
-  );
-  assert.equal(
-    buildExportJobDescription({ status: "cancelled" }),
-    "Export cancelled."
-  );
+  assert.equal(buildExportJobDescription({ status: "failed" }), "Export failed.");
+  assert.equal(buildExportJobDescription({ status: "cancelled" }), "Export cancelled.");
 });
 
 test("export job actions expose reveal only for completed downloads", () => {
@@ -81,7 +69,7 @@ test("reveal action dispatches the exact validated Chrome download id", () => {
     revealExportDownload(42, {
       show: (id) => ids.push(id),
     }),
-    true
+    true,
   );
   assert.deepEqual(ids, [42]);
   assert.equal(revealExportDownload("42", { show: () => {} }), false);
@@ -92,7 +80,7 @@ test("reveal action dispatches the exact validated Chrome download id", () => {
         throw new Error("show failed");
       },
     }),
-    false
+    false,
   );
 });
 
@@ -111,21 +99,21 @@ test("buildExportCompletionFromSaveResult preserves save and cancellation outcom
       downloadId: 42,
       fileName: "clip.mp4",
     }),
-    { status: "completed", downloadId: 42 }
+    { status: "completed", downloadId: 42 },
   );
   assert.deepEqual(
     buildExportCompletionFromSaveResult({
       saved: true,
       fileName: "clip.mp4",
     }),
-    { status: "completed", downloadId: null }
+    { status: "completed", downloadId: null },
   );
   assert.deepEqual(
     buildExportCompletionFromSaveResult({
       saved: false,
       reason: "cancelled",
     }),
-    { status: "cancelled" }
+    { status: "cancelled" },
   );
   assert.deepEqual(buildExportCompletionFromSaveResult(null), {
     status: "failed",
@@ -147,7 +135,7 @@ test("buildRetryExportSettings normalizes previous export settings", () => {
         captionStyle: { preset: "high-contrast", burnIn: true },
         gif: { startSeconds: 1.25, durationSeconds: 4, fps: 12, width: 640 },
       },
-      { status: "failed" }
+      { status: "failed" },
     ),
     {
       format: "gif",
@@ -159,7 +147,7 @@ test("buildRetryExportSettings normalizes previous export settings", () => {
       audioFormat: "m4a",
       captionStyle: { preset: "high-contrast", burnIn: true },
       gif: { startSeconds: 1.25, durationSeconds: 4, fps: 12, width: 640 },
-    }
+    },
   );
   assert.deepEqual(buildRetryExportSettings({}, { status: "cancelled" }), {
     format: "mp4",
@@ -187,7 +175,7 @@ test("buildExportRetrySnapshot applies explicit overrides without dropping local
       captionStyle: { preset: "large", burnIn: true },
       gif: { fps: 24, width: 1280 },
     },
-    { format: "webm", audioOnly: false }
+    { format: "webm", audioOnly: false },
   );
 
   assert.deepEqual(snapshot, {
@@ -207,9 +195,9 @@ test("buildRetryExportSettings blocks retries while another export is running", 
   assert.equal(
     buildRetryExportSettings(
       { format: "webm", audioFormat: "wav", gif: {} },
-      { status: "running" }
+      { status: "running" },
     ),
-    null
+    null,
   );
   assert.equal(buildRetryExportSettings(null, { status: "failed" }), null);
 });

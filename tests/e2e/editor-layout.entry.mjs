@@ -1,6 +1,6 @@
-import "../../src/pages/EditorApp/styles/edit/_VideoPlayer.scss";
-import "../../src/pages/EditorApp/styles/global/_app.scss";
-import trimStyles from "../../src/pages/EditorApp/styles/edit/_TrimUI.module.scss";
+import "../../src/pages/EditorApp/styles/edit/_VideoPlayer.css";
+import "../../src/pages/EditorApp/styles/global/_app.css";
+import trimStyles from "../../src/pages/EditorApp/styles/edit/_TrimUI.module.css";
 
 const transcriptWords = Array.from({ length: 520 }, (_, index) => {
   const word = ["local", "editing", "keeps", "timeline", "visible"][index % 5];

@@ -11,17 +11,19 @@ export const focusTab = async (
   }
 
   try {
-    const chromeApi = (globalThis as typeof globalThis & {
-      chrome: {
-        tabs: {
-          get: (id: number) => Promise<{ id?: number; windowId?: number }>;
-          update: (id: number, options: { active: boolean }) => Promise<unknown>;
+    const chromeApi = (
+      globalThis as typeof globalThis & {
+        chrome: {
+          tabs: {
+            get: (id: number) => Promise<{ id?: number; windowId?: number }>;
+            update: (id: number, options: { active: boolean }) => Promise<unknown>;
+          };
+          windows: {
+            update: (id: number, options: { focused: boolean }) => Promise<unknown>;
+          };
         };
-        windows: {
-          update: (id: number, options: { focused: boolean }) => Promise<unknown>;
-        };
-      };
-    }).chrome;
+      }
+    ).chrome;
     const tab = await chromeApi.tabs.get(tabId as number);
     if (!tab?.id || typeof tab.windowId !== "number") {
       console.warn("[SayLess][BG] focusTab skipped: tab unavailable", {

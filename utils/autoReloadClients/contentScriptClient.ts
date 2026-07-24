@@ -8,8 +8,7 @@ logger("Initialized reload listener");
 
 // Listen for reload messages from background script
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-  const shouldReload =
-    request.from === "backgroundClient" && request.action === "reload-yourself";
+  const shouldReload = request.from === "backgroundClient" && request.action === "reload-yourself";
 
   if (shouldReload) {
     logger("Received reload request from background");

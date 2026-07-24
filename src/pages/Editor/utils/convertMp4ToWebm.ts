@@ -3,7 +3,7 @@ import { VideoConverter } from "../mediabunny/lib/videoConverter.ts";
 async function convertMp4ToWebm(
   mp4Blob: Blob,
   onProgress: (progress: number) => void = () => {},
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<Blob> {
   const converter = new VideoConverter();
 

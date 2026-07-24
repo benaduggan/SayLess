@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  getActiveProvider,
-  registerProvider,
-} from "../../src/transcription/index.ts";
+import { getActiveProvider, registerProvider } from "../../src/transcription/index.ts";
 import { TRANSCRIPTION_ERROR_CODES } from "../../src/transcription/errors.ts";
 
 const REMOTE_TEST_PROVIDER_ID = "unit-remote-provider";

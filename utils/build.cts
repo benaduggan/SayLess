@@ -10,7 +10,7 @@ const ALLOWED_WEBPACK_WARNINGS = [
   {
     name: "transformers import.meta standalone warning",
     moduleName:
-      /(?:^|[\\\/])@huggingface[\\\/]transformers[\\\/]dist[\\\/]transformers\.web\.js$|\.\/node_modules\/@huggingface\/transformers\/dist\/transformers\.web\.js/,
+      /(?:^|[\\/])@huggingface[\\/]transformers[\\/]dist[\\/]transformers\.web\.js$|\.\/node_modules\/@huggingface\/transformers\/dist\/transformers\.web\.js/,
     message:
       /Critical dependency: 'import\.meta' cannot be used as a standalone expression\. For static analysis, its properties must be accessed directly/,
   },
@@ -20,8 +20,7 @@ const isAllowedWebpackWarning = (warning: any) => {
   const moduleName = warning?.moduleName || warning?.moduleIdentifier || "";
   const message = warning?.message || String(warning || "");
   return ALLOWED_WEBPACK_WARNINGS.some(
-    (allowed) =>
-      allowed.moduleName.test(moduleName) && allowed.message.test(message)
+    (allowed) => allowed.moduleName.test(moduleName) && allowed.message.test(message),
   );
 };
 
@@ -46,9 +45,7 @@ webpack(config, (err: any, stats: any) => {
   if (stats.hasWarnings()) {
     const info = stats.toJson({ all: false, warnings: true });
     const warnings = info.warnings || [];
-    const unexpectedWarnings = warnings.filter(
-      (warning: any) => !isAllowedWebpackWarning(warning)
-    );
+    const unexpectedWarnings = warnings.filter((warning: any) => !isAllowedWebpackWarning(warning));
     if (unexpectedWarnings.length) {
       console.error("Webpack compilation had unexpected warnings:");
       console.error(unexpectedWarnings);

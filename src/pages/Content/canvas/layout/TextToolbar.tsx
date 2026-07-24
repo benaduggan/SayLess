@@ -57,10 +57,7 @@ const TextToolbar = (_props: Record<string, never>) => {
     canvas.on("object:moving", function (e: any) {
       const movedObject = e.target;
 
-      if (
-        movedObject.type === "textbox" &&
-        canvas.getActiveObject() === movedObject
-      ) {
+      if (movedObject.type === "textbox" && canvas.getActiveObject() === movedObject) {
         positionToolbarOnTextbox(movedObject);
       }
     });
@@ -68,10 +65,7 @@ const TextToolbar = (_props: Record<string, never>) => {
     canvas.on("object:scaling", function (e: any) {
       const resizedObject = e.target;
 
-      if (
-        resizedObject.type === "textbox" &&
-        canvas.getActiveObject() === resizedObject
-      ) {
+      if (resizedObject.type === "textbox" && canvas.getActiveObject() === resizedObject) {
         positionToolbarOnTextbox(resizedObject);
       }
     });

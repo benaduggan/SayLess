@@ -96,17 +96,11 @@ const bundleHarness = (work) =>
           }
         }
         if (stats.hasErrors()) {
-          reject(
-            new Error(
-              info.errors
-                .map((error) => error.message || String(error))
-                .join("\n")
-            )
-          );
+          reject(new Error(info.errors.map((error) => error.message || String(error)).join("\n")));
           return;
         }
         resolve();
-      }
+      },
     );
   });
 
@@ -117,24 +111,21 @@ const bundleHarness = (work) =>
   await bundleHarness(work);
   fs.copyFileSync(
     path.join(ROOT, "src", "assets", "sounds", "beep.mp3"),
-    path.join(work, "project-audio.mp3")
+    path.join(work, "project-audio.mp3"),
   );
   const gifWorkerDir = path.join(work, "assets", "vendor", "gif.js");
   fs.mkdirSync(gifWorkerDir, { recursive: true });
   fs.copyFileSync(
     path.join(ROOT, "node_modules", "gif.js", "dist", "gif.worker.js"),
-    path.join(gifWorkerDir, "gif.worker.js")
+    path.join(gifWorkerDir, "gif.worker.js"),
   );
   fs.writeFileSync(
     path.join(work, "harness.html"),
-    "<!doctype html><meta charset=utf-8><title>Local recordings harness</title><script type=module src=./bundle.js></script>"
+    "<!doctype html><meta charset=utf-8><title>Local recordings harness</title><script type=module src=./bundle.js></script>",
   );
 
   const server = http.createServer((req, res) => {
-    const f = path.join(
-      work,
-      req.url === "/" ? "/harness.html" : req.url.split("?")[0]
-    );
+    const f = path.join(work, req.url === "/" ? "/harness.html" : req.url.split("?")[0]);
     if (!fs.existsSync(f)) {
       res.writeHead(404);
       return res.end();
@@ -155,8 +146,7 @@ const bundleHarness = (work) =>
   const browser = await chromium.launch({ channel: "chrome", headless });
   const context = await browser.newContext();
   const page = await context.newPage();
-  const forceTimelineAacUnsupported =
-    process.env.SAYLESS_TEST_FORCE_AAC_UNSUPPORTED === "1";
+  const forceTimelineAacUnsupported = process.env.SAYLESS_TEST_FORCE_AAC_UNSUPPORTED === "1";
   page.on("pageerror", (e) => console.log("  [pageerror]", e.message));
   await page.goto(harnessUrl);
   await page.waitForFunction("window.LOCAL_RECORDINGS_READY === true", {
@@ -180,7 +170,7 @@ const bundleHarness = (work) =>
         height = 180,
         videoBitsPerSecond,
         complexFrames = false,
-      } = {}
+      } = {},
     ) => {
       const canvas = document.createElement("canvas");
       canvas.width = width;
@@ -204,7 +194,7 @@ const bundleHarness = (work) =>
       const stream = new MediaStream(
         includeAudio
           ? [...video.getVideoTracks(), ...audioDest.stream.getAudioTracks()]
-          : [...video.getVideoTracks()]
+          : [...video.getVideoTracks()],
       );
       const recorder = new MediaRecorder(stream, {
         mimeType: "video/webm",
@@ -224,23 +214,16 @@ const bundleHarness = (work) =>
           for (let y = 0; y < canvas.height; y += blockSize) {
             for (let x = 0; x < canvas.width; x += blockSize) {
               seed = (seed * 1664525 + 1013904223) >>> 0;
-              ctx.fillStyle = `rgb(${seed & 255},${(seed >>> 8) & 255},${
-                (seed >>> 16) & 255
-              })`;
+              ctx.fillStyle = `rgb(${seed & 255},${(seed >>> 8) & 255},${(seed >>> 16) & 255})`;
               ctx.fillRect(x, y, blockSize, blockSize);
             }
           }
         } else {
-          ctx.fillStyle =
-            elapsed < 1.2 ? "#1457ff" : elapsed < 2.7 ? "#e04747" : "#138a45";
+          ctx.fillStyle = elapsed < 1.2 ? "#1457ff" : elapsed < 2.7 ? "#e04747" : "#138a45";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.fillStyle = "#fff";
           ctx.font = "24px sans-serif";
-          ctx.fillText(
-            elapsed < 1.2 ? "keep" : elapsed < 2.7 ? "remove" : "tail",
-            24,
-            96
-          );
+          ctx.fillText(elapsed < 1.2 ? "keep" : elapsed < 2.7 ? "remove" : "tail", 24, 96);
         }
         if (elapsed < sec) requestAnimationFrame(draw);
       };
@@ -404,19 +387,14 @@ const bundleHarness = (work) =>
       for (let i = 0; i < samples.length; i += 1) {
         const time = i / sampleRate;
         const inQuietRoomPause = time >= 1 && time < 2.35;
-        const tone = inQuietRoomPause
-          ? 0
-          : Math.sin(time * Math.PI * 2 * 260) * 0.12;
+        const tone = inQuietRoomPause ? 0 : Math.sin(time * Math.PI * 2 * 260) * 0.12;
         const roomNoise = noise() * (inQuietRoomPause ? 0.0015 : 0.018);
         samples[i] = tone + roomNoise;
       }
 
       return makeWavBlob(samples, sampleRate);
     };
-    const genQuadrantVideoRecording = async (
-      sec = 1.2,
-      { width = 320, height = 180 } = {}
-    ) => {
+    const genQuadrantVideoRecording = async (sec = 1.2, { width = 320, height = 180 } = {}) => {
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
@@ -456,10 +434,7 @@ const bundleHarness = (work) =>
       stream.getTracks().forEach((track) => track.stop());
       return new Blob(chunks, { type: "video/webm" });
     };
-    const sampleVideoPixel = (
-      blob,
-      { time = 0.4, xRatio = 0.5, yRatio = 0.5 } = {}
-    ) =>
+    const sampleVideoPixel = (blob, { time = 0.4, xRatio = 0.5, yRatio = 0.5 } = {}) =>
       new Promise((resolve, reject) => {
         const video = document.createElement("video");
         const url = URL.createObjectURL(blob);
@@ -477,7 +452,7 @@ const bundleHarness = (work) =>
         video.onloadedmetadata = () => {
           const seekTo = Math.min(
             Math.max(0, time),
-            Math.max(0, (Number(video.duration) || time) - 0.05)
+            Math.max(0, (Number(video.duration) || time) - 0.05),
           );
           video.currentTime = seekTo;
         };
@@ -488,14 +463,8 @@ const bundleHarness = (work) =>
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext("2d");
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const x = Math.min(
-              canvas.width - 1,
-              Math.max(0, Math.round(canvas.width * xRatio))
-            );
-            const y = Math.min(
-              canvas.height - 1,
-              Math.max(0, Math.round(canvas.height * yRatio))
-            );
+            const x = Math.min(canvas.width - 1, Math.max(0, Math.round(canvas.width * xRatio)));
+            const y = Math.min(canvas.height - 1, Math.max(0, Math.round(canvas.height * yRatio)));
             const [r, g, b, a] = ctx.getImageData(x, y, 1, 1).data;
             cleanup();
             resolve({ r, g, b, a, width: canvas.width, height: canvas.height });
@@ -530,8 +499,7 @@ const bundleHarness = (work) =>
         };
         video.src = url;
       });
-    const opfsSupported =
-      navigator.storage && typeof navigator.storage.getDirectory === "function";
+    const opfsSupported = navigator.storage && typeof navigator.storage.getDirectory === "function";
     if (opfsSupported) {
       const dir = await navigator.storage.getDirectory();
       for await (const [name] of dir.entries()) {
@@ -586,21 +554,13 @@ const bundleHarness = (work) =>
         { text: "tail", start: 3.05, end: 3.65 },
       ],
     };
-    const editAudioBefore = await window.TRANSCRIPTION_AUDIO.blobToMono16k(
-      editSourceBlob
-    );
-    let transcriptTimeline = window.LOCAL_TIMELINE.createTimeline(
-      editAudioBefore.duration
-    );
-    const deleteRange = window.TRANSCRIPT_EDIT.wordRange(
-      editTranscript.words,
-      1,
-      1
-    );
+    const editAudioBefore = await window.TRANSCRIPTION_AUDIO.blobToMono16k(editSourceBlob);
+    let transcriptTimeline = window.LOCAL_TIMELINE.createTimeline(editAudioBefore.duration);
+    const deleteRange = window.TRANSCRIPT_EDIT.wordRange(editTranscript.words, 1, 1);
     transcriptTimeline = window.LOCAL_TIMELINE.deleteSourceRange(
       transcriptTimeline,
       deleteRange.start,
-      deleteRange.end
+      deleteRange.end,
     );
     await lib.saveLocalRecordingProject("rec-transcript-flow", {
       source: {
@@ -613,32 +573,25 @@ const bundleHarness = (work) =>
       selectedClipId: transcriptTimeline.clips[0]?.id || null,
       exportSettings: { format: "mp4", includeCaptionSidecar: true },
     });
-    const reopenedTranscriptProject = await lib.getLocalRecordingProject(
-      "rec-transcript-flow"
-    );
-    const transcriptFlowCaption = await lib.getLocalRecordingCaptionExport(
-      "rec-transcript-flow"
-    );
+    const reopenedTranscriptProject = await lib.getLocalRecordingProject("rec-transcript-flow");
+    const transcriptFlowCaption = await lib.getLocalRecordingCaptionExport("rec-transcript-flow");
     const transcriptFlowVtt = await transcriptFlowCaption.blob.text();
     const timelineAacSupported = await browserCanEncodeTimelineAac();
     const transcriptRenderSourceBlob = timelineAacSupported
       ? await lib.readLocalRecordingBlob(
-          (
-            await lib.getLocalRecordingIndex()
-          )["rec-transcript-flow"]
+          (await lib.getLocalRecordingIndex())["rec-transcript-flow"],
         )
       : await genEditableRecording(4, { includeAudio: false });
     const resolvedTranscriptSegments = window.LOCAL_TIMELINE.resolveTimeline(
-      reopenedTranscriptProject.timeline
+      reopenedTranscriptProject.timeline,
     ).segments;
     const transcriptFlowExpectedDuration = resolvedTranscriptSegments.reduce(
-      (duration, segment) =>
-        duration + Math.max(0, segment.sourceEnd - segment.sourceStart),
-      0
+      (duration, segment) => duration + Math.max(0, segment.sourceEnd - segment.sourceStart),
+      0,
     );
     const transcriptFlowExport = await window.RENDER_TIMELINE(
       transcriptRenderSourceBlob,
-      resolvedTranscriptSegments
+      resolvedTranscriptSegments,
     );
     const abortVideoController = new AbortController();
     let abortVideoProgressCount = 0;
@@ -653,7 +606,7 @@ const bundleHarness = (work) =>
           abortVideoMaxProgress = Math.max(abortVideoMaxProgress, progress);
           if (progress >= 0.35) abortVideoController.abort();
         },
-        { signal: abortVideoController.signal }
+        { signal: abortVideoController.signal },
       );
     } catch (err) {
       abortVideoErrorName = err?.name || String(err);
@@ -676,29 +629,22 @@ const bundleHarness = (work) =>
         longTimelineSource,
         longTimelineSegments,
         (progress) => {
-          longTimelineAbortMaxProgress = Math.max(
-            longTimelineAbortMaxProgress,
-            progress
-          );
+          longTimelineAbortMaxProgress = Math.max(longTimelineAbortMaxProgress, progress);
           if (progress >= 0.25) longTimelineAbortController.abort();
         },
-        { signal: longTimelineAbortController.signal }
+        { signal: longTimelineAbortController.signal },
       );
     } catch (error) {
       longTimelineAbortErrorName = error?.name || String(error);
     }
-    const longTimelineAbortElapsedMs =
-      performance.now() - longTimelineAbortStartedAt;
+    const longTimelineAbortElapsedMs = performance.now() - longTimelineAbortStartedAt;
     const longTimelineRetryStartedAt = performance.now();
     const longTimelineRetry = await window.RENDER_TIMELINE(
       longTimelineSource,
-      longTimelineSegments
+      longTimelineSegments,
     );
-    const longTimelineRetryElapsedMs =
-      performance.now() - longTimelineRetryStartedAt;
-    const longTimelineRetryMetadata = await readVideoMetadata(
-      longTimelineRetry
-    );
+    const longTimelineRetryElapsedMs = performance.now() - longTimelineRetryStartedAt;
+    const longTimelineRetryMetadata = await readVideoMetadata(longTimelineRetry);
     const largeSourceBlob = await genEditableRecording(5, {
       includeAudio: false,
       width: 960,
@@ -723,30 +669,22 @@ const bundleHarness = (work) =>
         largeSourceBlob,
         largeSourceSegments,
         (progress) => {
-          largeSourceAbortMaxProgress = Math.max(
-            largeSourceAbortMaxProgress,
-            progress
-          );
+          largeSourceAbortMaxProgress = Math.max(largeSourceAbortMaxProgress, progress);
           if (progress >= 0.35) largeSourceAbortController.abort();
         },
-        { signal: largeSourceAbortController.signal }
+        { signal: largeSourceAbortController.signal },
       );
     } catch (error) {
       largeSourceAbortErrorName = error?.name || String(error);
     }
-    const largeSourceAbortElapsedMs =
-      performance.now() - largeSourceAbortStartedAt;
+    const largeSourceAbortElapsedMs = performance.now() - largeSourceAbortStartedAt;
     const largeSourceRetryStartedAt = performance.now();
-    const largeSourceRetry = await window.RENDER_TIMELINE(
-      largeSourceBlob,
-      largeSourceSegments
-    );
-    const largeSourceRetryElapsedMs =
-      performance.now() - largeSourceRetryStartedAt;
+    const largeSourceRetry = await window.RENDER_TIMELINE(largeSourceBlob, largeSourceSegments);
+    const largeSourceRetryElapsedMs = performance.now() - largeSourceRetryStartedAt;
     const largeSourceRetryMetadata = await readVideoMetadata(largeSourceRetry);
     const retryVideoExport = await window.RENDER_TIMELINE(
       transcriptRenderSourceBlob,
-      resolvedTranscriptSegments
+      resolvedTranscriptSegments,
     );
     const loadImageSize = (src) =>
       new Promise((resolve, reject) => {
@@ -789,10 +727,9 @@ const bundleHarness = (work) =>
       });
     const generatedThumbnailEntry = await lib.generateLocalRecordingThumbnail(
       "rec-transcript-flow",
-      { timeoutMs: 5000 }
+      { timeoutMs: 5000 },
     );
-    const generatedThumbnailDataUrl =
-      generatedThumbnailEntry?.thumbnailDataUrl || "";
+    const generatedThumbnailDataUrl = generatedThumbnailEntry?.thumbnailDataUrl || "";
     const generatedThumbnailSize = generatedThumbnailDataUrl
       ? await loadImageSize(generatedThumbnailDataUrl)
       : null;
@@ -815,60 +752,45 @@ const bundleHarness = (work) =>
             yRatio: 0.75,
           },
         ],
-      }
+      },
     );
     const transcriptFlowAudioExport = await window.RENDER_TIMELINE_AUDIO(
-      await lib.readLocalRecordingBlob(
-        (
-          await lib.getLocalRecordingIndex()
-        )["rec-transcript-flow"]
-      ),
-      window.LOCAL_TIMELINE.resolveTimeline(reopenedTranscriptProject.timeline)
-        .segments,
+      await lib.readLocalRecordingBlob((await lib.getLocalRecordingIndex())["rec-transcript-flow"]),
+      window.LOCAL_TIMELINE.resolveTimeline(reopenedTranscriptProject.timeline).segments,
       undefined,
-      { format: "wav" }
+      { format: "wav" },
     );
     const transcriptFlowM4aResult = await renderM4aAudioIfSupported(
-      await lib.readLocalRecordingBlob(
-        (
-          await lib.getLocalRecordingIndex()
-        )["rec-transcript-flow"]
-      ),
-      window.LOCAL_TIMELINE.resolveTimeline(reopenedTranscriptProject.timeline)
-        .segments,
+      await lib.readLocalRecordingBlob((await lib.getLocalRecordingIndex())["rec-transcript-flow"]),
+      window.LOCAL_TIMELINE.resolveTimeline(reopenedTranscriptProject.timeline).segments,
       undefined,
-      { format: "m4a" }
+      { format: "m4a" },
     );
     const editAudioAfter = timelineAacSupported
       ? await window.TRANSCRIPTION_AUDIO.blobToMono16k(transcriptFlowExport)
       : { duration: transcriptFlowExpectedDuration };
     const silenceAudioBlob = await genSilenceAudioRecording();
-    const decodedSilenceAudio = await window.TRANSCRIPTION_AUDIO.blobToMono16k(
-      silenceAudioBlob
+    const decodedSilenceAudio = await window.TRANSCRIPTION_AUDIO.blobToMono16k(silenceAudioBlob);
+    const browserAudioSilenceSuggestions = window.EDL_SUGGESTIONS.buildAudioSilenceSuggestions(
+      {
+        sampleRate: decodedSilenceAudio.sampleRate,
+        channels: [decodedSilenceAudio.pcm],
+      },
+      {
+        frameSeconds: 0.05,
+        minSilenceSeconds: 0.8,
+        paddingSeconds: 0.05,
+        silenceThresholdDb: -45,
+      },
     );
-    const browserAudioSilenceSuggestions =
-      window.EDL_SUGGESTIONS.buildAudioSilenceSuggestions(
-        {
-          sampleRate: decodedSilenceAudio.sampleRate,
-          channels: [decodedSilenceAudio.pcm],
-        },
-        {
-          frameSeconds: 0.05,
-          minSilenceSeconds: 0.8,
-          paddingSeconds: 0.05,
-          silenceThresholdDb: -45,
-        }
-      );
     const silenceAudioM4aResult = await renderM4aAudioIfSupported(
       silenceAudioBlob,
       [{ sourceStart: 0, sourceEnd: decodedSilenceAudio.duration }],
       undefined,
-      { format: "m4a" }
+      { format: "m4a" },
     );
     const decodedSilenceAudioM4a = silenceAudioM4aResult.blob
-      ? await window.TRANSCRIPTION_AUDIO.blobToMono16k(
-          silenceAudioM4aResult.blob
-        )
+      ? await window.TRANSCRIPTION_AUDIO.blobToMono16k(silenceAudioM4aResult.blob)
       : null;
     const m4aAudioSilenceSuggestions = decodedSilenceAudioM4a
       ? window.EDL_SUGGESTIONS.buildAudioSilenceSuggestions(
@@ -881,7 +803,7 @@ const bundleHarness = (work) =>
             minSilenceSeconds: 0.8,
             paddingSeconds: 0.05,
             silenceThresholdDb: -45,
-          }
+          },
         )
       : [];
     const abortAudioController = new AbortController();
@@ -899,7 +821,7 @@ const bundleHarness = (work) =>
             abortAudioMaxProgress = Math.max(abortAudioMaxProgress, progress);
             if (progress >= 0.35) abortAudioController.abort();
           },
-          { format: "m4a", signal: abortAudioController.signal }
+          { format: "m4a", signal: abortAudioController.signal },
         );
       } catch (err) {
         abortAudioErrorName = err?.name || String(err);
@@ -909,7 +831,7 @@ const bundleHarness = (work) =>
           silenceAudioBlob,
           [{ sourceStart: 0, sourceEnd: decodedSilenceAudio.duration }],
           undefined,
-          { format: "m4a" }
+          { format: "m4a" },
         )
       ).size;
     } else {
@@ -918,19 +840,18 @@ const bundleHarness = (work) =>
     const noisyRoomAudioBlob = genNoisyRoomAudioRecording();
     const decodedNoisyRoomAudio =
       await window.TRANSCRIPTION_AUDIO.blobToMono16k(noisyRoomAudioBlob);
-    const noisyRoomSilenceSuggestions =
-      window.EDL_SUGGESTIONS.buildAudioSilenceSuggestions(
-        {
-          sampleRate: decodedNoisyRoomAudio.sampleRate,
-          channels: [decodedNoisyRoomAudio.pcm],
-        },
-        {
-          frameSeconds: 0.05,
-          minSilenceSeconds: 0.8,
-          paddingSeconds: 0.05,
-          silenceThresholdDb: -42,
-        }
-      );
+    const noisyRoomSilenceSuggestions = window.EDL_SUGGESTIONS.buildAudioSilenceSuggestions(
+      {
+        sampleRate: decodedNoisyRoomAudio.sampleRate,
+        channels: [decodedNoisyRoomAudio.pcm],
+      },
+      {
+        frameSeconds: 0.05,
+        minSilenceSeconds: 0.8,
+        paddingSeconds: 0.05,
+        silenceThresholdDb: -42,
+      },
+    );
     const renderZoomFixture = async ({ width, height }) => {
       const blob = await genQuadrantVideoRecording(1.2, { width, height });
       const rendered = await window.RENDER_TIMELINE(
@@ -947,7 +868,7 @@ const bundleHarness = (work) =>
               yRatio: 0.85,
             },
           ],
-        }
+        },
       );
       return {
         bytes: rendered.size,
@@ -976,7 +897,7 @@ const bundleHarness = (work) =>
           widthRatio: 0.5,
           heightRatio: 0.5,
         },
-      }
+      },
     );
     const cropCenterPixel = await sampleVideoPixel(cropRendered, {
       time: 0.35,
@@ -1003,7 +924,7 @@ const bundleHarness = (work) =>
             yRatio: 0.35,
           },
         ],
-      }
+      },
     );
     const cropZoomCenterPixel = await sampleVideoPixel(cropZoomRendered, {
       time: 0.35,
@@ -1012,39 +933,28 @@ const bundleHarness = (work) =>
     });
     await lib.checkpointEditedLocalRecording(
       "rec-a",
-      new Blob(["first-edited"], { type: "video/mp4" })
+      new Blob(["first-edited"], { type: "video/mp4" }),
     );
-    const migratedProjectExport = await lib.getLocalRecordingProjectExport(
-      "rec-a"
-    );
-    const migratedProjectSidecar = JSON.parse(
-      await migratedProjectExport.blob.text()
-    );
+    const migratedProjectExport = await lib.getLocalRecordingProjectExport("rec-a");
+    const migratedProjectSidecar = JSON.parse(await migratedProjectExport.blob.text());
     const migratedProject = await lib.getLocalRecordingProject("rec-a");
 
     const newest = await lib.listLocalRecordings({ sortBy: "newest" });
     const alpha = await lib.listLocalRecordings({ sortBy: "alphabetical" });
     const firstEntry = newest.find((item) => item.id === "rec-a");
-    const editedBeforeClose = await blobText(
-      await lib.readLocalRecordingBlob(firstEntry)
-    );
+    const editedBeforeClose = await blobText(await lib.readLocalRecordingBlob(firstEntry));
     await lib.renameLocalRecording("rec-b", "Beta renamed");
     const projectAudioSamples = new Float32Array(16000);
     for (let index = 0; index < projectAudioSamples.length; index += 1) {
-      projectAudioSamples[index] =
-        Math.sin((index / 16000) * Math.PI * 2 * 440) * 0.35;
+      projectAudioSamples[index] = Math.sin((index / 16000) * Math.PI * 2 * 440) * 0.35;
     }
     const projectAudioBlob = makeWavBlob(projectAudioSamples);
-    const projectAudioTrack = await lib.saveLocalRecordingAudioAsset(
-      "rec-b",
-      projectAudioBlob,
-      {
-        fileName: "Project tone.wav",
-        volume: 0.8,
-        sourceVolume: 0.7,
-        mode: "replace",
-      }
-    );
+    const projectAudioTrack = await lib.saveLocalRecordingAudioAsset("rec-b", projectAudioBlob, {
+      fileName: "Project tone.wav",
+      volume: 0.8,
+      sourceVolume: 0.7,
+      mode: "replace",
+    });
     class PreviewVideoFake extends EventTarget {
       currentTime = 6.5;
       volume = 0.8;
@@ -1128,8 +1038,7 @@ const bundleHarness = (work) =>
       previewPauseCallsAfterDispose,
       previewRestoredVolume,
       revokedPreviewUrls,
-      detachedPlayListener:
-        previewAudio.playCalls === previewPlayCallsBeforeDetachedEvent,
+      detachedPlayListener: previewAudio.playCalls === previewPlayCallsBeforeDetachedEvent,
     };
     await lib.saveLocalRecordingProject("rec-b", {
       source: {
@@ -1193,13 +1102,11 @@ const bundleHarness = (work) =>
         gif: { startSeconds: 0.25, durationSeconds: 20, fps: 60, width: 2400 },
       },
     });
-    const projectSidecarExport = await lib.getLocalRecordingProjectExport(
-      "rec-b"
-    );
+    const projectSidecarExport = await lib.getLocalRecordingProjectExport("rec-b");
     const projectSidecar = JSON.parse(await projectSidecarExport.blob.text());
     const projectAudioBeforeClear = await lib.readLocalRecordingAudioAsset(
       "rec-b",
-      projectAudioTrack
+      projectAudioTrack,
     );
     await lib.clearLocalRecordingProject("rec-b");
     const projectAfterClear = await lib.getLocalRecordingProject("rec-b");
@@ -1210,39 +1117,30 @@ const bundleHarness = (work) =>
       projectAudioAfterClearError = String(error?.message || error);
     }
     await lib.importLocalRecordingProjectSidecar(
-      new File(
-        [JSON.stringify(projectSidecar)],
-        projectSidecarExport.fileName,
-        { type: "application/json" }
-      )
+      new File([JSON.stringify(projectSidecar)], projectSidecarExport.fileName, {
+        type: "application/json",
+      }),
     );
     const restoredProject = await lib.getLocalRecordingProject("rec-b");
     let importedAudioMissingError = null;
     try {
-      await lib.readLocalRecordingAudioAsset(
-        "rec-b",
-        restoredProject.audioTrack
-      );
+      await lib.readLocalRecordingAudioAsset("rec-b", restoredProject.audioTrack);
     } catch (error) {
       importedAudioMissingError = String(error?.message || error);
     }
-    const relinkedAudioTrack = await lib.saveLocalRecordingAudioAsset(
-      "rec-b",
-      projectAudioBlob,
-      {
-        fileName: "Project tone.wav",
-        volume: restoredProject.audioTrack.volume,
-        sourceVolume: restoredProject.audioTrack.sourceVolume,
-        mode: restoredProject.audioTrack.mode,
-      }
-    );
+    const relinkedAudioTrack = await lib.saveLocalRecordingAudioAsset("rec-b", projectAudioBlob, {
+      fileName: "Project tone.wav",
+      volume: restoredProject.audioTrack.volume,
+      sourceVolume: restoredProject.audioTrack.sourceVolume,
+      mode: restoredProject.audioTrack.mode,
+    });
     await lib.saveLocalRecordingProject("rec-b", {
       ...restoredProject,
       audioTrack: relinkedAudioTrack,
     });
     const projectAudioTimelineVideo = await window.RENDER_TIMELINE(
       transcriptRenderSourceBlob,
-      resolvedTranscriptSegments
+      resolvedTranscriptSegments,
     );
     const runEditorExportOp = async (message, cancelAt = null) => {
       let maxProgress = 0;
@@ -1253,10 +1151,7 @@ const bundleHarness = (work) =>
       let deliveryDataUrl = "";
       await window.EDITOR_OPS.runEditorOp(message, (reply) => {
         if (reply.type === "ffmpeg-progress") {
-          const progress = Math.max(
-            0,
-            Math.min(1, Number(reply.progress) / 100)
-          );
+          const progress = Math.max(0, Math.min(1, Number(reply.progress) / 100));
           if (progress + 0.0001 < lastProgress) progressMonotonic = false;
           lastProgress = progress;
           maxProgress = Math.max(maxProgress, progress);
@@ -1281,7 +1176,7 @@ const bundleHarness = (work) =>
     };
     const cancelledPostRenderWebm = await runEditorExportOp(
       { type: "to-webm", blob: largeSourceRetry },
-      0.25
+      0.25,
     );
     const retriedPostRenderWebm = await runEditorExportOp({
       type: "to-webm",
@@ -1299,7 +1194,7 @@ const bundleHarness = (work) =>
         blob: largeSourceRetry,
         options: gifExportOptions,
       },
-      0.25
+      0.25,
     );
     const retriedPostRenderGif = await runEditorExportOp({
       type: "to-gif",
@@ -1308,38 +1203,27 @@ const bundleHarness = (work) =>
     });
     const mp3ProjectAudioResponse = await fetch("/project-audio.mp3");
     if (!mp3ProjectAudioResponse.ok) {
-      throw new Error(
-        `project-audio-mp3-fetch-${mp3ProjectAudioResponse.status}`
-      );
+      throw new Error(`project-audio-mp3-fetch-${mp3ProjectAudioResponse.status}`);
     }
     const mp3ProjectAudioBlob = await mp3ProjectAudioResponse.blob();
-    const mp3ProjectAudioProbe = await window.VALIDATE_PROJECT_AUDIO(
-      mp3ProjectAudioBlob
-    );
+    const mp3ProjectAudioProbe = await window.VALIDATE_PROJECT_AUDIO(mp3ProjectAudioBlob);
     let mp3ProjectAudioRenderedBytes = 0;
     let mp3ProjectAudioRms = null;
     let m4aProjectAudioProbe = null;
     let m4aProjectAudioRenderedBytes = 0;
     let m4aProjectAudioRms = null;
     if (silenceAudioM4aResult.blob) {
-      m4aProjectAudioProbe = await window.VALIDATE_PROJECT_AUDIO(
-        silenceAudioM4aResult.blob
-      );
+      m4aProjectAudioProbe = await window.VALIDATE_PROJECT_AUDIO(silenceAudioM4aResult.blob);
     }
     let corruptProjectAudioError = null;
     try {
-      await window.VALIDATE_PROJECT_AUDIO(
-        new Blob(["not encoded audio"], { type: "audio/mpeg" })
-      );
+      await window.VALIDATE_PROJECT_AUDIO(new Blob(["not encoded audio"], { type: "audio/mpeg" }));
     } catch (error) {
       corruptProjectAudioError = String(error?.message || error);
     }
     const rmsWindow = (decoded, startSeconds, endSeconds) => {
       const start = Math.max(0, Math.floor(startSeconds * decoded.sampleRate));
-      const end = Math.min(
-        decoded.pcm.length,
-        Math.ceil(endSeconds * decoded.sampleRate)
-      );
+      const end = Math.min(decoded.pcm.length, Math.ceil(endSeconds * decoded.sampleRate));
       if (end <= start) return 0;
       let sum = 0;
       for (let index = start; index < end; index += 1) {
@@ -1362,39 +1246,33 @@ const bundleHarness = (work) =>
       const mp3ProjectAudioRendered = await window.MIX_PROJECT_AUDIO(
         projectAudioTimelineVideo,
         mp3ProjectAudioBlob,
-        { ...projectAudioTrack, mode: "replace", volume: 1, loop: true }
+        { ...projectAudioTrack, mode: "replace", volume: 1, loop: true },
       );
       const decodedMp3ProjectAudio =
         await window.TRANSCRIPTION_AUDIO.blobToMono16k(mp3ProjectAudioRendered);
       mp3ProjectAudioRenderedBytes = mp3ProjectAudioRendered.size;
       mp3ProjectAudioRms = Math.sqrt(
-        decodedMp3ProjectAudio.pcm.reduce(
-          (sum, sample) => sum + sample * sample,
-          0
-        ) / Math.max(1, decodedMp3ProjectAudio.pcm.length)
+        decodedMp3ProjectAudio.pcm.reduce((sum, sample) => sum + sample * sample, 0) /
+          Math.max(1, decodedMp3ProjectAudio.pcm.length),
       );
       if (silenceAudioM4aResult.blob) {
         const m4aProjectAudioRendered = await window.MIX_PROJECT_AUDIO(
           projectAudioTimelineVideo,
           silenceAudioM4aResult.blob,
-          { ...projectAudioTrack, mode: "replace", volume: 1 }
+          { ...projectAudioTrack, mode: "replace", volume: 1 },
         );
         const decodedM4aProjectAudio =
-          await window.TRANSCRIPTION_AUDIO.blobToMono16k(
-            m4aProjectAudioRendered
-          );
+          await window.TRANSCRIPTION_AUDIO.blobToMono16k(m4aProjectAudioRendered);
         m4aProjectAudioRenderedBytes = m4aProjectAudioRendered.size;
         m4aProjectAudioRms = Math.sqrt(
-          decodedM4aProjectAudio.pcm.reduce(
-            (sum, sample) => sum + sample * sample,
-            0
-          ) / Math.max(1, decodedM4aProjectAudio.pcm.length)
+          decodedM4aProjectAudio.pcm.reduce((sum, sample) => sum + sample * sample, 0) /
+            Math.max(1, decodedM4aProjectAudio.pcm.length),
         );
       }
       const projectAudioRendered = await window.MIX_PROJECT_AUDIO(
         projectAudioTimelineVideo,
         projectAudioBlob,
-        projectAudioTrack
+        projectAudioTrack,
       );
       const decodedProjectAudio =
         await window.TRANSCRIPTION_AUDIO.blobToMono16k(projectAudioRendered);
@@ -1402,21 +1280,18 @@ const bundleHarness = (work) =>
       projectAudioRenderedType = projectAudioRendered.type;
       projectAudioDuration = decodedProjectAudio.duration;
       projectAudioRms = Math.sqrt(
-        decodedProjectAudio.pcm.reduce(
-          (sum, sample) => sum + sample * sample,
-          0
-        ) / Math.max(1, decodedProjectAudio.pcm.length)
+        decodedProjectAudio.pcm.reduce((sum, sample) => sum + sample * sample, 0) /
+          Math.max(1, decodedProjectAudio.pcm.length),
       );
       projectAudioNonLoopLateRms = rmsWindow(decodedProjectAudio, 1.6, 2.6);
       const loopedProjectAudioRendered = await window.MIX_PROJECT_AUDIO(
         projectAudioTimelineVideo,
         projectAudioBlob,
-        { ...projectAudioTrack, loop: true }
+        { ...projectAudioTrack, loop: true },
       );
-      const decodedLoopedProjectAudio =
-        await window.TRANSCRIPTION_AUDIO.blobToMono16k(
-          loopedProjectAudioRendered
-        );
+      const decodedLoopedProjectAudio = await window.TRANSCRIPTION_AUDIO.blobToMono16k(
+        loopedProjectAudioRendered,
+      );
       projectAudioLoopLateRms = rmsWindow(decodedLoopedProjectAudio, 1.6, 2.6);
       const silentProjectAudioBlob = makeWavBlob(new Float32Array(16000));
       const mixRendered = await window.MIX_PROJECT_AUDIO(
@@ -1428,7 +1303,7 @@ const bundleHarness = (work) =>
           sourceVolume: 0.5,
           volume: 1,
           loop: true,
-        }
+        },
       );
       const replaceRendered = await window.MIX_PROJECT_AUDIO(
         projectAudioTimelineVideo,
@@ -1438,7 +1313,7 @@ const bundleHarness = (work) =>
           mode: "replace",
           volume: 1,
           loop: true,
-        }
+        },
       );
       const [decodedMix, decodedReplace] = await Promise.all([
         window.TRANSCRIPTION_AUDIO.blobToMono16k(mixRendered),
@@ -1453,13 +1328,10 @@ const bundleHarness = (work) =>
           projectAudioBlob,
           projectAudioTrack,
           (progress) => {
-            abortProjectAudioMaxProgress = Math.max(
-              abortProjectAudioMaxProgress,
-              progress
-            );
+            abortProjectAudioMaxProgress = Math.max(abortProjectAudioMaxProgress, progress);
             if (progress >= 0.9) abortProjectAudioController.abort();
           },
-          abortProjectAudioController.signal
+          abortProjectAudioController.signal,
         );
       } catch (error) {
         abortProjectAudioErrorName = error?.name || String(error);
@@ -1467,43 +1339,36 @@ const bundleHarness = (work) =>
       const retryProjectAudioExport = await window.MIX_PROJECT_AUDIO(
         projectAudioTimelineVideo,
         projectAudioBlob,
-        projectAudioTrack
+        projectAudioTrack,
       );
       retryProjectAudioExportBytes = retryProjectAudioExport.size;
     }
-    const transcriptExport = await lib.getLocalRecordingTranscriptExport(
-      "rec-b"
-    );
+    const transcriptExport = await lib.getLocalRecordingTranscriptExport("rec-b");
     const transcriptSidecar = JSON.parse(await transcriptExport.blob.text());
     const captionExport = await lib.getLocalRecordingCaptionExport("rec-b");
     const captionVtt = await captionExport.blob.text();
-    const transcriptCacheMetadata =
-      await transcriptCache.buildTranscriptCacheMetadata({
-        blob: secondOriginal,
-        recordingId: "rec-b",
-        config: {
-          providerId: "local-whisper",
-          providerOptions: {
-            "local-whisper": { model: "test-whisper" },
-          },
+    const transcriptCacheMetadata = await transcriptCache.buildTranscriptCacheMetadata({
+      blob: secondOriginal,
+      recordingId: "rec-b",
+      config: {
+        providerId: "local-whisper",
+        providerOptions: {
+          "local-whisper": { model: "test-whisper" },
         },
-        language: "en",
-      });
+      },
+      language: "en",
+    });
     await transcriptCache.saveCachedTranscript(transcriptCacheMetadata.key, {
       ...transcriptCacheMetadata,
       transcript: restoredProject.transcript,
     });
-    const cachedTranscript = await transcriptCache.getCachedTranscript(
-      transcriptCacheMetadata.key
-    );
+    const cachedTranscript = await transcriptCache.getCachedTranscript(transcriptCacheMetadata.key);
     await transcriptCache.deleteCachedTranscript(transcriptCacheMetadata.key);
     const cachedAfterDelete = await transcriptCache.getCachedTranscript(
-      transcriptCacheMetadata.key
+      transcriptCacheMetadata.key,
     );
     const duplicate = await lib.duplicateLocalRecording("rec-b");
-    const duplicateBlobText = await blobText(
-      await lib.readLocalRecordingBlob(duplicate)
-    );
+    const duplicateBlobText = await blobText(await lib.readLocalRecordingBlob(duplicate));
     const duplicateProject = await lib.getLocalRecordingProject(duplicate.id);
     const duplicateInspection = await lib.inspectLocalRecording(duplicate.id);
     const exportPackage = await lib.getLocalRecordingExport(duplicate.id);
@@ -1514,23 +1379,17 @@ const bundleHarness = (work) =>
     const missingAfterRepair = await lib.inspectLocalRecording("rec-missing");
     const imported = await lib.importLocalRecordingFile(
       new File(["imported-original"], "Imported Demo.webm"),
-      { createdAt: 4000 }
+      { createdAt: 4000 },
     );
-    const importedText = await blobText(
-      await lib.readLocalRecordingBlob(imported)
-    );
+    const importedText = await blobText(await lib.readLocalRecordingBlob(imported));
     const importedExport = await lib.getLocalRecordingExport(imported.id);
     const importedExportText = await blobText(importedExport.blob);
     const thumbnailDataUrl =
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lwU9WQAAAABJRU5ErkJggg==";
-    const thumbnailEntry = await lib.saveLocalRecordingThumbnail(
-      imported.id,
-      thumbnailDataUrl
-    );
-    const invalidGeneratedThumbnail = await lib.generateLocalRecordingThumbnail(
-      imported.id,
-      { timeoutMs: 250 }
-    );
+    const thumbnailEntry = await lib.saveLocalRecordingThumbnail(imported.id, thumbnailDataUrl);
+    const invalidGeneratedThumbnail = await lib.generateLocalRecordingThumbnail(imported.id, {
+      timeoutMs: 250,
+    });
     await lib.registerLocalRecording({
       id: "rec-orphan",
       title: "Orphaned blob",
@@ -1551,9 +1410,7 @@ const bundleHarness = (work) =>
         create: true,
       });
       const writable = await handle.createWritable();
-      await writable.write(
-        new Blob(["x".repeat(5000)], { type: "video/webm" })
-      );
+      await writable.write(new Blob(["x".repeat(5000)], { type: "video/webm" }));
       await writable.close();
     }
     const orphanInspection = await lib.inspectLocalRecordingStorage();
@@ -1573,10 +1430,7 @@ const bundleHarness = (work) =>
       durationMs: 1000,
       createdAt: 7000,
     });
-    const bulkExports = await lib.getLocalRecordingExports([
-      "rec-bulk-a",
-      "rec-bulk-b",
-    ]);
+    const bulkExports = await lib.getLocalRecordingExports(["rec-bulk-a", "rec-bulk-b"]);
     const bulkProjectExports = await lib.getLocalRecordingProjectExports([
       "rec-bulk-a",
       "rec-bulk-b",
@@ -1614,7 +1468,7 @@ const bundleHarness = (work) =>
     exportState = exportJobState.beginExportJobState(
       exportState,
       { kind: "mp4", label: "MP4 export" },
-      1000
+      1000,
     );
     exportLifecycleSnapshots.push({
       name: "running-start",
@@ -1623,26 +1477,23 @@ const bundleHarness = (work) =>
       title: exportPanelState.buildExportJobTitle(exportState.exportJob),
       description: exportPanelState.buildExportJobDescription(
         exportState.exportJob,
-        exportState.processingProgress
+        exportState.processingProgress,
       ),
       canRetry: exportPanelState.canRetryExportJob(exportState.exportJob),
       canReveal: exportPanelState.canRevealExportJob(
         exportState.exportJob,
-        exportState.lastExportDownloadId
+        exportState.lastExportDownloadId,
       ),
       lastExportDownloadId: exportState.lastExportDownloadId,
     });
-    exportState = exportJobState.updateExportJobProgressState(
-      exportState,
-      42.4
-    );
+    exportState = exportJobState.updateExportJobProgressState(exportState, 42.4);
     exportLifecycleSnapshots.push({
       name: "running-progress",
       status: exportState.exportJob.status,
       progress: exportState.exportJob.progress,
       description: exportPanelState.buildExportJobDescription(
         exportState.exportJob,
-        exportState.processingProgress
+        exportState.processingProgress,
       ),
     });
     exportState = exportJobState.cancelExportJobState(exportState, 2000);
@@ -1658,7 +1509,7 @@ const bundleHarness = (work) =>
         captionStyle: { preset: "high-contrast", burnIn: true },
         gif: { startSeconds: 0.25, durationSeconds: 2.5, fps: 24, width: 640 },
       },
-      exportState.exportJob
+      exportState.exportJob,
     );
     exportLifecycleSnapshots.push({
       name: "cancelled",
@@ -1671,19 +1522,17 @@ const bundleHarness = (work) =>
       downloadingGIF: exportState.downloadingGIF,
       processingProgress: exportState.processingProgress,
       title: exportPanelState.buildExportJobTitle(exportState.exportJob),
-      description: exportPanelState.buildExportJobDescription(
-        exportState.exportJob
-      ),
+      description: exportPanelState.buildExportJobDescription(exportState.exportJob),
     });
     exportState = exportJobState.beginExportJobState(
       exportState,
       { kind: "mp4", label: "MP4 export" },
-      3000
+      3000,
     );
     exportState = exportJobState.finishExportJobState(
       { ...exportState, lastExportDownloadId: 321 },
       { status: "completed" },
-      4000
+      4000,
     );
     exportLifecycleSnapshots.push({
       name: "completed",
@@ -1692,25 +1541,19 @@ const bundleHarness = (work) =>
       canRetry: exportPanelState.canRetryExportJob(exportState.exportJob),
       canReveal: exportPanelState.canRevealExportJob(
         exportState.exportJob,
-        exportState.lastExportDownloadId
+        exportState.lastExportDownloadId,
       ),
       title: exportPanelState.buildExportJobTitle(exportState.exportJob),
-      description: exportPanelState.buildExportJobDescription(
-        exportState.exportJob
-      ),
-      completionFromSaved: exportPanelState.buildExportCompletionFromSaveResult(
-        {
-          saved: true,
-          downloadId: 321,
-        }
-      ),
-      completionFromCancelled:
-        exportPanelState.buildExportCompletionFromSaveResult({
-          reason: "cancelled",
-        }),
+      description: exportPanelState.buildExportJobDescription(exportState.exportJob),
+      completionFromSaved: exportPanelState.buildExportCompletionFromSaveResult({
+        saved: true,
+        downloadId: 321,
+      }),
+      completionFromCancelled: exportPanelState.buildExportCompletionFromSaveResult({
+        reason: "cancelled",
+      }),
     });
-    const exportStateAfterDismiss =
-      exportJobState.dismissExportJobState(exportState);
+    const exportStateAfterDismiss = exportJobState.dismissExportJobState(exportState);
     await lib.deleteLocalRecording("rec-a");
     const afterActions = await lib.listLocalRecordings({ sortBy: "newest" });
     const savedProject = await lib.getLocalRecordingProject("rec-b");
@@ -1724,12 +1567,10 @@ const bundleHarness = (work) =>
     return {
       newestIds: newest.map((item) => item.id),
       alphaIds: alpha.map((item) => item.id),
-      transcriptFlowClipCount:
-        reopenedTranscriptProject?.timeline?.clips?.length || 0,
+      transcriptFlowClipCount: reopenedTranscriptProject?.timeline?.clips?.length || 0,
       transcriptFlowDeletedWordPresent: transcriptFlowVtt.includes("remove"),
       transcriptFlowKeptWordsPresent:
-        transcriptFlowVtt.includes("keep") &&
-        transcriptFlowVtt.includes("tail"),
+        transcriptFlowVtt.includes("keep") && transcriptFlowVtt.includes("tail"),
       transcriptFlowDurationBefore: editAudioBefore.duration,
       transcriptFlowDurationAfter: editAudioAfter.duration,
       timelineAacSupported,
@@ -1738,9 +1579,8 @@ const bundleHarness = (work) =>
       abortVideoErrorName,
       longTimelineSegmentCount: longTimelineSegments.length,
       longTimelinePlannedDuration: longTimelineSegments.reduce(
-        (duration, segment) =>
-          duration + segment.sourceEnd - segment.sourceStart,
-        0
+        (duration, segment) => duration + segment.sourceEnd - segment.sourceStart,
+        0,
       ),
       longTimelineAbortMaxProgress,
       longTimelineAbortErrorName,
@@ -1762,41 +1602,26 @@ const bundleHarness = (work) =>
       transcriptFlowAudioExportType: transcriptFlowAudioExport.type,
       transcriptFlowM4aExportBytes: transcriptFlowM4aResult.blob?.size || 0,
       transcriptFlowM4aExportType: transcriptFlowM4aResult.blob?.type || "",
-      transcriptFlowM4aUnsupportedReason:
-        transcriptFlowM4aResult.unsupportedReason,
+      transcriptFlowM4aUnsupportedReason: transcriptFlowM4aResult.unsupportedReason,
       browserAudioSilenceCount: browserAudioSilenceSuggestions.length,
-      browserAudioSilenceStart: Number(
-        (browserAudioSilenceSuggestions[0]?.start || 0).toFixed(2)
-      ),
-      browserAudioSilenceEnd: Number(
-        (browserAudioSilenceSuggestions[0]?.end || 0).toFixed(2)
-      ),
+      browserAudioSilenceStart: Number((browserAudioSilenceSuggestions[0]?.start || 0).toFixed(2)),
+      browserAudioSilenceEnd: Number((browserAudioSilenceSuggestions[0]?.end || 0).toFixed(2)),
       browserAudioSilenceLabel: browserAudioSilenceSuggestions[0]?.label || "",
       m4aAudioSilenceExportBytes: silenceAudioM4aResult.blob?.size || 0,
       m4aAudioSilenceExportType: silenceAudioM4aResult.blob?.type || "",
       m4aAudioSilenceUnsupportedReason: silenceAudioM4aResult.unsupportedReason,
-      m4aAudioSilenceDuration: Number(
-        (decodedSilenceAudioM4a?.duration || 0).toFixed(2)
-      ),
+      m4aAudioSilenceDuration: Number((decodedSilenceAudioM4a?.duration || 0).toFixed(2)),
       m4aAudioSilenceCount: m4aAudioSilenceSuggestions.length,
-      m4aAudioSilenceStart: Number(
-        (m4aAudioSilenceSuggestions[0]?.start || 0).toFixed(2)
-      ),
-      m4aAudioSilenceEnd: Number(
-        (m4aAudioSilenceSuggestions[0]?.end || 0).toFixed(2)
-      ),
+      m4aAudioSilenceStart: Number((m4aAudioSilenceSuggestions[0]?.start || 0).toFixed(2)),
+      m4aAudioSilenceEnd: Number((m4aAudioSilenceSuggestions[0]?.end || 0).toFixed(2)),
       m4aAudioSilenceLabel: m4aAudioSilenceSuggestions[0]?.label || "",
       abortAudioProgressCount,
       abortAudioMaxProgress,
       abortAudioErrorName,
       retryAudioExportBytes,
       noisyRoomSilenceCount: noisyRoomSilenceSuggestions.length,
-      noisyRoomSilenceStart: Number(
-        (noisyRoomSilenceSuggestions[0]?.start || 0).toFixed(2)
-      ),
-      noisyRoomSilenceEnd: Number(
-        (noisyRoomSilenceSuggestions[0]?.end || 0).toFixed(2)
-      ),
+      noisyRoomSilenceStart: Number((noisyRoomSilenceSuggestions[0]?.start || 0).toFixed(2)),
+      noisyRoomSilenceEnd: Number((noisyRoomSilenceSuggestions[0]?.end || 0).toFixed(2)),
       noisyRoomSilenceLabel: noisyRoomSilenceSuggestions[0]?.label || "",
       zoomRenderedBytes: zoomWide.bytes,
       zoomCenterPixel: zoomWide.centerPixel,
@@ -1845,18 +1670,15 @@ const bundleHarness = (work) =>
       projectSidecarKind: projectSidecar.kind,
       projectSidecarRecordingId: projectSidecar.recording?.id,
       projectSidecarSchemaVersion: projectSidecar.project?.version,
-      projectSidecarExportFormat:
-        projectSidecar.project?.exportSettings?.format,
-      projectSidecarExportQuality:
-        projectSidecar.project?.exportSettings?.qualityPreset,
-      projectSidecarGifDuration:
-        projectSidecar.project?.exportSettings?.gif?.durationSeconds,
+      projectSidecarExportFormat: projectSidecar.project?.exportSettings?.format,
+      projectSidecarExportQuality: projectSidecar.project?.exportSettings?.qualityPreset,
+      projectSidecarGifDuration: projectSidecar.project?.exportSettings?.gif?.durationSeconds,
       projectSidecarGifFps: projectSidecar.project?.exportSettings?.gif?.fps,
       projectSidecarChapterLabels: projectSidecar.project?.chapterMarkers?.map(
-        (marker) => marker.label
+        (marker) => marker.label,
       ),
       projectSidecarZoomLabels: projectSidecar.project?.zoomKeyframes?.map(
-        (keyframe) => keyframe.label
+        (keyframe) => keyframe.label,
       ),
       projectSidecarCrop: projectSidecar.project?.crop,
       projectSidecarAudioTrack: projectSidecar.project?.audioTrack,
@@ -1865,23 +1687,16 @@ const bundleHarness = (work) =>
       importedAudioMissingError,
       relinkedAudioAssetId: relinkedAudioTrack.assetId,
       projectAfterClear,
-      restoredProjectClipIds: restoredProject?.timeline?.clips?.map(
-        (clip) => clip.id
-      ),
-      restoredProjectChapterLabels: restoredProject?.chapterMarkers?.map(
-        (marker) => marker.label
-      ),
-      restoredProjectZoomLabels: restoredProject?.zoomKeyframes?.map(
-        (keyframe) => keyframe.label
-      ),
+      restoredProjectClipIds: restoredProject?.timeline?.clips?.map((clip) => clip.id),
+      restoredProjectChapterLabels: restoredProject?.chapterMarkers?.map((marker) => marker.label),
+      restoredProjectZoomLabels: restoredProject?.zoomKeyframes?.map((keyframe) => keyframe.label),
       restoredProjectCrop: restoredProject?.crop,
       restoredProjectAudioTrack: restoredProject?.audioTrack,
       restoredProjectTranscriptText: restoredProject?.transcript?.words
         ?.map((word) => word.text)
         .join(" "),
       restoredProjectExportFormat: restoredProject?.exportSettings?.format,
-      restoredProjectCaptionStyle:
-        restoredProject?.exportSettings?.captionStyle?.preset,
+      restoredProjectCaptionStyle: restoredProject?.exportSettings?.captionStyle?.preset,
       transcriptExportFileName: transcriptExport.fileName,
       transcriptSidecarKind: transcriptSidecar.kind,
       transcriptTimelineAwareText: transcriptSidecar.timelineAwareWords
@@ -1889,44 +1704,29 @@ const bundleHarness = (work) =>
         .join(" "),
       captionExportFileName: captionExport.fileName,
       captionVtt,
-      generatedThumbnailIsJpeg:
-        generatedThumbnailDataUrl.startsWith("data:image/jpeg"),
+      generatedThumbnailIsJpeg: generatedThumbnailDataUrl.startsWith("data:image/jpeg"),
       generatedThumbnailWidth: generatedThumbnailSize?.width || 0,
       generatedThumbnailHeight: generatedThumbnailSize?.height || 0,
       generatedThumbnailAspect:
         generatedThumbnailSize?.width && generatedThumbnailSize?.height
-          ? Number(
-              (
-                generatedThumbnailSize.width / generatedThumbnailSize.height
-              ).toFixed(3)
-            )
+          ? Number((generatedThumbnailSize.width / generatedThumbnailSize.height).toFixed(3))
           : 0,
       generatedThumbnailCenterPixel,
-      transcriptCacheKeyIncludesLanguage:
-        transcriptCacheMetadata.key.includes("en"),
-      cachedTranscriptText: cachedTranscript?.transcript?.words
-        ?.map((word) => word.text)
-        .join(" "),
+      transcriptCacheKeyIncludesLanguage: transcriptCacheMetadata.key.includes("en"),
+      cachedTranscriptText: cachedTranscript?.transcript?.words?.map((word) => word.text).join(" "),
       cachedAfterDelete,
       duplicateProjectRecordingId: duplicateProject?.recordingId,
-      duplicateProjectClipIds: duplicateProject?.timeline?.clips?.map(
-        (clip) => clip.id
-      ),
+      duplicateProjectClipIds: duplicateProject?.timeline?.clips?.map((clip) => clip.id),
       duplicateProjectChapterLabels: duplicateProject?.chapterMarkers?.map(
-        (marker) => marker.label
+        (marker) => marker.label,
       ),
       duplicateProjectZoomLabels: duplicateProject?.zoomKeyframes?.map(
-        (keyframe) => keyframe.label
+        (keyframe) => keyframe.label,
       ),
       duplicateProjectCrop: duplicateProject?.crop,
       duplicateProjectAudioTrack: duplicateProject?.audioTrack,
       duplicateProjectAudioBytes: duplicateProject?.audioTrack
-        ? (
-            await lib.readLocalRecordingAudioAsset(
-              duplicate.id,
-              duplicateProject.audioTrack
-            )
-          ).size
+        ? (await lib.readLocalRecordingAudioAsset(duplicate.id, duplicateProject.audioTrack)).size
         : 0,
       duplicateProjectExportFormat: duplicateProject?.exportSettings?.format,
       duplicateInspectionStatus: duplicateInspection.status,
@@ -1958,9 +1758,7 @@ const bundleHarness = (work) =>
       orphanCountAfterCleanup: orphanAfterCleanup.orphanCount,
       bulkExportFileNames: bulkExports.map((item) => item.fileName),
       bulkExportTexts,
-      bulkProjectExportFileNames: bulkProjectExports.map(
-        (item) => item.fileName
-      ),
+      bulkProjectExportFileNames: bulkProjectExports.map((item) => item.fileName),
       bulkDeleteCount: bulkDeleteResult.deletedCount,
       bulkDeleteResultIds: bulkDeleteResult.results.map((item) => item.id),
       bulkIdsAfterDelete: afterBulkDelete
@@ -1976,15 +1774,9 @@ const bundleHarness = (work) =>
       renamedTitle: afterActions.find((item) => item.id === "rec-b")?.title,
       projectClipIds: savedProject?.timeline?.clips?.map((clip) => clip.id),
       projectSelectedClipId: savedProject?.selectedClipId,
-      projectTranscriptText: savedProject?.transcript?.words
-        ?.map((word) => word.text)
-        .join(" "),
-      projectChapterLabels: savedProject?.chapterMarkers?.map(
-        (marker) => marker.label
-      ),
-      projectZoomLabels: savedProject?.zoomKeyframes?.map(
-        (keyframe) => keyframe.label
-      ),
+      projectTranscriptText: savedProject?.transcript?.words?.map((word) => word.text).join(" "),
+      projectChapterLabels: savedProject?.chapterMarkers?.map((marker) => marker.label),
+      projectZoomLabels: savedProject?.zoomKeyframes?.map((keyframe) => keyframe.label),
       projectCrop: savedProject?.crop,
       projectAudioTrack: savedProject?.audioTrack,
       projectExportSettings: savedProject?.exportSettings,
@@ -2015,26 +1807,14 @@ const bundleHarness = (work) =>
     const lib = window.LOCAL_RECORDINGS;
     const newest = await lib.listLocalRecordings({ sortBy: "newest" });
     const secondEntry = newest.find((item) => item.id === "rec-b");
-    const duplicateEntry = newest.find(
-      (item) => item.title === "Beta renamed copy"
-    );
+    const duplicateEntry = newest.find((item) => item.title === "Beta renamed copy");
     const importedEntry = newest.find((item) => item.title === "Imported Demo");
-    const secondAfterReopen = await (
-      await lib.readLocalRecordingBlob(secondEntry)
-    ).text();
-    const duplicateAfterReopen = await (
-      await lib.readLocalRecordingBlob(duplicateEntry)
-    ).text();
-    const importedAfterReopen = await (
-      await lib.readLocalRecordingBlob(importedEntry)
-    ).text();
+    const secondAfterReopen = await (await lib.readLocalRecordingBlob(secondEntry)).text();
+    const duplicateAfterReopen = await (await lib.readLocalRecordingBlob(duplicateEntry)).text();
+    const importedAfterReopen = await (await lib.readLocalRecordingBlob(importedEntry)).text();
     const project = await lib.getLocalRecordingProject("rec-b");
-    const transcriptFlowProject = await lib.getLocalRecordingProject(
-      "rec-transcript-flow"
-    );
-    const duplicateProject = await lib.getLocalRecordingProject(
-      duplicateEntry.id
-    );
+    const transcriptFlowProject = await lib.getLocalRecordingProject("rec-transcript-flow");
+    const duplicateProject = await lib.getLocalRecordingProject(duplicateEntry.id);
     return {
       count: newest.length,
       ids: newest.map((item) => item.id),
@@ -2047,48 +1827,34 @@ const bundleHarness = (work) =>
       importedMetaSource: importedEntry?.recordingMeta?.source,
       importedThumbnailDataUrl: importedEntry?.thumbnailDataUrl,
       duplicateProjectRecordingId: duplicateProject?.recordingId,
-      duplicateProjectClipIds: duplicateProject?.timeline?.clips?.map(
-        (clip) => clip.id
-      ),
+      duplicateProjectClipIds: duplicateProject?.timeline?.clips?.map((clip) => clip.id),
       duplicateProjectChapterLabels: duplicateProject?.chapterMarkers?.map(
-        (marker) => marker.label
+        (marker) => marker.label,
       ),
       duplicateProjectZoomLabels: duplicateProject?.zoomKeyframes?.map(
-        (keyframe) => keyframe.label
+        (keyframe) => keyframe.label,
       ),
       duplicateProjectCrop: duplicateProject?.crop,
       duplicateProjectAudioTrack: duplicateProject?.audioTrack,
       duplicateProjectAudioBytes: duplicateProject?.audioTrack
-        ? (
-            await lib.readLocalRecordingAudioAsset(
-              duplicateEntry.id,
-              duplicateProject.audioTrack
-            )
-          ).size
+        ? (await lib.readLocalRecordingAudioAsset(duplicateEntry.id, duplicateProject.audioTrack))
+            .size
         : 0,
       duplicateProjectExportFormat: duplicateProject?.exportSettings?.format,
       projectClipIds: project?.timeline?.clips?.map((clip) => clip.id),
       projectMuted: project?.timeline?.clips?.[1]?.muted,
       projectSelectedClipId: project?.selectedClipId,
-      projectTranscriptText: project?.transcript?.words
-        ?.map((word) => word.text)
-        .join(" "),
-      projectChapterLabels: project?.chapterMarkers?.map(
-        (marker) => marker.label
-      ),
-      projectZoomLabels: project?.zoomKeyframes?.map(
-        (keyframe) => keyframe.label
-      ),
+      projectTranscriptText: project?.transcript?.words?.map((word) => word.text).join(" "),
+      projectChapterLabels: project?.chapterMarkers?.map((marker) => marker.label),
+      projectZoomLabels: project?.zoomKeyframes?.map((keyframe) => keyframe.label),
       projectCrop: project?.crop,
       projectAudioTrack: project?.audioTrack,
       projectAudioBytes: project?.audioTrack
-        ? (await lib.readLocalRecordingAudioAsset("rec-b", project.audioTrack))
-            .size
+        ? (await lib.readLocalRecordingAudioAsset("rec-b", project.audioTrack)).size
         : 0,
       projectExportFormat: project?.exportSettings?.format,
       projectExportQuality: project?.exportSettings?.qualityPreset,
-      transcriptFlowClipCount:
-        transcriptFlowProject?.timeline?.clips?.length || 0,
+      transcriptFlowClipCount: transcriptFlowProject?.timeline?.clips?.length || 0,
       transcriptFlowTranscriptText: transcriptFlowProject?.transcript?.words
         ?.map((word) => word.text)
         .join(" "),
@@ -2111,14 +1877,12 @@ const bundleHarness = (work) =>
       "--require-complete",
       ...sidecarProbePaths,
     ],
-    { cwd: ROOT, encoding: "utf8" }
+    { cwd: ROOT, encoding: "utf8" },
   );
   if (sidecarProbeRun.error) throw sidecarProbeRun.error;
   if (sidecarProbeRun.status !== 0) {
     throw new Error(
-      `Product sidecar probe failed:\n${
-        sidecarProbeRun.stderr || sidecarProbeRun.stdout
-      }`
+      `Product sidecar probe failed:\n${sidecarProbeRun.stderr || sidecarProbeRun.stdout}`,
     );
   }
   const sidecarProbeReport = JSON.parse(sidecarProbeRun.stdout);
@@ -2150,10 +1914,9 @@ const bundleHarness = (work) =>
     /encoder configuration/i.test(reason || "") &&
     /not supported by this browser/i.test(reason || "");
   const transcriptM4aOk =
-    result.transcriptFlowM4aExportBytes > 0 &&
-    result.transcriptFlowM4aExportType === "audio/mp4";
+    result.transcriptFlowM4aExportBytes > 0 && result.transcriptFlowM4aExportType === "audio/mp4";
   const transcriptM4aSkipped = hasUnsupportedAudioEncoderReason(
-    result.transcriptFlowM4aUnsupportedReason
+    result.transcriptFlowM4aUnsupportedReason,
   );
   const silenceM4aOk =
     result.m4aAudioSilenceExportBytes > 0 &&
@@ -2167,7 +1930,7 @@ const bundleHarness = (work) =>
     result.m4aAudioSilenceEnd <= 2.35 &&
     result.m4aAudioSilenceLabel.includes("silence");
   const silenceM4aSkipped = hasUnsupportedAudioEncoderReason(
-    result.m4aAudioSilenceUnsupportedReason
+    result.m4aAudioSilenceUnsupportedReason,
   );
   const abortM4aOk =
     result.abortAudioProgressCount > 0 &&
@@ -2175,8 +1938,7 @@ const bundleHarness = (work) =>
     result.abortAudioErrorName === "AbortError" &&
     result.retryAudioExportBytes > 0;
   const abortM4aSkipped =
-    silenceM4aSkipped &&
-    result.abortAudioErrorName === "UnsupportedAudioEncoder";
+    silenceM4aSkipped && result.abortAudioErrorName === "UnsupportedAudioEncoder";
   const m4aProjectAudioOk =
     result.m4aProjectAudioProbe?.duration >= 3 &&
     result.m4aProjectAudioProbe?.duration <= 3.5 &&
@@ -2184,21 +1946,16 @@ const bundleHarness = (work) =>
     result.m4aProjectAudioProbe?.sampleRate > 0 &&
     result.m4aProjectAudioRenderedBytes > 0 &&
     result.m4aProjectAudioRms > 0.05;
-  const m4aProjectAudioSkipped =
-    silenceM4aSkipped || !result.timelineAacSupported;
+  const m4aProjectAudioSkipped = silenceM4aSkipped || !result.timelineAacSupported;
 
   const ok =
-    result.newestIds.join(",") ===
-      "rec-missing,rec-transcript-flow,rec-b,rec-a" &&
-    result.alphaIds.join(",") ===
-      "rec-a,rec-b,rec-missing,rec-transcript-flow" &&
+    result.newestIds.join(",") === "rec-missing,rec-transcript-flow,rec-b,rec-a" &&
+    result.alphaIds.join(",") === "rec-a,rec-b,rec-missing,rec-transcript-flow" &&
     result.transcriptFlowClipCount === 2 &&
     result.transcriptFlowDeletedWordPresent === false &&
     result.transcriptFlowKeptWordsPresent === true &&
-    result.transcriptFlowDurationBefore - result.transcriptFlowDurationAfter >
-      0.7 &&
-    result.transcriptFlowDurationBefore - result.transcriptFlowDurationAfter <
-      1.5 &&
+    result.transcriptFlowDurationBefore - result.transcriptFlowDurationAfter > 0.7 &&
+    result.transcriptFlowDurationBefore - result.transcriptFlowDurationAfter < 1.5 &&
     result.abortVideoProgressCount > 0 &&
     result.abortVideoMaxProgress >= 0.35 &&
     result.abortVideoErrorName === "AbortError" &&
@@ -2262,8 +2019,7 @@ const bundleHarness = (work) =>
     result.cropZoomCenterPixel.height === 108 &&
     isRedPixel(result.cropZoomCenterPixel) &&
     (!result.timelineAacSupported ||
-      (result.projectAudioRenderedBytes > 0 &&
-        result.projectAudioRenderedType === "video/mp4")) &&
+      (result.projectAudioRenderedBytes > 0 && result.projectAudioRenderedType === "video/mp4")) &&
     result.projectAudioPreviewController.previewSourceVolume === 0.4 &&
     result.projectAudioPreviewController.previewAfterPlay.currentTime === 0.5 &&
     result.projectAudioPreviewController.previewAfterPlay.playCalls === 1 &&
@@ -2281,26 +2037,21 @@ const bundleHarness = (work) =>
     result.cancelledPostRenderWebm.deliveryType === null &&
     result.retriedPostRenderWebm.deliveryType === "download-webm" &&
     result.retriedPostRenderWebm.progressMonotonic === true &&
-    result.retriedPostRenderWebm.deliveryDataUrlPrefix.startsWith(
-      "data:video/webm"
-    ) &&
+    result.retriedPostRenderWebm.deliveryDataUrlPrefix.startsWith("data:video/webm") &&
     result.retriedPostRenderWebm.deliveryDataUrlBytes > 100 &&
     result.cancelledPostRenderGif.cancelled === true &&
     result.cancelledPostRenderGif.maxProgress >= 0.25 &&
     result.cancelledPostRenderGif.deliveryType === null &&
     result.retriedPostRenderGif.deliveryType === "download-gif" &&
     result.retriedPostRenderGif.progressMonotonic === true &&
-    result.retriedPostRenderGif.deliveryDataUrlPrefix.startsWith(
-      "data:image/gif"
-    ) &&
+    result.retriedPostRenderGif.deliveryDataUrlPrefix.startsWith("data:image/gif") &&
     result.retriedPostRenderGif.deliveryDataUrlBytes > 100 &&
     result.mp3ProjectAudioType === "audio/mpeg" &&
     result.mp3ProjectAudioProbe?.duration > 0 &&
     result.mp3ProjectAudioProbe?.numberOfChannels >= 1 &&
     result.mp3ProjectAudioProbe?.sampleRate > 0 &&
     (!result.timelineAacSupported ||
-      (result.mp3ProjectAudioRenderedBytes > 0 &&
-        result.mp3ProjectAudioRms > 0.001)) &&
+      (result.mp3ProjectAudioRenderedBytes > 0 && result.mp3ProjectAudioRms > 0.001)) &&
     (m4aProjectAudioOk || m4aProjectAudioSkipped) &&
     result.corruptProjectAudioError === "project-audio-decode-unsupported" &&
     (!result.timelineAacSupported ||
@@ -2345,18 +2096,15 @@ const bundleHarness = (work) =>
     result.projectSidecarAudioTrack.volume === 0.8 &&
     /^[a-f0-9]{64}$/.test(result.projectSidecarAudioTrack.sha256) &&
     result.projectAudioBeforeClearBytes === 32044 &&
-    result.projectAudioAfterClearError ===
-      "local-recording-audio-asset-missing" &&
-    result.importedAudioMissingError ===
-      "local-recording-audio-asset-missing" &&
+    result.projectAudioAfterClearError === "local-recording-audio-asset-missing" &&
+    result.importedAudioMissingError === "local-recording-audio-asset-missing" &&
     result.relinkedAudioAssetId === result.projectSidecarAudioTrack.assetId &&
     result.projectAfterClear === null &&
     result.restoredProjectClipIds.join(",") === "clip-a,clip-b" &&
     result.restoredProjectChapterLabels.join(",") === "Hello,Offline" &&
     result.restoredProjectZoomLabels.join(",") === "Click zoom" &&
     result.restoredProjectCrop.widthRatio === 0.75 &&
-    result.restoredProjectAudioTrack.assetId ===
-      result.projectSidecarAudioTrack.assetId &&
+    result.restoredProjectAudioTrack.assetId === result.projectSidecarAudioTrack.assetId &&
     result.restoredProjectTranscriptText === "hello offline" &&
     result.restoredProjectExportFormat === "gif" &&
     result.restoredProjectCaptionStyle === "high-contrast" &&
@@ -2373,19 +2121,13 @@ const bundleHarness = (work) =>
     result.productSidecarProbe.fileCount === 3 &&
     result.productSidecarProbe.coverage.status === "structurally-complete" &&
     result.productSidecarProbe.coverage.completeSetCount === 1 &&
-    result.productSidecarProbe.coverage.sidecarSets[0].name ===
-      "Beta renamed" &&
-    result.productSidecarProbe.coverage.sidecarSets[0].recordingIds.join(
-      ","
-    ) === "rec-b" &&
-    result.productSidecarProbe.files.find((file) => file.format === "vtt")
-      ?.cueCount === 1 &&
-    result.productSidecarProbe.files.find(
-      (file) => file.format === "transcript-json"
-    )?.timelineAwareWordCount === 1 &&
-    result.productSidecarProbe.files.find(
-      (file) => file.format === "sayless-project-json"
-    )?.projectVersion === 4 &&
+    result.productSidecarProbe.coverage.sidecarSets[0].name === "Beta renamed" &&
+    result.productSidecarProbe.coverage.sidecarSets[0].recordingIds.join(",") === "rec-b" &&
+    result.productSidecarProbe.files.find((file) => file.format === "vtt")?.cueCount === 1 &&
+    result.productSidecarProbe.files.find((file) => file.format === "transcript-json")
+      ?.timelineAwareWordCount === 1 &&
+    result.productSidecarProbe.files.find((file) => file.format === "sayless-project-json")
+      ?.projectVersion === 4 &&
     result.generatedThumbnailIsJpeg === true &&
     result.generatedThumbnailWidth === 320 &&
     result.generatedThumbnailHeight === 180 &&
@@ -2393,10 +2135,8 @@ const bundleHarness = (work) =>
     result.generatedThumbnailCenterPixel?.width === 320 &&
     result.generatedThumbnailCenterPixel?.height === 180 &&
     result.generatedThumbnailCenterPixel?.b > 120 &&
-    result.generatedThumbnailCenterPixel?.b >
-      result.generatedThumbnailCenterPixel?.r * 1.5 &&
-    result.generatedThumbnailCenterPixel?.b >
-      result.generatedThumbnailCenterPixel?.g * 1.5 &&
+    result.generatedThumbnailCenterPixel?.b > result.generatedThumbnailCenterPixel?.r * 1.5 &&
+    result.generatedThumbnailCenterPixel?.b > result.generatedThumbnailCenterPixel?.g * 1.5 &&
     result.generatedThumbnailCenterPixel?.a === 255 &&
     result.transcriptCacheKeyIncludesLanguage === true &&
     result.cachedTranscriptText === "hello offline" &&
@@ -2406,8 +2146,7 @@ const bundleHarness = (work) =>
     result.duplicateProjectChapterLabels.join(",") === "Hello,Offline" &&
     result.duplicateProjectZoomLabels.join(",") === "Click zoom" &&
     result.duplicateProjectCrop.heightRatio === 0.65 &&
-    result.duplicateProjectAudioTrack.assetId ===
-      result.projectSidecarAudioTrack.assetId &&
+    result.duplicateProjectAudioTrack.assetId === result.projectSidecarAudioTrack.assetId &&
     result.duplicateProjectAudioBytes === 32044 &&
     result.duplicateProjectExportFormat === "gif" &&
     result.duplicateInspectionOk === true &&
@@ -2440,8 +2179,7 @@ const bundleHarness = (work) =>
     result.bulkProjectExportFileNames.join(",") ===
       "Bulk A.sayless-project.json,Bulk B.sayless-project.json" &&
     result.bulkDeleteCount === 2 &&
-    result.bulkDeleteResultIds.join(",") ===
-      "rec-bulk-a,rec-bulk-b,rec-bulk-missing" &&
+    result.bulkDeleteResultIds.join(",") === "rec-bulk-a,rec-bulk-b,rec-bulk-missing" &&
     result.bulkIdsAfterDelete.length === 0 &&
     result.pressureUnknownLevel === "unknown" &&
     result.pressureNormalLevel === "normal" &&
@@ -2459,8 +2197,7 @@ const bundleHarness = (work) =>
     result.exportLifecycleSnapshots[1].name === "running-progress" &&
     result.exportLifecycleSnapshots[1].status === "running" &&
     result.exportLifecycleSnapshots[1].progress === 42 &&
-    result.exportLifecycleSnapshots[1].description ===
-      "Rendering locally (42%)" &&
+    result.exportLifecycleSnapshots[1].description === "Rendering locally (42%)" &&
     result.exportLifecycleSnapshots[2].name === "cancelled" &&
     result.exportLifecycleSnapshots[2].status === "cancelled" &&
     result.exportLifecycleSnapshots[2].progress === 42 &&
@@ -2472,22 +2209,15 @@ const bundleHarness = (work) =>
     result.exportLifecycleSnapshots[2].title === "MP4 export cancelled" &&
     result.exportLifecycleSnapshots[2].description === "Export cancelled." &&
     result.exportLifecycleSnapshots[2].retrySnapshot.format === "gif" &&
-    result.exportLifecycleSnapshots[2].retrySnapshot.qualityPreset ===
-      "compressed" &&
-    result.exportLifecycleSnapshots[2].retrySnapshot.includeProjectSidecar ===
-      true &&
-    result.exportLifecycleSnapshots[2].retrySnapshot
-      .includeTranscriptSidecar === true &&
-    result.exportLifecycleSnapshots[2].retrySnapshot.includeCaptionSidecar ===
-      true &&
+    result.exportLifecycleSnapshots[2].retrySnapshot.qualityPreset === "compressed" &&
+    result.exportLifecycleSnapshots[2].retrySnapshot.includeProjectSidecar === true &&
+    result.exportLifecycleSnapshots[2].retrySnapshot.includeTranscriptSidecar === true &&
+    result.exportLifecycleSnapshots[2].retrySnapshot.includeCaptionSidecar === true &&
     result.exportLifecycleSnapshots[2].retrySnapshot.audioOnly === true &&
     result.exportLifecycleSnapshots[2].retrySnapshot.audioFormat === "m4a" &&
-    result.exportLifecycleSnapshots[2].retrySnapshot.captionStyle.preset ===
-      "high-contrast" &&
-    result.exportLifecycleSnapshots[2].retrySnapshot.captionStyle.burnIn ===
-      true &&
-    result.exportLifecycleSnapshots[2].retrySnapshot.gif.durationSeconds ===
-      2.5 &&
+    result.exportLifecycleSnapshots[2].retrySnapshot.captionStyle.preset === "high-contrast" &&
+    result.exportLifecycleSnapshots[2].retrySnapshot.captionStyle.burnIn === true &&
+    result.exportLifecycleSnapshots[2].retrySnapshot.gif.durationSeconds === 2.5 &&
     result.exportLifecycleSnapshots[3].name === "completed" &&
     result.exportLifecycleSnapshots[3].status === "completed" &&
     result.exportLifecycleSnapshots[3].progress === 100 &&
@@ -2495,11 +2225,9 @@ const bundleHarness = (work) =>
     result.exportLifecycleSnapshots[3].canReveal === true &&
     result.exportLifecycleSnapshots[3].title === "MP4 export complete" &&
     result.exportLifecycleSnapshots[3].description === "Export finished." &&
-    result.exportLifecycleSnapshots[3].completionFromSaved.status ===
-      "completed" &&
+    result.exportLifecycleSnapshots[3].completionFromSaved.status === "completed" &&
     result.exportLifecycleSnapshots[3].completionFromSaved.downloadId === 321 &&
-    result.exportLifecycleSnapshots[3].completionFromCancelled.status ===
-      "cancelled" &&
+    result.exportLifecycleSnapshots[3].completionFromCancelled.status === "cancelled" &&
     result.exportLifecycleDismissed === true &&
     result.renamedTitle === "Beta renamed" &&
     result.projectClipIds.join(",") === "clip-a,clip-b" &&
@@ -2508,8 +2236,7 @@ const bundleHarness = (work) =>
     result.projectChapterLabels.join(",") === "Hello,Offline" &&
     result.projectZoomLabels.join(",") === "Click zoom" &&
     result.projectCrop.widthRatio === 0.75 &&
-    result.projectAudioTrack.assetId ===
-      result.projectSidecarAudioTrack.assetId &&
+    result.projectAudioTrack.assetId === result.projectSidecarAudioTrack.assetId &&
     result.projectExportSettings.format === "gif" &&
     result.projectExportSettings.qualityPreset === "compressed" &&
     result.projectExportSettings.includeTranscriptSidecar === true &&
@@ -2533,8 +2260,7 @@ const bundleHarness = (work) =>
     afterReopen.duplicateProjectChapterLabels.join(",") === "Hello,Offline" &&
     afterReopen.duplicateProjectZoomLabels.join(",") === "Click zoom" &&
     afterReopen.duplicateProjectCrop.widthRatio === 0.75 &&
-    afterReopen.duplicateProjectAudioTrack.assetId ===
-      result.projectSidecarAudioTrack.assetId &&
+    afterReopen.duplicateProjectAudioTrack.assetId === result.projectSidecarAudioTrack.assetId &&
     afterReopen.duplicateProjectAudioBytes === 32044 &&
     afterReopen.duplicateProjectExportFormat === "gif" &&
     afterReopen.projectClipIds.join(",") === "clip-a,clip-b" &&
@@ -2544,17 +2270,14 @@ const bundleHarness = (work) =>
     afterReopen.projectChapterLabels.join(",") === "Hello,Offline" &&
     afterReopen.projectZoomLabels.join(",") === "Click zoom" &&
     afterReopen.projectCrop.heightRatio === 0.65 &&
-    afterReopen.projectAudioTrack.assetId ===
-      result.projectSidecarAudioTrack.assetId &&
+    afterReopen.projectAudioTrack.assetId === result.projectSidecarAudioTrack.assetId &&
     afterReopen.projectAudioBytes === 32044 &&
     afterReopen.projectExportFormat === "gif" &&
     afterReopen.projectExportQuality === "compressed" &&
     afterReopen.transcriptFlowClipCount === 2 &&
     afterReopen.transcriptFlowTranscriptText === "keep remove tail";
 
-  console.log(
-    ok ? "LOCAL RECORDINGS HARNESS PASS" : "LOCAL RECORDINGS HARNESS FAIL"
-  );
+  console.log(ok ? "LOCAL RECORDINGS HARNESS PASS" : "LOCAL RECORDINGS HARNESS FAIL");
   process.exit(ok ? 0 : 1);
 })().catch((e) => {
   console.error("RUNNER ERROR", e);

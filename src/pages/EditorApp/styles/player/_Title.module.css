@@ -1,0 +1,114 @@
+@font-face {
+  font-family: "Satoshi-Light";
+  src: url("/assets/fonts/Satoshi-Light.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Satoshi-Medium";
+  src: url("/assets/fonts/Satoshi-Medium.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Satoshi-Bold";
+  src: url("/assets/fonts/Satoshi-Bold.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+/* Colors */
+/* Font */
+/* Spacing */
+/*
+$spacing-01: 0.125rem;
+$spacing-02: 0.25rem;
+$spacing-03: 0.5rem;
+$spacing-04: 0.75rem;
+$spacing-05: 1rem;
+*/
+/* Container */
+/* Gradients */
+/* Events */
+/* Z-index */
+.TitleParent {
+  position: relative;
+  bottom: 0;
+  width: 90%;
+  max-width: 900px;
+  left: 0;
+  right: 0;
+  margin: 0px !important;
+}
+
+.TitleWrap {
+  position: relative;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Align items at the top of the flex container */
+  height: auto; /* Allow the container to expand with multiple lines of text */
+}
+.TitleWrap:hover {
+  cursor: text;
+}
+.TitleWrap h1 {
+  margin: 0;
+  padding: 0;
+  font-size: 20px;
+  font-family: "Satoshi-Medium", sans-serif;
+  position: absolute;
+  top: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  width: calc(100% - 140px);
+}
+.TitleWrap input {
+  position: absolute;
+  top: 100%;
+  font-family: "Satoshi-Medium", sans-serif;
+  font-size: 20px;
+  border-radius: 30px;
+  border: 1px solid #e8e8e8;
+  width: 100%;
+  height: 32px;
+  box-sizing: border-box;
+}
+.TitleWrap input:focus {
+  outline: none;
+  box-shadow: 0px 0px 0px 2px rgba(48, 128, 248, 0.5);
+}
+
+.pencil {
+  display: inline-block;
+  color: #9797a4;
+}
+
+.shareButton {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #29292f;
+  color: #fff;
+  border-radius: 30px;
+  padding: 0px 16px;
+  height: 40px;
+  position: absolute;
+  right: 0px;
+  gap: 8px;
+  font-size: 500;
+  font-family: "Satoshi-Medium", sans-serif;
+  top: -6px;
+}
+.shareButton:hover {
+  cursor: pointer;
+  background-color: #000 !important;
+}
+
+.shareIcon {
+  width: 16px;
+}
+.shareIcon svg {
+  color: #fff;
+  margin-top: 1px;
+}

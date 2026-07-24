@@ -1,14 +1,10 @@
 import { createHash } from "node:crypto";
-import {
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 export const REQUIRED_AUTOMATED_COMMANDS = [
+  "lint",
+  "format:check",
   "typecheck",
   "test:unit",
   "test:e2e:offline-whisper-assets",
@@ -59,8 +55,7 @@ export const dirFingerprint = (dir) => {
   return { fileCount: files.length, sha256: hash.digest("hex") };
 };
 
-export const dirSize = (dir) =>
-  walkFiles(dir).reduce((total, file) => total + file.size, 0);
+export const dirSize = (dir) => walkFiles(dir).reduce((total, file) => total + file.size, 0);
 
 export const formatBytes = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -118,8 +113,7 @@ export const writeCompleteReleaseEvidence = ({
   const buildFingerprint = dirFingerprint(buildDir);
   const bundledWhisper = dirFingerprint(whisperDir);
   const exportFileNameForFormat = (format, index) => {
-    if (format === "transcript-json")
-      return `sayless-qa-transcript-${index + 1}.transcript.json`;
+    if (format === "transcript-json") return `sayless-qa-transcript-${index + 1}.transcript.json`;
     if (format === "sayless-project-json")
       return `sayless-qa-project-${index + 1}.sayless-project.json`;
     return `sayless-qa-${format}-${index + 1}.${format}`;
@@ -260,7 +254,7 @@ export const writeCompleteReleaseEvidence = ({
   const mediaReportFiles = [
     ...recordingProbeFiles,
     ...exportProbeFiles.filter((file) =>
-      ["mp4", "webm", "gif", "wav", "m4a"].includes(file.format)
+      ["mp4", "webm", "gif", "wav", "m4a"].includes(file.format),
     ),
     ...projectAudioProbeFiles,
   ];
@@ -279,9 +273,7 @@ export const writeCompleteReleaseEvidence = ({
     files: mediaReportFiles,
   });
   const sidecarReportFiles = exportProbeFiles
-    .filter((file) =>
-      ["vtt", "transcript-json", "sayless-project-json"].includes(file.format)
-    )
+    .filter((file) => ["vtt", "transcript-json", "sayless-project-json"].includes(file.format))
     .map((file) => ({
       ...file,
       exportFields: {
@@ -311,9 +303,7 @@ export const writeCompleteReleaseEvidence = ({
     automatedEvidenceGeneratedAt: generatedAt,
     manualSession: {
       kind: "sayless.manualQaSessionProvenance",
-      profileCreatedAt: new Date(
-        Date.parse(generatedAt) + 10_000
-      ).toISOString(),
+      profileCreatedAt: new Date(Date.parse(generatedAt) + 10_000).toISOString(),
       releaseVersion: version,
       automatedEvidenceGeneratedAt: generatedAt,
       buildSha256: buildFingerprint.sha256,
@@ -427,8 +417,7 @@ export const writeCompleteReleaseEvidence = ({
       externalNetworkProbe: {
         url: "https://example.com/",
         result: "failed",
-        observedError:
-          "Chrome fetch failed with ERR_INTERNET_DISCONNECTED in the same QA profile.",
+        observedError: "Chrome fetch failed with ERR_INTERNET_DISCONNECTED in the same QA profile.",
         sameChromeProfile: true,
       },
       networkProbeResult:
@@ -449,8 +438,7 @@ export const writeCompleteReleaseEvidence = ({
           recordingId: recordingA,
           startSeconds: 21.4,
           endSeconds: 24.9,
-          observation:
-            "Suggested a quiet narration pause in the WebM tab recording.",
+          observation: "Suggested a quiet narration pause in the WebM tab recording.",
         },
         {
           recordingId: recordingB,
@@ -465,12 +453,10 @@ export const writeCompleteReleaseEvidence = ({
           recordingId: recordingB,
           startSeconds: 198.5,
           endSeconds: 203.8,
-          observation:
-            "Keyboard and fan noise remained audible and was not suggested as silence.",
+          observation: "Keyboard and fan noise remained audible and was not suggested as silence.",
         },
       ],
-      notes:
-        "Quiet regions were suggested and noisy keyboard regions were ignored.",
+      notes: "Quiet regions were suggested and noisy keyboard regions were ignored.",
     },
     zoom: {
       recordingIds: [recordingA, recordingC],
@@ -500,8 +486,7 @@ export const writeCompleteReleaseEvidence = ({
             "Kept, removed, previewed, reopened, and exported click-derived zoom keyframes on the region recording.",
         },
       ],
-      notes:
-        "Compared saved click-derived zoom framing across wide and 4:3 real recordings.",
+      notes: "Compared saved click-derived zoom framing across wide and 4:3 real recordings.",
     },
     crop: {
       recordingIds: [recordingA, recordingC],
@@ -560,8 +545,7 @@ export const writeCompleteReleaseEvidence = ({
           sampleRate: 48000,
           decodeVerified: true,
           audiblePreviewVerified: true,
-          notes:
-            "Decoded stereo 48 kHz WAV metadata and heard the real music bed in preview.",
+          notes: "Decoded stereo 48 kHz WAV metadata and heard the real music bed in preview.",
         },
         {
           format: "m4a",
@@ -573,8 +557,7 @@ export const writeCompleteReleaseEvidence = ({
           sampleRate: 44100,
           decodeVerified: true,
           audiblePreviewVerified: true,
-          notes:
-            "Decoded mono 44.1 kHz M4A metadata and heard the real voice note in preview.",
+          notes: "Decoded mono 44.1 kHz M4A metadata and heard the real voice note in preview.",
         },
         {
           format: "mp3",
@@ -632,8 +615,7 @@ export const writeCompleteReleaseEvidence = ({
         {
           type: "sidecar-import",
           recordingIds: [recordingB],
-          observation:
-            "Imported media with its sidecar and confirmed timeline settings restored.",
+          observation: "Imported media with its sidecar and confirmed timeline settings restored.",
         },
         {
           type: "bulk-export-delete",
@@ -644,8 +626,7 @@ export const writeCompleteReleaseEvidence = ({
         {
           type: "orphan-cleanup",
           recordingIds: [],
-          observation:
-            "Triggered orphan cleanup and removed unreferenced local media only.",
+          observation: "Triggered orphan cleanup and removed unreferenced local media only.",
         },
         {
           type: "missing-media-repair",
@@ -679,8 +660,7 @@ export const writeCompleteReleaseEvidence = ({
             "Google Drive",
             "remote transcription",
           ],
-          notes:
-            "Reviewed release copy for paid, account, cloud, and remote claims.",
+          notes: "Reviewed release copy for paid, account, cloud, and remote claims.",
           residualRisk: "No residual release-note risk found.",
         },
         {
@@ -702,8 +682,7 @@ export const writeCompleteReleaseEvidence = ({
             "cloud upload",
             "dashboard",
           ],
-          notes:
-            "Reviewed screenshots for account prompts and hosted dashboard claims.",
+          notes: "Reviewed screenshots for account prompts and hosted dashboard claims.",
           residualRisk: "No residual screenshot risk found.",
         },
         {
@@ -725,8 +704,7 @@ export const writeCompleteReleaseEvidence = ({
             "cloud",
             "remote transcription",
           ],
-          notes:
-            "Reviewed listing text for local-only positioning and no paid features.",
+          notes: "Reviewed listing text for local-only positioning and no paid features.",
           residualRisk: "No residual store-listing risk found.",
         },
       ],
@@ -735,45 +713,41 @@ export const writeCompleteReleaseEvidence = ({
       noGoogleDriveClaims: true,
       noDefaultRemoteTranscriptionClaims: true,
       noUnverifiedMultiSceneAutoZoomClaims: true,
-      notes:
-        "Publication review found no paid gates, hosted dashboard claims, or remote defaults.",
+      notes: "Publication review found no paid gates, hosted dashboard claims, or remote defaults.",
     },
     checks: {
       fresh_install_no_account_or_paid_gates: check(
         "fresh install surfaces showed no paid or account gates",
-        []
+        [],
       ),
-      recording_recovery_real_short_recordings: check(
-        "recordings opened and recovered locally",
-        [recordingA, recordingB]
-      ),
-      offline_transcription_real_speakers: check(
-        "offline transcription worked for both speakers",
-        [recordingA, recordingB]
-      ),
-      timeline_editing_persistence: check(
-        "timeline edits persisted after reopen",
-        [recordingA]
-      ),
+      recording_recovery_real_short_recordings: check("recordings opened and recovered locally", [
+        recordingA,
+        recordingB,
+      ]),
+      offline_transcription_real_speakers: check("offline transcription worked for both speakers", [
+        recordingA,
+        recordingB,
+      ]),
+      timeline_editing_persistence: check("timeline edits persisted after reopen", [recordingA]),
       export_cancel_retry_reveal_real_recordings: check(
         "cancel, retry, and reveal worked for long export",
-        [recordingB]
+        [recordingB],
       ),
       audio_silence_real_codecs_and_noise: check(
         "silence suggestions covered quiet and noisy regions",
-        [recordingA, recordingB]
+        [recordingA, recordingB],
       ),
-      zoom_preview_export_real_recordings: check(
-        "zoom preview and export matched click metadata",
-        [recordingA, recordingC]
-      ),
+      zoom_preview_export_real_recordings: check("zoom preview and export matched click metadata", [
+        recordingA,
+        recordingC,
+      ]),
       crop_preview_export_real_recordings: check(
         "crop preview and export matched normalized edge bounds",
-        [recordingA, recordingC]
+        [recordingA, recordingC],
       ),
       project_audio_real_inputs_and_long_sync: check(
         "real project audio inputs stayed synchronized on the long recording",
-        [recordingB]
+        [recordingB],
       ),
       local_library_recovery: check("library recovery operations completed", [
         recordingA,
@@ -781,7 +755,7 @@ export const writeCompleteReleaseEvidence = ({
       ]),
       final_surface_no_paid_cloud_or_remote_claims: check(
         "final publication surface had no paid cloud remote claims",
-        []
+        [],
       ),
     },
   });

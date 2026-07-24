@@ -35,7 +35,7 @@ const ImageTool = (
   toolSettings: ToolSettings,
   setToolSettings: SetToolSettings,
   saveCanvas: (settings: ToolSettings, setSettings: SetToolSettings) => void,
-  contentState: ImageToolContentState
+  contentState: ImageToolContentState,
 ): { removeEventListeners(): void } => {
   const image = new Image();
   let fabricImage: FabricImageInstance | null = null;

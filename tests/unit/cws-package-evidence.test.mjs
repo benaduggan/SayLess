@@ -207,7 +207,10 @@ test("CWS package verifier rejects tampered zip and evidence files", async () =>
     const result = runVerifier(fixture.dir);
 
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /CWS package evidence does not match current build-cws\.zip SHA-256/);
+    assert.match(
+      result.stderr,
+      /CWS package evidence does not match current build-cws\.zip SHA-256/,
+    );
     assert.match(result.stderr, /build-cws\.zip must match extension\.zip SHA-256/);
     assert.match(result.stderr, /package release evidence manual QA evidence hash does not match/);
   } finally {
@@ -234,8 +237,14 @@ test("CWS package verifier rejects stale package build evidence", async () => {
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /package release evidence build file count/);
     assert.match(result.stderr, /package release evidence build byte size/);
-    assert.match(result.stderr, /package release evidence formatted build size must match current build size/);
-    assert.match(result.stderr, /package release evidence build fingerprint does not match current build/);
+    assert.match(
+      result.stderr,
+      /package release evidence formatted build size must match current build size/,
+    );
+    assert.match(
+      result.stderr,
+      /package release evidence build fingerprint does not match current build/,
+    );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -345,7 +354,10 @@ test("CWS package verifier rejects non-passing CWS evidence status", async () =>
     const result = runVerifier(fixture.dir);
 
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /CWS package evidence is non-passing: Chrome Web Store package has not passed/);
+    assert.match(
+      result.stderr,
+      /CWS package evidence is non-passing: Chrome Web Store package has not passed/,
+    );
     assert.match(
       result.stderr,
       /CWS package evidence failed step: scripts\/package-release\.mjs exit code 1/,
@@ -439,7 +451,10 @@ test("CWS package verifier rejects stale source zip size evidence", async () => 
     const result = runVerifier(fixture.dir);
 
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /CWS package sourceZip size must match current extension\.zip size/);
+    assert.match(
+      result.stderr,
+      /CWS package sourceZip size must match current extension\.zip size/,
+    );
     assert.match(
       result.stderr,
       /CWS package sourceZip formatted size must match current extension\.zip size/,
@@ -478,7 +493,10 @@ test("CWS package verifier rejects missing or alternate CWS evidence paths", asy
       /CWS package evidence packageEvidence\.path must point to release-artifacts\/package-release\.json/,
     );
     assert.match(absoluteResult.stderr, /CWS package sourceZip\.path must point to extension\.zip/);
-    assert.match(absoluteResult.stderr, /CWS package evidence cwsZip\.path must point to build-cws\.zip/);
+    assert.match(
+      absoluteResult.stderr,
+      /CWS package evidence cwsZip\.path must point to build-cws\.zip/,
+    );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -496,8 +514,14 @@ test("CWS package verifier rejects source zip drift from package evidence", asyn
     const result = runVerifier(fixture.dir);
 
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /CWS package sourceZip SHA-256 must match package release zip evidence/);
-    assert.match(result.stderr, /CWS package sourceZip size must match package release zip evidence/);
+    assert.match(
+      result.stderr,
+      /CWS package sourceZip SHA-256 must match package release zip evidence/,
+    );
+    assert.match(
+      result.stderr,
+      /CWS package sourceZip size must match package release zip evidence/,
+    );
     assert.match(
       result.stderr,
       /CWS package sourceZip formatted size must match package release zip evidence/,

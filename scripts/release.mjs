@@ -22,14 +22,11 @@ const DRY_RUN = args.includes("--dry-run");
 const bumpKind = args.find((a) => ["patch", "minor", "major"].includes(a));
 
 if (!bumpKind) {
-  console.error(
-    "Usage: node scripts/release.mjs [--dry-run] patch|minor|major"
-  );
+  console.error("Usage: node scripts/release.mjs [--dry-run] patch|minor|major");
   process.exit(2);
 }
 
-const shCapture = (cmd) =>
-  execSync(cmd, { cwd: ROOT, encoding: "utf8" }).trim();
+const shCapture = (cmd) => execSync(cmd, { cwd: ROOT, encoding: "utf8" }).trim();
 
 const bumpSemver = (version, kind) => {
   const m = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
@@ -48,11 +45,7 @@ const bumpSemver = (version, kind) => {
   return `${major}.${minor}.${patch}`;
 };
 
-const printReleaseChecklist = (
-  version,
-  commitsBlock,
-  { dryRun = false } = {}
-) => {
+const printReleaseChecklist = (version, commitsBlock, { dryRun = false } = {}) => {
   const bar = "-".repeat(60);
   console.log(bar);
   console.log(`Release v${version} ${dryRun ? "preview" : "prepared"}`);
@@ -65,24 +58,22 @@ const printReleaseChecklist = (
   console.log("  1. Run: npm run qa:release:auto");
   console.log("  2. Run: npm run qa:release:status");
   console.log("  3. Run: npm run qa:release:manual:template");
+  console.log("  4. Run: npm run qa:release:manual:profile -- --sync-template --launch");
   console.log(
-    "  4. Run: npm run qa:release:manual:profile -- --sync-template --launch"
-  );
-  console.log(
-    "  5. Complete docs/RELEASE_QA.md in that clean profile, use the printed --resume-profile command if Chrome closes, keep every real source/export/project-audio/sidecar file, and fill release-artifacts/manual-qa-evidence.json section by section"
+    "  5. Complete docs/RELEASE_QA.md in that clean profile, use the printed --resume-profile command if Chrome closes, keep every real source/export/project-audio/sidecar file, and fill release-artifacts/manual-qa-evidence.json section by section",
   );
   console.log("  6. Run throughout the session: npm run qa:release:manual:progress");
   console.log(
-    "  7. After collecting the files, measure the complete real-media set: npm run qa:release:manual:media -- --json --require-complete --output=release-artifacts/manual-qa-media-probe.json <files...>"
+    "  7. After collecting the files, measure the complete real-media set: npm run qa:release:manual:media -- --json --require-complete --output=release-artifacts/manual-qa-media-probe.json <files...>",
   );
   console.log(
-    "  8. After exporting the matched set, inspect it: npm run qa:release:manual:sidecars -- --json --require-complete --output=release-artifacts/manual-qa-sidecar-probe.json <files...>"
+    "  8. After exporting the matched set, inspect it: npm run qa:release:manual:sidecars -- --json --require-complete --output=release-artifacts/manual-qa-sidecar-probe.json <files...>",
   );
   console.log(
-    "  9. Preview and atomically import exact filename-matched measurements: npm run qa:release:manual:measurements -- --json --write"
+    "  9. Preview and atomically import exact filename-matched measurements: npm run qa:release:manual:measurements -- --json --write",
   );
   console.log(
-    ' 10. Only after both strict reports pass, set status to "passed", set testedAt, and run: npm run qa:release:manual:progress'
+    ' 10. Only after both strict reports pass, set status to "passed", set testedAt, and run: npm run qa:release:manual:progress',
   );
   console.log(" 11. Run: npm run qa:release:manual");
   console.log(" 12. Run: npm run package:release");
@@ -91,20 +82,16 @@ const printReleaseChecklist = (
   console.log(" 15. Run: npm run verify:cws-package");
   console.log(" 16. Run: npm run qa:release:status");
   console.log(
-    " 17. Attach release-artifacts/release-qa-automated.json, release-artifacts/manual-qa-evidence.json, release-artifacts/manual-qa-media-probe.json, release-artifacts/manual-qa-sidecar-probe.json, release-artifacts/package-release.json, release-artifacts/cws-package.json, docs/STORE_LISTING.md, extension.zip, and build-cws.zip"
+    " 17. Attach release-artifacts/release-qa-automated.json, release-artifacts/manual-qa-evidence.json, release-artifacts/manual-qa-media-probe.json, release-artifacts/manual-qa-sidecar-probe.json, release-artifacts/package-release.json, release-artifacts/cws-package.json, docs/STORE_LISTING.md, extension.zip, and build-cws.zip",
   );
-  console.log(
-    ` 18. Tag after review: git tag v${version} && git push origin v${version}`
-  );
+  console.log(` 18. Tag after review: git tag v${version} && git push origin v${version}`);
   console.log(bar);
 };
 
 try {
   const status = shCapture("git status --porcelain");
   if (status) {
-    console.warn(
-      "Warning: working tree has uncommitted changes. Continuing anyway.\n"
-    );
+    console.warn("Warning: working tree has uncommitted changes. Continuing anyway.\n");
   }
 } catch {}
 
@@ -116,7 +103,7 @@ const currentPkgVersion = pkg.version;
 
 if (currentManifestVersion !== currentPkgVersion) {
   console.warn(
-    `Warning: manifest (${currentManifestVersion}) and package.json (${currentPkgVersion}) versions differ.`
+    `Warning: manifest (${currentManifestVersion}) and package.json (${currentPkgVersion}) versions differ.`,
   );
   console.warn(`Bumping from manifest version (${currentManifestVersion}).\n`);
 }

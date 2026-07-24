@@ -50,11 +50,7 @@ const cleanWord = (text: unknown): string =>
     .replace(/\s+/g, " ")
     .trim();
 
-const makeLabel = (
-  words: readonly ChapterWord[],
-  startTime: number,
-  fallback: string,
-): string => {
+const makeLabel = (words: readonly ChapterWord[], startTime: number, fallback: string): string => {
   const label = words
     .filter((word) => Number(word?.end) >= startTime - 0.1)
     .slice(0, MAX_LABEL_WORDS)
@@ -91,9 +87,7 @@ export const normalizeChapterMarkers = (
       if (!isFiniteTime(marker?.time)) return null;
       const time = normalizeTime(marker.time, duration);
       return {
-        id:
-          marker.id ||
-          markerId(cleanWord(marker.source) || "manual", `${time}-${index}`),
+        id: marker.id || markerId(cleanWord(marker.source) || "manual", `${time}-${index}`),
         time,
         label: cleanWord(marker.label) || `Section ${index + 1}`,
         source: cleanWord(marker.source) || "manual",

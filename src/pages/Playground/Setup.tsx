@@ -25,10 +25,7 @@ const Setup = (): React.JSX.Element => {
 
   return (
     <div className="setupBackground">
-      <img
-        src={chrome.runtime.getURL("assets/logo-text.svg")}
-        className="setupLogo"
-      />
+      <img src={chrome.runtime.getURL("assets/logo-text.svg")} className="setupLogo" />
       <GradientBackground />
       <style>
         {`

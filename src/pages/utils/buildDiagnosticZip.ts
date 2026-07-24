@@ -2,10 +2,7 @@
 // the BG (make-zip handler) so the ~100 KB dep doesn't ship into every
 // content script.
 import { getStartFlowTrace } from "./startFlowTrace.ts";
-import {
-  AUDIO_DIAGNOSTIC_KEYS,
-  buildAudioDiagnosticsSnapshot,
-} from "./audioDiagnostics.ts";
+import { AUDIO_DIAGNOSTIC_KEYS, buildAudioDiagnosticsSnapshot } from "./audioDiagnostics.ts";
 
 // Strip user-home paths and URL query/fragments (recording IDs,
 // signed-URL tokens) before the zip leaves the machine.
@@ -106,9 +103,7 @@ const chromeApi = (): DiagnosticChromeApi =>
   (globalThis as typeof globalThis & { chrome: DiagnosticChromeApi }).chrome;
 
 const asRecord = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {};
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
 
 export const buildDiagnosticZip = async ({
   extraConfig = {},
@@ -125,45 +120,41 @@ export const buildDiagnosticZip = async ({
     perfTimeline,
     localRecordingEvents,
   ] = await Promise.all([
-      chromeApi().runtime.sendMessage({ type: "get-platform-info" }),
-      chromeApi().runtime.sendMessage({ type: "get-diagnostic-log" }),
-      new Promise<Record<string, unknown>>((resolve) =>
-        chromeApi().storage.local.get(FAST_RECORDER_KEYS, resolve),
+    chromeApi().runtime.sendMessage({ type: "get-platform-info" }),
+    chromeApi().runtime.sendMessage({ type: "get-diagnostic-log" }),
+    new Promise<Record<string, unknown>>((resolve) =>
+      chromeApi().storage.local.get(FAST_RECORDER_KEYS, resolve),
+    ),
+    new Promise<Record<string, unknown>>((resolve) =>
+      chromeApi().storage.local.get(AUDIO_DIAGNOSTIC_KEYS, resolve),
+    ),
+    new Promise<unknown[]>((resolve) =>
+      chromeApi().storage.local.get(["lifecycleLog"], (r) =>
+        resolve(Array.isArray(r.lifecycleLog) ? r.lifecycleLog : []),
       ),
-      new Promise<Record<string, unknown>>((resolve) =>
-        chromeApi().storage.local.get(AUDIO_DIAGNOSTIC_KEYS, resolve),
-      ),
-      new Promise<unknown[]>((resolve) =>
-        chromeApi().storage.local.get(["lifecycleLog"], (r) =>
-          resolve(Array.isArray(r.lifecycleLog) ? r.lifecycleLog : []),
-        ),
-      ),
-      new Promise<Array<Record<string, unknown>>>((resolve) =>
-        // Merge per-context perfTimeline.* keys by timestamp.
-        chromeApi().storage.local.get(null, (all) => {
-          const merged: Array<Record<string, unknown>> = [];
-          for (const k of Object.keys(all || {})) {
-            if (k === "perfTimeline" || k.startsWith("perfTimeline.")) {
-              const arr = all[k];
+    ),
+    new Promise<Array<Record<string, unknown>>>((resolve) =>
+      // Merge per-context perfTimeline.* keys by timestamp.
+      chromeApi().storage.local.get(null, (all) => {
+        const merged: Array<Record<string, unknown>> = [];
+        for (const k of Object.keys(all || {})) {
+          if (k === "perfTimeline" || k.startsWith("perfTimeline.")) {
+            const arr = all[k];
             if (Array.isArray(arr)) {
               merged.push(...arr.map(asRecord));
             }
-            }
           }
-          merged.sort((a, b) => Number(a.t ?? 0) - Number(b.t ?? 0));
-          resolve(merged);
-        }),
+        }
+        merged.sort((a, b) => Number(a.t ?? 0) - Number(b.t ?? 0));
+        resolve(merged);
+      }),
+    ),
+    new Promise<unknown[]>((resolve) =>
+      chromeApi().storage.local.get(["localRecordingEvents"], (r) =>
+        resolve(Array.isArray(r?.localRecordingEvents) ? r.localRecordingEvents : []),
       ),
-      new Promise<unknown[]>((resolve) =>
-        chromeApi().storage.local.get(["localRecordingEvents"], (r) =>
-          resolve(
-            Array.isArray(r?.localRecordingEvents)
-              ? r.localRecordingEvents
-              : [],
-          ),
-        ),
-      ),
-    ]);
+    ),
+  ]);
 
   const manifestVersion = chromeApi().runtime.getManifest().version;
   const now = new Date();
@@ -187,8 +178,7 @@ export const buildDiagnosticZip = async ({
       height: window.screen.availHeight,
       devicePixelRatio: window.devicePixelRatio,
     },
-    deviceMemory:
-      (navigator as Navigator & { deviceMemory?: number }).deviceMemory || null,
+    deviceMemory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory || null,
   });
 
   files["config.json"] = JSON.stringify({
@@ -208,12 +198,10 @@ export const buildDiagnosticZip = async ({
         const session = asRecord(sessionValue);
         if (!Array.isArray(session.events) || !session.events.length) continue;
         const hints: string[] = [];
-        const hasEditorOpen = session.events.some(
-          (value) => {
-            const ev = asRecord(value);
-            return ev.e === "editor-open" && asRecord(ev.d).type === "editor";
-          },
-        );
+        const hasEditorOpen = session.events.some((value) => {
+          const ev = asRecord(value);
+          return ev.e === "editor-open" && asRecord(ev.d).type === "editor";
+        });
         const hasEditorReady = session.events.some(
           (value) => asRecord(value).e === "editor-load-ready",
         );
@@ -250,9 +238,7 @@ export const buildDiagnosticZip = async ({
   }
 
   if (Array.isArray(localRecordingEvents) && localRecordingEvents.length > 0) {
-    files["local-recording-events.json"] = JSON.stringify(
-      redactPii(localRecordingEvents),
-    );
+    files["local-recording-events.json"] = JSON.stringify(redactPii(localRecordingEvents));
   }
 
   const filename = `sayless-diagnostics-${ts}.zip`;
@@ -264,9 +250,7 @@ export const buildDiagnosticZip = async ({
   });
   const resp = asRecord(response);
   if (!resp.ok || typeof resp.base64 !== "string") {
-    throw new Error(
-      `make-zip failed: ${resp?.error || "no response from background"}`,
-    );
+    throw new Error(`make-zip failed: ${resp?.error || "no response from background"}`);
   }
   // base64 over the message channel; structured-clone of ArrayBuffer
   // is unreliable across MV3 contexts.

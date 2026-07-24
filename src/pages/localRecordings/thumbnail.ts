@@ -28,17 +28,10 @@ export const computeThumbnailCanvasSize = (
   maxHeight: unknown = DEFAULT_THUMBNAIL_MAX_HEIGHT,
 ): { width: number; height: number; scale: number } => {
   const safeMaxWidth = Math.max(1, Number(maxWidth) || DEFAULT_THUMBNAIL_MAX_WIDTH);
-  const safeMaxHeight = Math.max(
-    1,
-    Number(maxHeight) || DEFAULT_THUMBNAIL_MAX_HEIGHT,
-  );
+  const safeMaxHeight = Math.max(1, Number(maxHeight) || DEFAULT_THUMBNAIL_MAX_HEIGHT);
   const safeSourceWidth = Math.max(1, Number(sourceWidth) || safeMaxWidth);
   const safeSourceHeight = Math.max(1, Number(sourceHeight) || safeMaxHeight);
-  const scale = Math.min(
-    safeMaxWidth / safeSourceWidth,
-    safeMaxHeight / safeSourceHeight,
-    1,
-  );
+  const scale = Math.min(safeMaxWidth / safeSourceWidth, safeMaxHeight / safeSourceHeight, 1);
   return {
     width: Math.max(1, Math.round(safeSourceWidth * scale)),
     height: Math.max(1, Math.round(safeSourceHeight * scale)),

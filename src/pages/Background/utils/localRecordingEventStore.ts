@@ -3,21 +3,21 @@ const MAX_EVENTS = 300;
 
 let writeChain: Promise<void> = Promise.resolve();
 
-export const appendLocalRecordingEvent = async (
-  event: unknown,
-): Promise<boolean> => {
+export const appendLocalRecordingEvent = async (event: unknown): Promise<boolean> => {
   if (!event || typeof event !== "object") return false;
   const eventRecord = event as Record<string, unknown>;
-  const chromeApi = (globalThis as typeof globalThis & {
-    chrome: {
-      storage: {
-        local: {
-          get: (keys: string[]) => Promise<Record<string, unknown>>;
-          set: (values: Record<string, unknown>) => Promise<void>;
+  const chromeApi = (
+    globalThis as typeof globalThis & {
+      chrome: {
+        storage: {
+          local: {
+            get: (keys: string[]) => Promise<Record<string, unknown>>;
+            set: (values: Record<string, unknown>) => Promise<void>;
+          };
         };
       };
-    };
-  }).chrome;
+    }
+  ).chrome;
   const job = writeChain.then(async () => {
     const existing = await chromeApi.storage.local.get([LOCAL_RECORDING_EVENTS_KEY]);
     const current: unknown[] = Array.isArray(existing[LOCAL_RECORDING_EVENTS_KEY])

@@ -6,10 +6,7 @@ interface RestoreTab {
   id: number;
 }
 
-type RestoreTabListener = (
-  tabId: number,
-  info: { status?: string },
-) => void;
+type RestoreTabListener = (tabId: number, info: { status?: string }) => void;
 
 interface RestoreChromeApi {
   i18n: { getMessage: (key: string) => string };
@@ -32,8 +29,7 @@ interface RestoreChromeApi {
   };
 }
 
-const chrome = (globalThis as typeof globalThis & { chrome: RestoreChromeApi })
-  .chrome;
+const chrome = (globalThis as typeof globalThis & { chrome: RestoreChromeApi }).chrome;
 
 // pass explicitTabId so toasts land on the original tab even after a switch
 const notifyRestoreToast = async (
@@ -57,8 +53,7 @@ const notifyRestoreToast = async (
 
 const notifyRestoreEmpty = (tabId: number | null = null): Promise<void> =>
   notifyRestoreToast(
-    chrome.i18n.getMessage("restoreEmptyToast") ||
-      "No recoverable recording found.",
+    chrome.i18n.getMessage("restoreEmptyToast") || "No recoverable recording found.",
     tabId,
   );
 
@@ -157,10 +152,7 @@ export const restoreRecording = async (): Promise<void> => {
           if (settled) return;
           settled = true;
           chrome.tabs.onUpdated.removeListener(listener);
-          console.warn(
-            "[SayLess][BG] restore-recording (opfs) tab load timed out",
-            editorTabId,
-          );
+          console.warn("[SayLess][BG] restore-recording (opfs) tab load timed out", editorTabId);
           notifyRestoreTimeout(triggerTabId).catch(() => {});
           setTimeout(() => {
             chrome.tabs.remove(editorTabId).catch(() => {});
@@ -191,11 +183,7 @@ export const restoreRecording = async (): Promise<void> => {
   // here was a stale-flag hazard — a crashed WebCodecs session can leave it
   // true while no OPFS file ever made it to disk, which would route to
   // editor.html and find nothing.
-  const {
-    recordingDuration,
-    firstChunkAt,
-    lastChunkAt,
-  } = await chrome.storage.local.get([
+  const { recordingDuration, firstChunkAt, lastChunkAt } = await chrome.storage.local.get([
     "recordingDuration",
     "firstChunkAt",
     "lastChunkAt",
@@ -250,10 +238,7 @@ export const restoreRecording = async (): Promise<void> => {
         if (settled) return;
         settled = true;
         chrome.tabs.onUpdated.removeListener(listener);
-        console.warn(
-          "[SayLess][BG] restore-recording (idb) tab load timed out",
-          editorTabId,
-        );
+        console.warn("[SayLess][BG] restore-recording (idb) tab load timed out", editorTabId);
         notifyRestoreTimeout(triggerTabId).catch(() => {});
         setTimeout(() => {
           chrome.tabs.remove(editorTabId).catch(() => {});

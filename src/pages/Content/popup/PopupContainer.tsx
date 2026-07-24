@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useContext,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useContext, useLayoutEffect, useRef } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 
 import {
@@ -17,11 +11,7 @@ import {
 
 import { Rnd } from "react-rnd";
 
-import {
-  CloseIconPopup,
-  GrabIconPopup,
-  HelpIconPopup,
-} from "../toolbar/components/SVG";
+import { CloseIconPopup, GrabIconPopup, HelpIconPopup } from "../toolbar/components/SVG";
 
 import RecordingTab from "./layout/RecordingTab";
 import VideosTab from "./layout/VideosTab";
@@ -38,9 +28,7 @@ const assertLocalExtensionUrl = (url: string): string => {
   return url;
 };
 
-const PopupContainer = (props: {
-  shadowRef: React.RefObject<HTMLElement | null>;
-}) => {
+const PopupContainer = (props: { shadowRef: React.RefObject<HTMLElement | null> }) => {
   const [contentState, setContentState] = useContext(contentStateContext);
   const contentStateRef = useRef(contentState);
   const [tab, setTab] = useState("record");
@@ -89,11 +77,9 @@ const PopupContainer = (props: {
   }, [tab]);
 
   useLayoutEffect(() => {
-    if (!recordTabRef.current || !videoTabRef.current || !pillRef.current)
-      return;
+    if (!recordTabRef.current || !videoTabRef.current || !pillRef.current) return;
 
-    const tabRef =
-      tab === "record" ? recordTabRef.current : videoTabRef.current;
+    const tabRef = tab === "record" ? recordTabRef.current : videoTabRef.current;
 
     pillRef.current.style.left = `${tabRef.offsetLeft}px`;
     pillRef.current.style.width = `${tabRef.getBoundingClientRect().width}px`;
@@ -266,16 +252,11 @@ const PopupContainer = (props: {
 
   useEffect(() => {
     requestAnimationFrame(() => {
-      const tabRef =
-        contentState.bigTab === "record"
-          ? recordTabRef.current
-          : videoTabRef.current;
+      const tabRef = contentState.bigTab === "record" ? recordTabRef.current : videoTabRef.current;
 
       if (tabRef && pillRef.current) {
         pillRef.current.style.left = `${tabRef.offsetLeft}px`;
-        pillRef.current.style.width = `${
-          tabRef.getBoundingClientRect().width
-        }px`;
+        pillRef.current.style.width = `${tabRef.getBoundingClientRect().width}px`;
       }
     });
   }, [contentState.bigTab, pillRef.current]);
@@ -300,9 +281,7 @@ const PopupContainer = (props: {
           width: "auto",
           height: "auto",
         }}
-        className={
-          "react-draggable" + " " + elastic + " " + shake + " " + dragging
-        }
+        className={"react-draggable" + " " + elastic + " " + shake + " " + dragging}
         enableResizing={false}
         dragHandleClassName="drag-area"
         onDragStart={handleDragStart}
@@ -310,28 +289,11 @@ const PopupContainer = (props: {
         onDragStop={handleDrop}
         ref={DragRef}
       >
-        <div
-          className="popup-container"
-          id="local-tour-popup-container"
-          ref={PopupRef}
-        >
-          <div
-            className={open ? "popup-drag-head" : "popup-drag-head drag-area"}
-          ></div>
-          <div
-            className={
-              open ? "popup-controls open" : "popup-controls drag-area"
-            }
-          >
-            <SettingsMenu
-              shadowRef={props.shadowRef}
-              open={open}
-              setOpen={setOpen}
-            />
-            <div
-              style={{ marginBottom: "-4px", cursor: "pointer" }}
-              onClick={openLocalHelpPage}
-            >
+        <div className="popup-container" id="local-tour-popup-container" ref={PopupRef}>
+          <div className={open ? "popup-drag-head" : "popup-drag-head drag-area"}></div>
+          <div className={open ? "popup-controls open" : "popup-controls drag-area"}>
+            <SettingsMenu shadowRef={props.shadowRef} open={open} setOpen={setOpen} />
+            <div style={{ marginBottom: "-4px", cursor: "pointer" }} onClick={openLocalHelpPage}>
               <HelpIconPopup />
             </div>
             <div
@@ -364,11 +326,7 @@ const PopupContainer = (props: {
           </div>
           <div className="popup-nav"></div>
           <div className="popup-content">
-            <Tabs.Root
-              className="TabsRoot tl"
-              value={tab}
-              onValueChange={onValueChange}
-            >
+            <Tabs.Root className="TabsRoot tl" value={tab} onValueChange={onValueChange}>
               <Tabs.List
                 className="TabsList tl"
                 data-value={tab}
@@ -383,11 +341,7 @@ const PopupContainer = (props: {
                   tabIndex={0}
                 >
                   <div className="TabsTriggerIcon">
-                    <img
-                      src={
-                        tab === "record" ? RecordTabActive : RecordTabInactive
-                      }
-                    />
+                    <img src={tab === "record" ? RecordTabActive : RecordTabInactive} />
                   </div>
                   {chrome.i18n.getMessage("recordTab")}
                 </Tabs.Trigger>
@@ -398,9 +352,7 @@ const PopupContainer = (props: {
                   tabIndex={0}
                 >
                   <div className="TabsTriggerIcon">
-                    <img
-                      src={tab === "videos" ? VideoTabActive : VideoTabInactive}
-                    />
+                    <img src={tab === "videos" ? VideoTabActive : VideoTabInactive} />
                   </div>
                   {chrome.i18n.getMessage("videosTab")}
                 </Tabs.Trigger>

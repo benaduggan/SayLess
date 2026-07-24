@@ -34,16 +34,16 @@ const unknownOptions = args.filter(
   (arg) =>
     arg.startsWith("-") &&
     !arg.startsWith("--output=") &&
-    !["--json", "--require-complete", "--help", "-h"].includes(arg)
+    !["--json", "--require-complete", "--help", "-h"].includes(arg),
 );
 const inputPaths = args.filter((arg) => !arg.startsWith("-"));
 
 const usage = () => {
   console.log(
-    "Usage: npm run qa:release:manual:sidecars -- [--json] [--require-complete] [--output=<report.json>] <vtt-or-json-file> [file ...]"
+    "Usage: npm run qa:release:manual:sidecars -- [--json] [--require-complete] [--output=<report.json>] <vtt-or-json-file> [file ...]",
   );
   console.log(
-    "Validates exported structure only; opening, viewing, and importing remain manual observations."
+    "Validates exported structure only; opening, viewing, and importing remain manual observations.",
   );
 };
 
@@ -57,11 +57,7 @@ if (help) {
   process.exit(0);
 }
 if (unknownOptions.length) {
-  fail(
-    `unknown option${
-      unknownOptions.length === 1 ? "" : "s"
-    }: ${unknownOptions.join(", ")}`
-  );
+  fail(`unknown option${unknownOptions.length === 1 ? "" : "s"}: ${unknownOptions.join(", ")}`);
 }
 if (!inputPaths.length) {
   usage();
@@ -70,31 +66,21 @@ if (!inputPaths.length) {
 
 const safeDisplayPath = (absolutePath) => {
   const rootRelative = relative(ROOT, absolutePath);
-  return rootRelative && !rootRelative.startsWith("..")
-    ? rootRelative
-    : basename(absolutePath);
+  return rootRelative && !rootRelative.startsWith("..") ? rootRelative : basename(absolutePath);
 };
 
-const nonEmptyString = (value) =>
-  typeof value === "string" && value.trim().length > 0;
-const finiteNumber = (value) =>
-  typeof value === "number" && Number.isFinite(value);
+const nonEmptyString = (value) => typeof value === "string" && value.trim().length > 0;
+const finiteNumber = (value) => typeof value === "number" && Number.isFinite(value);
 const positiveNumber = (value) => finiteNumber(value) && value > 0;
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const sidecarSetName = (fileName) =>
-  fileName.replace(
-    /(?:\.sayless-project\.json|\.transcript\.json|\.vtt)$/i,
-    ""
-  );
+  fileName.replace(/(?:\.sayless-project\.json|\.transcript\.json|\.vtt)$/i, "");
 
 const parseVttTimestamp = (value) => {
   const match = /^(\d{2,}):([0-5]\d):([0-5]\d)\.(\d{3})$/.exec(value);
   if (!match) return null;
   return (
-    Number(match[1]) * 3600 +
-    Number(match[2]) * 60 +
-    Number(match[3]) +
-    Number(match[4]) / 1000
+    Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]) + Number(match[4]) / 1000
   );
 };
 
@@ -112,17 +98,11 @@ const probeVtt = ({ fileName, text }) => {
     if (!lines[index].includes("-->")) continue;
     const timing = /^(\S+)\s+-->\s+(\S+)\s*$/.exec(lines[index].trim());
     if (!timing) {
-      throw new Error(
-        `${fileName}: cue ${cues.length + 1} timing is malformed.`
-      );
+      throw new Error(`${fileName}: cue ${cues.length + 1} timing is malformed.`);
     }
     const startSeconds = parseVttTimestamp(timing[1]);
     const endSeconds = parseVttTimestamp(timing[2]);
-    if (
-      startSeconds === null ||
-      endSeconds === null ||
-      endSeconds <= startSeconds
-    ) {
+    if (startSeconds === null || endSeconds === null || endSeconds <= startSeconds) {
       throw new Error(`${fileName}: cue ${cues.length + 1} range is invalid.`);
     }
     const textLines = [];
@@ -177,9 +157,7 @@ const validateCommonJsonSidecar = (value, fileName, expectedKind) => {
     throw new Error(`${fileName}: sidecar kind must be ${expectedKind}.`);
   }
   if (value.schemaVersion !== SIDECAR_SCHEMA_VERSION) {
-    throw new Error(
-      `${fileName}: sidecar schemaVersion must be ${SIDECAR_SCHEMA_VERSION}.`
-    );
+    throw new Error(`${fileName}: sidecar schemaVersion must be ${SIDECAR_SCHEMA_VERSION}.`);
   }
   if (!Number.isSafeInteger(value.exportedAt) || value.exportedAt <= 0) {
     throw new Error(`${fileName}: exportedAt must be a positive integer.`);
@@ -197,9 +175,7 @@ const validateCommonJsonSidecar = (value, fileName, expectedKind) => {
 
 const probeTranscriptJson = ({ fileName, value }) => {
   if (!/\.transcript\.json$/i.test(fileName)) {
-    throw new Error(
-      `${fileName}: transcript export file name must end in .transcript.json.`
-    );
+    throw new Error(`${fileName}: transcript export file name must end in .transcript.json.`);
   }
   validateCommonJsonSidecar(value, fileName, TRANSCRIPT_SIDECAR_KIND);
   validateWords(value.transcript?.words, "transcript.words", fileName);
@@ -212,29 +188,21 @@ const probeTranscriptJson = ({ fileName, value }) => {
     recordingId: value.recording.id,
     transcriptWordCount: value.transcript.words.length,
     timelineAwareWordCount: value.timelineAwareWords.length,
-    language: nonEmptyString(value.transcript.language)
-      ? value.transcript.language
-      : null,
-    providerId: nonEmptyString(value.transcript.providerId)
-      ? value.transcript.providerId
-      : null,
+    language: nonEmptyString(value.transcript.language) ? value.transcript.language : null,
+    providerId: nonEmptyString(value.transcript.providerId) ? value.transcript.providerId : null,
   };
 };
 
 const probeProjectJson = ({ fileName, value }) => {
   if (!/\.sayless-project\.json$/i.test(fileName)) {
-    throw new Error(
-      `${fileName}: project export file name must end in .sayless-project.json.`
-    );
+    throw new Error(`${fileName}: project export file name must end in .sayless-project.json.`);
   }
   validateCommonJsonSidecar(value, fileName, PROJECT_SIDECAR_KIND);
   if (!value.project || typeof value.project !== "object") {
     throw new Error(`${fileName}: project object is required.`);
   }
   if (value.project.version !== PROJECT_SCHEMA_VERSION) {
-    throw new Error(
-      `${fileName}: project.version must be ${PROJECT_SCHEMA_VERSION}.`
-    );
+    throw new Error(`${fileName}: project.version must be ${PROJECT_SCHEMA_VERSION}.`);
   }
   if (!value.project.source || typeof value.project.source !== "object") {
     throw new Error(`${fileName}: project.source is required.`);
@@ -243,9 +211,7 @@ const probeProjectJson = ({ fileName, value }) => {
     throw new Error(`${fileName}: project.source.duration must be positive.`);
   }
   if (value.project.recordingId !== value.recording.id) {
-    throw new Error(
-      `${fileName}: project.recordingId must match recording.id.`
-    );
+    throw new Error(`${fileName}: project.recordingId must match recording.id.`);
   }
   if (value.project.timeline?.version !== 2) {
     throw new Error(`${fileName}: project.timeline.version must be 2.`);
@@ -264,9 +230,7 @@ const probeProjectJson = ({ fileName, value }) => {
       clip.sourceEnd > value.project.source.duration + 0.001 ||
       typeof clip.muted !== "boolean"
     ) {
-      throw new Error(
-        `${fileName}: project.timeline.clips[${index}] is invalid.`
-      );
+      throw new Error(`${fileName}: project.timeline.clips[${index}] is invalid.`);
     }
     if (clipIds.has(clip.id)) {
       throw new Error(`${fileName}: project timeline clip ids must be unique.`);
@@ -275,29 +239,18 @@ const probeProjectJson = ({ fileName, value }) => {
   }
   if (
     !positiveNumber(value.project.timeline?.source?.duration) ||
-    Math.abs(
-      value.project.timeline.source.duration - value.project.source.duration
-    ) > 0.001
+    Math.abs(value.project.timeline.source.duration - value.project.source.duration) > 0.001
   ) {
-    throw new Error(
-      `${fileName}: project timeline/source durations must match.`
-    );
+    throw new Error(`${fileName}: project timeline/source durations must match.`);
   }
-  if (
-    !value.project.exportSettings ||
-    typeof value.project.exportSettings !== "object"
-  ) {
+  if (!value.project.exportSettings || typeof value.project.exportSettings !== "object") {
     throw new Error(`${fileName}: project.exportSettings is required.`);
   }
   if (!EXPORT_FORMATS.has(value.project.exportSettings.format)) {
     throw new Error(`${fileName}: project export format is invalid.`);
   }
   if (value.project.transcript != null) {
-    validateWords(
-      value.project.transcript.words,
-      "project.transcript.words",
-      fileName
-    );
+    validateWords(value.project.transcript.words, "project.transcript.words", fileName);
   }
   return {
     format: "sayless-project-json",
@@ -313,9 +266,7 @@ const probeProjectJson = ({ fileName, value }) => {
     chapterCount: Array.isArray(value.project.chapterMarkers)
       ? value.project.chapterMarkers.length
       : 0,
-    zoomCount: Array.isArray(value.project.zoomKeyframes)
-      ? value.project.zoomKeyframes.length
-      : 0,
+    zoomCount: Array.isArray(value.project.zoomKeyframes) ? value.project.zoomKeyframes.length : 0,
     hasCrop: Boolean(value.project.crop),
     hasProjectAudioReference: Boolean(value.project.audioTrack),
     exportFormat: value.project.exportSettings.format ?? null,
@@ -386,17 +337,13 @@ for (const path of inputPaths) {
 }
 
 const observedFormats = [...new Set(files.map((file) => file.format))].sort();
-const remainingFormats = REQUIRED_FORMATS.filter(
-  (format) => !observedFormats.includes(format)
-);
+const remainingFormats = REQUIRED_FORMATS.filter((format) => !observedFormats.includes(format));
 const sidecarSets = [...new Set(files.map((file) => file.sidecarSetName))]
   .sort((a, b) => a.localeCompare(b))
   .map((name) => {
     const setFiles = files.filter((file) => file.sidecarSetName === name);
     const formats = [...new Set(setFiles.map((file) => file.format))].sort();
-    const setRemainingFormats = REQUIRED_FORMATS.filter(
-      (format) => !formats.includes(format)
-    );
+    const setRemainingFormats = REQUIRED_FORMATS.filter((format) => !formats.includes(format));
     const recordingIds = [
       ...new Set(setFiles.map((file) => file.recordingId).filter(Boolean)),
     ].sort();
@@ -407,16 +354,14 @@ const sidecarSets = [...new Set(files.map((file) => file.sidecarSetName))]
         !setRemainingFormats.length && recordingIdsMatch
           ? "structurally-complete"
           : recordingIdsMatch
-          ? "incomplete"
-          : "recording-id-mismatch",
+            ? "incomplete"
+            : "recording-id-mismatch",
       observedFormats: formats,
       remainingFormats: setRemainingFormats,
       recordingIds,
     };
   });
-const completeSetCount = sidecarSets.filter(
-  (set) => set.status === "structurally-complete"
-).length;
+const completeSetCount = sidecarSets.filter((set) => set.status === "structurally-complete").length;
 const coverage = {
   status: completeSetCount ? "structurally-complete" : "incomplete",
   observedFormats,
@@ -448,11 +393,7 @@ try {
 if (asJson) {
   console.log(JSON.stringify(report, null, 2));
 } else {
-  console.log(
-    `Manual QA sidecar probe: ${files.length} file${
-      files.length === 1 ? "" : "s"
-    }`
-  );
+  console.log(`Manual QA sidecar probe: ${files.length} file${files.length === 1 ? "" : "s"}`);
   for (const file of files) {
     console.log(`\n${file.fileName}`);
     console.log(`  Format: ${file.format}`);
@@ -464,7 +405,7 @@ if (asJson) {
     }
     if (file.format === "sayless-project-json") {
       console.log(
-        `  Project v${file.projectVersion}: ${file.clipCount} clips, ${file.zoomCount} zooms, ${file.chapterCount} chapters`
+        `  Project v${file.projectVersion}: ${file.clipCount} clips, ${file.zoomCount} zooms, ${file.chapterCount} chapters`,
       );
     }
   }
@@ -473,16 +414,13 @@ if (asJson) {
       coverage.totalFormatCount
     } formats, ${coverage.completeSetCount} matched complete set${
       coverage.completeSetCount === 1 ? "" : "s"
-    })`
+    })`,
   );
-  for (const format of coverage.remainingFormats)
-    console.log(`  TODO: ${format}`);
+  for (const format of coverage.remainingFormats) console.log(`  TODO: ${format}`);
   for (const set of coverage.sidecarSets) {
     if (set.status === "structurally-complete") continue;
     console.log(
-      `  SET ${set.name}: ${set.status}; missing ${
-        set.remainingFormats.join(", ") || "none"
-      }`
+      `  SET ${set.name}: ${set.status}; missing ${set.remainingFormats.join(", ") || "none"}`,
     );
   }
   if (report.reportPath) console.log(`  Report: ${report.reportPath}`);
@@ -491,7 +429,7 @@ if (asJson) {
 
 if (requireComplete && coverage.status !== "structurally-complete") {
   console.error(
-    "MANUAL QA SIDECAR PROBE FAIL: no filename-matched structurally complete sidecar set was found."
+    "MANUAL QA SIDECAR PROBE FAIL: no filename-matched structurally complete sidecar set was found.",
   );
   process.exitCode = 1;
 }

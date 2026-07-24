@@ -1,7 +1,4 @@
-import {
-  registerMessage,
-  messageRouter,
-} from "../../../../messaging/messageRouter";
+import { registerMessage, messageRouter } from "../../../../messaging/messageRouter";
 import {
   LOCAL_PLAYBACK_MAX_BYTES,
   parseLocalPlaybackChunk,
@@ -56,9 +53,7 @@ const finiteNumber = (value: unknown, fallback = 0): number => {
   return Number.isFinite(number) ? number : fallback;
 };
 
-const parseLocalPlaybackSummary = (
-  value: unknown,
-): LocalPlaybackSummary | null => {
+const parseLocalPlaybackSummary = (value: unknown): LocalPlaybackSummary | null => {
   if (!isRecord(value)) return null;
   const offerId = nonEmptyString(value.offerId);
   if (value.available !== true || value.trackType !== "screen" || !offerId) {
@@ -93,23 +88,18 @@ export const setupHandlers = () => {
 
   const getProjectMessageTargetOrigin = () => {
     if (!TRUSTED_APP_ORIGIN) return null;
-    return window.location.origin === TRUSTED_APP_ORIGIN
-      ? TRUSTED_APP_ORIGIN
-      : null;
+    return window.location.origin === TRUSTED_APP_ORIGIN ? TRUSTED_APP_ORIGIN : null;
   };
 
   const postProjectHandoff = (payload: UnknownRecord) => {
     const targetOrigin = getProjectMessageTargetOrigin();
     if (!targetOrigin) {
-      console.warn(
-        "[SayLess][Content] Ignoring project handoff on untrusted origin",
-        {
-          source: nonEmptyString(payload.source) || "unknown",
-          pageOrigin: window.location.origin,
-          trustedOrigin: TRUSTED_APP_ORIGIN,
-          projectId: nonEmptyString(payload.projectId),
-        }
-      );
+      console.warn("[SayLess][Content] Ignoring project handoff on untrusted origin", {
+        source: nonEmptyString(payload.source) || "unknown",
+        pageOrigin: window.location.origin,
+        trustedOrigin: TRUSTED_APP_ORIGIN,
+        projectId: nonEmptyString(payload.projectId),
+      });
       return false;
     }
 
@@ -122,7 +112,7 @@ export const setupHandlers = () => {
           replay: true,
           replayAt: Date.now(),
         },
-        targetOrigin
+        targetOrigin,
       );
     }, 250);
     return true;
@@ -230,22 +220,20 @@ export const setupHandlers = () => {
     projectId,
     sceneId,
     offer,
-  }: { projectId: string; sceneId: string | null; offer: LocalPlaybackSummary }) => {
+  }: {
+    projectId: string;
+    sceneId: string | null;
+    offer: LocalPlaybackSummary;
+  }) => {
     if (!offer?.offerId) {
       throw new Error("local-playback-offer-missing");
     }
 
-    if (
-      activeLocalPlaybackSource?.offerId === offer.offerId &&
-      activeLocalPlaybackSource?.url
-    ) {
+    if (activeLocalPlaybackSource?.offerId === offer.offerId && activeLocalPlaybackSource?.url) {
       return activeLocalPlaybackSource;
     }
 
-    if (
-      localPlaybackBuildPromise &&
-      localPlaybackBuildOfferId === offer.offerId
-    ) {
+    if (localPlaybackBuildPromise && localPlaybackBuildOfferId === offer.offerId) {
       return localPlaybackBuildPromise;
     }
 
@@ -480,7 +468,7 @@ export const setupHandlers = () => {
             requestId,
             payload,
           },
-          TRUSTED_APP_ORIGIN
+          TRUSTED_APP_ORIGIN,
         );
       };
       // Repost on a 500ms cadence in case the editor app's listener
@@ -547,8 +535,8 @@ export const setupHandlers = () => {
       showExtension: !prev.showExtension,
       hasOpenedBefore: true,
       showPopup: true,
-      ...(storageReconcile || {}),
-      ...(multiReconcile || {}),
+      ...storageReconcile,
+      ...multiReconcile,
     }));
     setTimer(0);
     updateFromStorage();
@@ -568,9 +556,7 @@ export const setupHandlers = () => {
 
     // BG is source of truth; reading React default would race the user
     // setting and produce double beeps.
-    const { countdown: storedCountdown } = await chrome.storage.local.get([
-      "countdown",
-    ]);
+    const { countdown: storedCountdown } = await chrome.storage.local.get(["countdown"]);
     const state = getState();
 
     if (storedCountdown) {
@@ -585,9 +571,7 @@ export const setupHandlers = () => {
         // into the captured frame for region/desktop (stream already live).
         countdownEverShown: true,
       }));
-      chrome.runtime
-        .sendMessage({ type: "diag-countdown-started" })
-        .catch(() => {});
+      chrome.runtime.sendMessage({ type: "diag-countdown-started" }).catch(() => {});
     } else {
       // countdownCancelled is cleared in startStreaming, so not stale here.
       state.startRecordingAfterCountdown();
@@ -655,8 +639,7 @@ export const setupHandlers = () => {
   registerMessage("toggle-cursor-mode", () => {
     if (contentStateRef.current.recordingType === "camera") return;
     const state = getState();
-    const nextMode =
-      contentStateRef.current.cursorMode === "none" ? "cursor" : "";
+    const nextMode = contentStateRef.current.cursorMode === "none" ? "cursor" : "";
     if (state?.setToolbarMode) {
       state.setToolbarMode(nextMode);
     } else {
@@ -671,21 +654,17 @@ export const setupHandlers = () => {
     const state = getState();
 
     // SW restart can leave stale state; double-check storage before reset.
-    const { recording, recorderSession, pendingRecording } =
-      await chrome.storage.local.get([
-        "recording",
-        "recorderSession",
-        "pendingRecording",
-      ]);
+    const { recording, recorderSession, pendingRecording } = await chrome.storage.local.get([
+      "recording",
+      "recorderSession",
+      "pendingRecording",
+    ]);
 
     const isActuallyRecording =
-      recording ||
-      (isRecord(recorderSession) && recorderSession.status === "recording");
+      recording || (isRecord(recorderSession) && recorderSession.status === "recording");
 
     if (isActuallyRecording || pendingRecording) {
-      console.warn(
-        "Ignoring stale recording-ended message - recording still active"
-      );
+      console.warn("Ignoring stale recording-ended message - recording still active");
       return;
     }
 
@@ -724,7 +703,7 @@ export const setupHandlers = () => {
         "Export diagnostics",
         () => {
           chrome.runtime.sendMessage({ type: "export-finalize-diagnostics" });
-        }
+        },
       );
     }
   });
@@ -768,19 +747,14 @@ export const setupHandlers = () => {
             errorCode: "REC_START_FAILED",
             zipBundled: true,
           });
-        }
+        },
       );
     }
   });
 
   registerMessage("start-stream", () => {
     const state = getState();
-    if (
-      state.preparingRecording ||
-      state.pendingRecording ||
-      state.recording ||
-      state.pipEnded
-    ) {
+    if (state.preparingRecording || state.pendingRecording || state.recording || state.pipEnded) {
       console.warn("[SayLess][Content] start-stream BLOCKED by guard state:", {
         preparingRecording: state.preparingRecording,
         pendingRecording: state.pendingRecording,
@@ -804,11 +778,8 @@ export const setupHandlers = () => {
   });
 
   registerMessage("commands", (message) => {
-    const commands = Array.isArray(message.commands)
-      ? message.commands.filter(isRecord)
-      : [];
-    const findCommand = (name: string) =>
-      commands.find((command) => command.name === name);
+    const commands = Array.isArray(message.commands) ? message.commands.filter(isRecord) : [];
+    const findCommand = (name: string) => commands.find((command) => command.name === name);
     const shortcut = (command: UnknownRecord | undefined): string =>
       typeof command?.shortcut === "string" ? command.shortcut : "";
 
@@ -915,7 +886,7 @@ export const setupHandlers = () => {
           source: "stream-error",
           zipBundled: true,
         });
-      }
+      },
     );
   });
 
@@ -925,7 +896,7 @@ export const setupHandlers = () => {
       state.openToast(
         message.message || chrome.i18n.getMessage("streamEndedWarningToast"),
         () => {},
-        10000
+        10000,
       );
     }
   });
@@ -942,12 +913,10 @@ export const setupHandlers = () => {
     const state = getState();
     const isMac = message?.variant === "mac";
     const title = chrome.i18n.getMessage(
-      isMac ? "recordAudioWarningMacTitle" : "recordAudioWarningOtherTitle"
+      isMac ? "recordAudioWarningMacTitle" : "recordAudioWarningOtherTitle",
     );
     const description = chrome.i18n.getMessage(
-      isMac
-        ? "recordAudioWarningMacDescription"
-        : "recordAudioWarningOtherDescription"
+      isMac ? "recordAudioWarningMacDescription" : "recordAudioWarningOtherDescription",
     );
     if (!description) return;
     const timeout = message?.timeout || 10000;
@@ -1070,7 +1039,7 @@ export const setupHandlers = () => {
           errorCode: "FAST_RECORDER_HARD_FAIL",
           zipBundled: true,
         });
-      }
+      },
     );
   });
 
@@ -1161,11 +1130,7 @@ export const setupHandlers = () => {
     // Toast on top; auto-dismisses in 5s.
     const state = getState();
     if (state.openToast) {
-      state.openToast(
-        chrome.i18n.getMessage("addedToMultiToast"),
-        () => {},
-        5000
-      );
+      state.openToast(chrome.i18n.getMessage("addedToMultiToast"), () => {}, 5000);
     }
   });
 
@@ -1186,11 +1151,7 @@ export const setupHandlers = () => {
       const state = getState();
       if (state.openToast) {
         // Explicit 5s lifetime; see addedToMultiToast above.
-        state.openToast(
-          chrome.i18n.getMessage("readyRecordSceneToast"),
-          () => {},
-          5000
-        );
+        state.openToast(chrome.i18n.getMessage("readyRecordSceneToast"), () => {}, 5000);
       }
     }, 1000);
   });
@@ -1205,11 +1166,7 @@ export const setupHandlers = () => {
       }));
 
       if (state.openToast) {
-        state.openToast(
-          chrome.i18n.getMessage("reachingRecordingLimitToast"),
-          () => {},
-          5000
-        );
+        state.openToast(chrome.i18n.getMessage("reachingRecordingLimitToast"), () => {}, 5000);
       }
     }
   });
@@ -1222,11 +1179,7 @@ export const setupHandlers = () => {
       }));
 
       if (state.openToast) {
-        state.openToast(
-          chrome.i18n.getMessage("recordingLimitReachedToast"),
-          () => {},
-          5000
-        );
+        state.openToast(chrome.i18n.getMessage("recordingLimitReachedToast"), () => {}, 5000);
       }
     }
   });
@@ -1261,7 +1214,7 @@ export const setupHandlers = () => {
         multiMode: message.multiMode,
         projectId: message.projectId || null,
       },
-      "*"
+      "*",
     );
 
     if (!message.multiMode) {
@@ -1277,9 +1230,7 @@ export const setupHandlers = () => {
   registerMessage("update-project-ready", (message, sender) => {
     const projectId = nonEmptyString(message.projectId);
     if (!projectId) {
-      console.warn(
-        "[SayLess][Content] Ignoring update-project-ready without projectId"
-      );
+      console.warn("[SayLess][Content] Ignoring update-project-ready without projectId");
       return;
     }
 
@@ -1289,9 +1240,7 @@ export const setupHandlers = () => {
     const localPlayback = parseLocalPlaybackSummary(message.localPlayback);
     latestLocalPlaybackOffer = localPlayback;
     latestLocalPlaybackProjectId = latestLocalPlaybackOffer ? projectId : null;
-    latestLocalPlaybackSceneId = latestLocalPlaybackOffer
-      ? nonEmptyString(message.sceneId)
-      : null;
+    latestLocalPlaybackSceneId = latestLocalPlaybackOffer ? nonEmptyString(message.sceneId) : null;
 
     const posted = postProjectHandoff({
       source: "update-project-ready",
@@ -1299,30 +1248,29 @@ export const setupHandlers = () => {
       newProject: message.newProject,
       sceneId: message.sceneId,
       projectId,
-      localPlayback:
-        localPlayback
-          ? {
-              ...localPlayback,
-              ready:
-                activeLocalPlaybackSource?.offerId === localPlayback.offerId &&
-                Boolean(activeLocalPlaybackSource?.url),
-              url:
-                activeLocalPlaybackSource?.offerId === localPlayback.offerId
-                  ? activeLocalPlaybackSource.url
-                  : null,
-              mimeType:
-                activeLocalPlaybackSource?.offerId === localPlayback.offerId
-                  ? activeLocalPlaybackSource.mimeType || "video/webm"
-                  : null,
-              localBytes:
-                activeLocalPlaybackSource?.offerId === localPlayback.offerId
-                  ? activeLocalPlaybackSource.size || null
-                  : null,
-            }
-          : {
-              available: false,
-              trackType: "screen",
-            },
+      localPlayback: localPlayback
+        ? {
+            ...localPlayback,
+            ready:
+              activeLocalPlaybackSource?.offerId === localPlayback.offerId &&
+              Boolean(activeLocalPlaybackSource?.url),
+            url:
+              activeLocalPlaybackSource?.offerId === localPlayback.offerId
+                ? activeLocalPlaybackSource.url
+                : null,
+            mimeType:
+              activeLocalPlaybackSource?.offerId === localPlayback.offerId
+                ? activeLocalPlaybackSource.mimeType || "video/webm"
+                : null,
+            localBytes:
+              activeLocalPlaybackSource?.offerId === localPlayback.offerId
+                ? activeLocalPlaybackSource.size || null
+                : null,
+          }
+        : {
+            available: false,
+            trackType: "screen",
+          },
       handoffAt,
       handoffId,
       handoffSeq: projectReadySeq,

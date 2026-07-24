@@ -30,13 +30,9 @@ export const sendSystemAudioGuidanceToast = (): void => {
     ({ forceDisplayMediaScreen, macSystemAudioCapture }) => {
       const useDisplayMedia = shouldUseDisplayMediaForScreen({
         forceDisplayMediaScreen:
-          typeof forceDisplayMediaScreen === "boolean"
-            ? forceDisplayMediaScreen
-            : undefined,
+          typeof forceDisplayMediaScreen === "boolean" ? forceDisplayMediaScreen : undefined,
         macSystemAudioCapture:
-          typeof macSystemAudioCapture === "boolean"
-            ? macSystemAudioCapture
-            : undefined,
+          typeof macSystemAudioCapture === "boolean" ? macSystemAudioCapture : undefined,
       });
       const variant = isMac && !useDisplayMedia ? "mac" : "other";
       try {

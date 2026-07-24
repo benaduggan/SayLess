@@ -1,10 +1,4 @@
-import React, {
-  useEffect,
-  useContext,
-  useRef,
-  useState,
-  useLayoutEffect,
-} from "react";
+import React, { useEffect, useContext, useRef, useState, useLayoutEffect } from "react";
 
 import { Rnd } from "react-rnd";
 
@@ -13,9 +7,7 @@ import { contentStateContext } from "../../context/ContentState";
 import CameraToolbar from "./CameraToolbar";
 import ResizeHandle from "../components/ResizeHandle";
 
-const CameraWrap = (props: {
-  shadowRef: React.RefObject<HTMLElement | null>;
-}) => {
+const CameraWrap = (props: { shadowRef: React.RefObject<HTMLElement | null> }) => {
   const [contentState, setContentState] = React.useContext(contentStateContext);
   const cameraRef = React.useRef<Rnd | null>(null);
   const [cx, setCx] = useState(200);
@@ -25,9 +17,7 @@ const CameraWrap = (props: {
 
   const updateUIPosition = () => {
     const ref =
-      props.shadowRef.current!.shadowRoot!.querySelector<HTMLElement>(
-        ".camera-draggable"
-      )!;
+      props.shadowRef.current!.shadowRoot!.querySelector<HTMLElement>(".camera-draggable")!;
     // Cached: fires at ~60Hz during resize, was 12 reflows/call.
     const refRect = ref.getBoundingClientRect();
     const circleCenterX = refRect.left + refRect.width / 2;
@@ -36,17 +26,13 @@ const CameraWrap = (props: {
     const squareBottomRightX = refRect.left + refRect.width;
     const squareBottomRightY = refRect.top + refRect.height;
     const handle =
-      props.shadowRef.current!.shadowRoot!.querySelector<HTMLElement>(
-        ".camera-resize"
-      )!;
+      props.shadowRef.current!.shadowRoot!.querySelector<HTMLElement>(".camera-resize")!;
     const toolbar =
-      props.shadowRef.current!.shadowRoot!.querySelector<HTMLElement>(
-        ".camera-toolbar"
-      )!;
+      props.shadowRef.current!.shadowRoot!.querySelector<HTMLElement>(".camera-toolbar")!;
 
     const c = Math.sqrt(
       Math.pow(circleCenterX - squareBottomRightX, 2) +
-        Math.pow(circleCenterY - squareBottomRightY, 2)
+        Math.pow(circleCenterY - squareBottomRightY, 2),
     );
     const a = circleRadius / Math.sqrt(2);
     const r = (c + Math.sqrt(c ** 2 + 16 * a ** 2)) / 4;
@@ -64,9 +50,7 @@ const CameraWrap = (props: {
 
   const saveDimensions = () => {
     const ref =
-      props.shadowRef.current!.shadowRoot!.querySelector<HTMLElement>(
-        ".camera-draggable"
-      )!;
+      props.shadowRef.current!.shadowRoot!.querySelector<HTMLElement>(".camera-draggable")!;
     const rect = ref.getBoundingClientRect();
     const dims = { size: rect.width, x: rect.x, y: rect.y };
 
@@ -90,9 +74,7 @@ const CameraWrap = (props: {
   useLayoutEffect(() => {
     const updateCameraPosition = () => {
       const ref =
-        props.shadowRef.current?.shadowRoot?.querySelector<HTMLElement>(
-          ".camera-draggable"
-        );
+        props.shadowRef.current?.shadowRoot?.querySelector<HTMLElement>(".camera-draggable");
       if (!ref) return;
       let xpos = cameraRef.current!.getDraggablePosition().x;
       let ypos = cameraRef.current!.getDraggablePosition().y;
@@ -137,20 +119,20 @@ const CameraWrap = (props: {
           !contentState.recording && !contentState.pendingRecording
             ? "visible"
             : (!contentState.pipEnded &&
-                contentState.surface === "monitor" &&
-                (contentState.pendingRecording || contentState.recording)) ||
-              contentState.onboarding
-            ? "hidden"
-            : "visible",
+                  contentState.surface === "monitor" &&
+                  (contentState.pendingRecording || contentState.recording)) ||
+                contentState.onboarding
+              ? "hidden"
+              : "visible",
         pointerEvents:
           !contentState.recording && !contentState.pendingRecording
             ? "auto"
             : (!contentState.pipEnded &&
-                contentState.surface === "monitor" &&
-                (contentState.pendingRecording || contentState.recording)) ||
-              contentState.onboarding
-            ? "none"
-            : "auto",
+                  contentState.surface === "monitor" &&
+                  (contentState.pendingRecording || contentState.recording)) ||
+                contentState.onboarding
+              ? "none"
+              : "auto",
       }}
     >
       <Rnd
@@ -201,9 +183,7 @@ const CameraWrap = (props: {
             border: "none",
             pointerEvents: "none",
           }}
-          className={`screenity-iframe${
-            contentState.cameraFlipped ? " camera-flipped" : ""
-          }`}
+          className={`screenity-iframe${contentState.cameraFlipped ? " camera-flipped" : ""}`}
           src={chrome.runtime.getURL("camera.html")}
           allow="camera; microphone"
         ></iframe>

@@ -70,105 +70,95 @@ export const handleChunks = async (
   // outer try/finally guarantees lock release even if the storage read throws
   let mainCompleted = false;
   try {
-  const { sandboxTab, bannerSupport } = await chromeApi().storage.local.get([
-    "sandboxTab",
-    "bannerSupport",
-  ]);
-
-  if (DEBUG_POSTSTOP)
-    console.debug("[SayLess][BG] handleChunks called", {
-      chunksLength: chunks?.length,
-      sandboxTab,
-      override,
-    });
-
-  // legacy flag kept in sync for callers still reading it
-  await chromeApi().storage.local.set({ sendingChunks: true });
-
-  try {
-    if (!Array.isArray(chunks) || chunks.length === 0) {
-      if (DEBUG_POSTSTOP)
-        console.debug("[SayLess][BG] no chunks to send; deferring delivery");
-      return;
-    }
-
-    chunks.sort((a, b) => {
-      if (a.index == null) return -1;
-      if (b.index == null) return 1;
-      return a.index - b.index;
-    });
-
-    const targetTab = target?.tabId || Number(sandboxTab) || null;
-    const targetFrame = target?.frameId ?? null;
+    const { sandboxTab, bannerSupport } = await chromeApi().storage.local.get([
+      "sandboxTab",
+      "bannerSupport",
+    ]);
 
     if (DEBUG_POSTSTOP)
-      console.debug("[SayLess][BG] sending chunk-count", {
-        count: chunks.length,
-        targetTab,
-        targetFrame,
+      console.debug("[SayLess][BG] handleChunks called", {
+        chunksLength: chunks?.length,
+        sandboxTab,
         override,
       });
 
-    const sendToTarget = (msg: Record<string, unknown>): Promise<unknown> =>
-      new Promise<unknown>((resolve, reject) => {
-        try {
-          if (targetTab == null) return reject(new Error("no-target-tab"));
-          if (typeof targetFrame === "number") {
-            chromeApi().tabs.sendMessage(
-              targetTab,
-              msg,
-              { frameId: targetFrame },
-              (resp) => {
+    // legacy flag kept in sync for callers still reading it
+    await chromeApi().storage.local.set({ sendingChunks: true });
+
+    try {
+      if (!Array.isArray(chunks) || chunks.length === 0) {
+        if (DEBUG_POSTSTOP) console.debug("[SayLess][BG] no chunks to send; deferring delivery");
+        return;
+      }
+
+      chunks.sort((a, b) => {
+        if (a.index == null) return -1;
+        if (b.index == null) return 1;
+        return a.index - b.index;
+      });
+
+      const targetTab = target?.tabId || Number(sandboxTab) || null;
+      const targetFrame = target?.frameId ?? null;
+
+      if (DEBUG_POSTSTOP)
+        console.debug("[SayLess][BG] sending chunk-count", {
+          count: chunks.length,
+          targetTab,
+          targetFrame,
+          override,
+        });
+
+      const sendToTarget = (msg: Record<string, unknown>): Promise<unknown> =>
+        new Promise<unknown>((resolve, reject) => {
+          try {
+            if (targetTab == null) return reject(new Error("no-target-tab"));
+            if (typeof targetFrame === "number") {
+              chromeApi().tabs.sendMessage(targetTab, msg, { frameId: targetFrame }, (resp) => {
                 if (chromeApi().runtime.lastError)
                   return reject(chromeApi().runtime.lastError?.message);
                 resolve(resp);
-              },
-            );
-          } else {
-            sendMessageTab(targetTab, msg, null).then(resolve).catch(reject);
+              });
+            } else {
+              sendMessageTab(targetTab, msg, null).then(resolve).catch(reject);
+            }
+          } catch (err) {
+            reject(err);
           }
-        } catch (err) {
-          reject(err);
-        }
-      });
+        });
 
-    try {
-      await sendToTarget({
-        type: "chunk-count",
-        count: chunks.length,
-        override,
-      });
-    } catch (err) {
-      if (DEBUG_POSTSTOP)
-        console.warn("[SayLess][BG] chunk-count message failed", err);
-    }
-
-    if (bannerSupport) {
       try {
-        await sendToTarget({ type: "banner-support" });
+        await sendToTarget({
+          type: "chunk-count",
+          count: chunks.length,
+          override,
+        });
       } catch (err) {
-        if (DEBUG_POSTSTOP)
-          console.warn("[SayLess][BG] banner-support message failed", err);
+        if (DEBUG_POSTSTOP) console.warn("[SayLess][BG] chunk-count message failed", err);
       }
-    }
 
-    // editor reads chunks directly from IDB/OPFS via chooseReader; make-video-tab
-    // just triggers that read (old per-chunk relay push removed)
-    if (DEBUG_POSTSTOP)
-      console.debug(
-        "[SayLess][BG] instructing sandbox to make video tab",
-        { sandboxTab: targetTab },
-      );
-    try {
-      await sendToTarget({ type: "make-video-tab", override });
-    } catch (err) {
+      if (bannerSupport) {
+        try {
+          await sendToTarget({ type: "banner-support" });
+        } catch (err) {
+          if (DEBUG_POSTSTOP) console.warn("[SayLess][BG] banner-support message failed", err);
+        }
+      }
+
+      // editor reads chunks directly from IDB/OPFS via chooseReader; make-video-tab
+      // just triggers that read (old per-chunk relay push removed)
       if (DEBUG_POSTSTOP)
-        console.warn("[SayLess][BG] make-video-tab message failed", err);
+        console.debug("[SayLess][BG] instructing sandbox to make video tab", {
+          sandboxTab: targetTab,
+        });
+      try {
+        await sendToTarget({ type: "make-video-tab", override });
+      } catch (err) {
+        if (DEBUG_POSTSTOP) console.warn("[SayLess][BG] make-video-tab message failed", err);
+      }
+    } finally {
+      await chromeApi().storage.local.set({ sendingChunks: false });
+      mainCompleted = true;
     }
-  } finally {
-    await chromeApi().storage.local.set({ sendingChunks: false });
-    mainCompleted = true;
-  }
   } finally {
     void mainCompleted;
     if (releaseChain) releaseChain();

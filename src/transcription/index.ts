@@ -38,9 +38,7 @@ export {
  * @param {import("./config.ts").TranscriptionConfig} [config]
  * @returns {Promise<{ provider: import("./types.ts").TranscriptionProvider, options: object, config: import("./config.ts").TranscriptionConfig }>}
  */
-export async function getActiveProvider(
-  config?: TranscriptionConfig,
-): Promise<{
+export async function getActiveProvider(config?: TranscriptionConfig): Promise<{
   provider: TranscriptionProvider;
   options: TranscriptionProviderOptions;
   config: TranscriptionConfig;
@@ -55,9 +53,7 @@ export async function getActiveProvider(
   }
   if (cfg.privacyMode && provider.requiresNetwork) {
     throw classifyTranscriptionError(
-      new Error(
-        `transcription: provider "${provider.id}" needs network but privacyMode is on`,
-      ),
+      new Error(`transcription: provider "${provider.id}" needs network but privacyMode is on`),
       { phase: "provider" },
     );
   }

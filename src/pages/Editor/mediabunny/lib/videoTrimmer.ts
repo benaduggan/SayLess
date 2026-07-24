@@ -57,8 +57,7 @@ export class VideoTrimmer {
 
     const inputFormat = await input.getFormat();
     const targetFormat =
-      outputFormat ||
-      (inputFormat.name.toLowerCase().includes("mp4") ? "mp4" : "webm");
+      outputFormat || (inputFormat.name.toLowerCase().includes("mp4") ? "mp4" : "webm");
 
     const videoTrack = await input.getPrimaryVideoTrack();
     if (!videoTrack) throw new Error("Trimming failed - no video track");
@@ -69,9 +68,7 @@ export class VideoTrimmer {
     const startKey = await videoSink.getKeyPacket(startTime);
     if (!startKey) throw new Error("Trimming failed - no key packet at start");
     const baseTime = startKey.timestamp;
-    const endVideoPacket = Number.isFinite(endTime)
-      ? await videoSink.getPacket(endTime)
-      : null;
+    const endVideoPacket = Number.isFinite(endTime) ? await videoSink.getPacket(endTime) : null;
 
     const dir = await navigator.storage.getDirectory();
     const outFileName = `${TEMP_FILE_PREFIX}${Date.now()}-${Math.random()
@@ -81,9 +78,7 @@ export class VideoTrimmer {
     const writable = await (outHandle as any).createWritable();
 
     const format: OutputFormat =
-      targetFormat === "mp4"
-        ? new Mp4OutputFormat({ fastStart: false })
-        : new WebMOutputFormat();
+      targetFormat === "mp4" ? new Mp4OutputFormat({ fastStart: false }) : new WebMOutputFormat();
 
     const target = new StreamTarget(writable, { chunked: true });
     const output = new Output({ format, target });
@@ -135,9 +130,7 @@ export class VideoTrimmer {
       const audioSink = new EncodedPacketSink(audioTrack);
       const startA = await audioSink.getPacket(baseTime);
       if (!startA) return;
-      const endA = Number.isFinite(endTime)
-        ? await audioSink.getPacket(endTime)
-        : null;
+      const endA = Number.isFinite(endTime) ? await audioSink.getPacket(endTime) : null;
       let isFirst = true;
       const iter = endA ? audioSink.packets(startA, endA) : audioSink.packets(startA);
       for await (const packet of iter) {
@@ -158,8 +151,12 @@ export class VideoTrimmer {
       await output.finalize();
       // finalize() owns the writable lock; don't close here.
     } catch (err) {
-      try { await writable.abort(); } catch {}
-      try { await dir.removeEntry(outFileName); } catch {}
+      try {
+        await writable.abort();
+      } catch {}
+      try {
+        await dir.removeEntry(outFileName);
+      } catch {}
       throw err;
     }
 
@@ -167,7 +164,9 @@ export class VideoTrimmer {
     // Read into ArrayBuffer so deleting the OPFS entry doesn't invalidate
     // the returned Blob (some impls back File lazily by the handle).
     const bytes = await file.arrayBuffer();
-    try { await dir.removeEntry(outFileName); } catch {}
+    try {
+      await dir.removeEntry(outFileName);
+    } catch {}
     return new Blob([bytes], {
       type: targetFormat === "mp4" ? "video/mp4" : "video/webm",
     });
@@ -212,7 +211,7 @@ export async function trimVideo(
   blob: Blob,
   startTime: number,
   endTime: number,
-  options?: Omit<TrimOptions, "startTime" | "endTime">
+  options?: Omit<TrimOptions, "startTime" | "endTime">,
 ): Promise<Blob> {
   return videoTrimmer.trim(blob, { startTime, endTime, ...options });
 }

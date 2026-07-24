@@ -52,9 +52,7 @@ export function attachTimelinePreview(
 
     // Resync after a user scrub: jump idx to whichever clip holds `t`.
     if (t < clip.sourceStart - 0.4 || t >= clip.sourceEnd + 0.4) {
-      const j = clips.findIndex(
-        (c) => t >= c.sourceStart - EPS && t < c.sourceEnd + EPS,
-      );
+      const j = clips.findIndex((c) => t >= c.sourceStart - EPS && t < c.sourceEnd + EPS);
       if (j >= 0) {
         idx = j;
         clip = clips[j];

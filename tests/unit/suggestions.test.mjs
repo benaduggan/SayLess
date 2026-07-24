@@ -40,9 +40,7 @@ test("buildTranscriptSuggestions cuts only the duplicate repeated word", () => {
     ]),
   );
 
-  const repeat = suggestions.find(
-    (suggestion) => suggestion.kind === "repeated-word",
-  );
+  const repeat = suggestions.find((suggestion) => suggestion.kind === "repeated-word");
   assert.equal(repeat.label, "can");
   assert.equal(repeat.fromIndex, 2);
   assert.equal(repeat.toIndex, 2);
@@ -66,11 +64,7 @@ test("buildTranscriptSuggestions detects long pauses between words", () => {
 
 test("buildAudioSilenceSuggestions detects quiet waveform ranges", () => {
   const sampleRate = 10;
-  const samples = Float32Array.from([
-    0.2, 0.2, 0.2,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0.2, 0.2,
-  ]);
+  const samples = Float32Array.from([0.2, 0.2, 0.2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.2, 0.2]);
 
   const suggestions = buildAudioSilenceSuggestions(
     { sampleRate, channels: [samples] },

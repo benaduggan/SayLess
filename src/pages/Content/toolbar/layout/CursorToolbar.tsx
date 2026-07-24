@@ -24,7 +24,7 @@ const CursorToolbar = (props: {
 }) => {
   const [contentState, setContentState] = useContext(contentStateContext);
   const lastClickedEffectRef = useRef<CursorMode>(
-    (contentState.cursorMode as CursorMode) || "none"
+    (contentState.cursorMode as CursorMode) || "none",
   );
 
   useEffect(() => {
@@ -33,10 +33,7 @@ const CursorToolbar = (props: {
     }
   }, [contentState.cursorMode]);
 
-  const deriveCursorMode = (
-    effects: CursorEffect[],
-    fallback: CursorMode
-  ): CursorMode => {
+  const deriveCursorMode = (effects: CursorEffect[], fallback: CursorMode): CursorMode => {
     if (effects.length === 0) return "none";
     if (effects.length === 1) return effects[0];
     if (fallback !== "none" && effects.includes(fallback)) return fallback;
@@ -61,9 +58,7 @@ const CursorToolbar = (props: {
       return;
     }
 
-    const currentEffects: CursorEffect[] = Array.isArray(
-      contentState.cursorEffects
-    )
+    const currentEffects: CursorEffect[] = Array.isArray(contentState.cursorEffects)
       ? contentState.cursorEffects
       : [];
 
@@ -79,10 +74,7 @@ const CursorToolbar = (props: {
     }
 
     lastClickedEffectRef.current = effect;
-    const nextMode = deriveCursorMode(
-      nextEffects,
-      lastClickedEffectRef.current
-    );
+    const nextMode = deriveCursorMode(nextEffects, lastClickedEffectRef.current);
 
     setContentState((prev) => ({
       ...prev,
@@ -98,14 +90,11 @@ const CursorToolbar = (props: {
     });
   };
 
-  const handleClick =
-    (effect: CursorMode) => (event: React.MouseEvent<HTMLButtonElement>) => {
-      applyCursorSelection(effect, Boolean(event.shiftKey));
-    };
+  const handleClick = (effect: CursorMode) => (event: React.MouseEvent<HTMLButtonElement>) => {
+    applyCursorSelection(effect, Boolean(event.shiftKey));
+  };
 
-  const cursorEffects: CursorEffect[] = Array.isArray(
-    contentState.cursorEffects
-  )
+  const cursorEffects: CursorEffect[] = Array.isArray(contentState.cursorEffects)
     ? contentState.cursorEffects
     : [];
   const isDefault = cursorEffects.length === 0;
@@ -138,10 +127,7 @@ const CursorToolbar = (props: {
           </div>
         </TooltipWrap>
         <Toolbar.Separator className="ToolbarSeparator" />
-        <TooltipWrap
-          content={chrome.i18n.getMessage("highlightClicksTooltip")}
-          shortcut="1"
-        >
+        <TooltipWrap content={chrome.i18n.getMessage("highlightClicksTooltip")} shortcut="1">
           <div className="ToolbarToggleWrap">
             <Toolbar.ToggleItem
               className="ToolbarToggleItem"
@@ -153,10 +139,7 @@ const CursorToolbar = (props: {
             </Toolbar.ToggleItem>
           </div>
         </TooltipWrap>
-        <TooltipWrap
-          content={chrome.i18n.getMessage("highlightCursorTooltip")}
-          shortcut="2"
-        >
+        <TooltipWrap content={chrome.i18n.getMessage("highlightCursorTooltip")} shortcut="2">
           <div className="ToolbarToggleWrap">
             <Toolbar.ToggleItem
               className="ToolbarToggleItem"
@@ -168,10 +151,7 @@ const CursorToolbar = (props: {
             </Toolbar.ToggleItem>
           </div>
         </TooltipWrap>
-        <TooltipWrap
-          content={chrome.i18n.getMessage("spotlightCursorTooltip")}
-          shortcut="3"
-        >
+        <TooltipWrap content={chrome.i18n.getMessage("spotlightCursorTooltip")} shortcut="3">
           <div className="ToolbarToggleWrap">
             <Toolbar.ToggleItem
               className="ToolbarToggleItem"

@@ -60,8 +60,7 @@ export class TranscriptionError extends Error {
 }
 
 export const isTranscriptionError = (error: unknown): error is TranscriptionError =>
-  error instanceof TranscriptionError ||
-  errorProperty(error, "name") === "TranscriptionError";
+  error instanceof TranscriptionError || errorProperty(error, "name") === "TranscriptionError";
 
 export const formatTranscriptionError = (error: unknown): string => {
   if (isTranscriptionError(error)) {
@@ -116,9 +115,7 @@ export function classifyTranscriptionError(
     });
   }
 
-  if (
-    /quota|quotaexceeded|no space|disk full|insufficient storage|storage is full/i.test(text)
-  ) {
+  if (/quota|quotaexceeded|no space|disk full|insufficient storage|storage is full/i.test(text)) {
     return new TranscriptionError({
       code: TRANSCRIPTION_ERROR_CODES.QUOTA_EXHAUSTED,
       phase,
@@ -177,6 +174,7 @@ export function classifyTranscriptionError(
     phase,
     cause: error,
     message: "Local transcription failed.",
-    action: "Retry after reopening the editor; if it fails again, export diagnostics from the local support tools.",
+    action:
+      "Retry after reopening the editor; if it fails again, export diagnostics from the local support tools.",
   });
 }

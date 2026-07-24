@@ -67,13 +67,11 @@ const buildDevImpl = () => {
 
   const refreshSessionId = (): void => {
     try {
-      chromeApi().storage.local
-        .get(["recordingAttemptId"])
+      chromeApi()
+        .storage.local.get(["recordingAttemptId"])
         .then((res) => {
           cachedSessionId =
-            typeof res.recordingAttemptId === "string"
-              ? res.recordingAttemptId
-              : cachedSessionId;
+            typeof res.recordingAttemptId === "string" ? res.recordingAttemptId : cachedSessionId;
         })
         .catch(() => {});
     } catch {}
@@ -108,12 +106,9 @@ const buildDevImpl = () => {
   const emit = (label: string, meta: PerfMetadata): void => {
     if (!cachedSessionId) refreshSessionId();
     const now = Date.now();
-    const perfNow =
-      typeof performance !== "undefined" ? performance.now() : null;
+    const perfNow = typeof performance !== "undefined" ? performance.now() : null;
     const delta =
-      perfNow !== null && lastMarkPerfNow !== null
-        ? Math.round(perfNow - lastMarkPerfNow)
-        : null;
+      perfNow !== null && lastMarkPerfNow !== null ? Math.round(perfNow - lastMarkPerfNow) : null;
     lastMarkPerfNow = perfNow;
     const entry: PerfEntry = {
       t: now,
@@ -150,12 +145,8 @@ const buildDevImpl = () => {
     } catch {}
   };
 
-  const perfSpanImpl = (
-    label: string,
-    startMeta: PerfMetadata = null,
-  ): EndPerfSpan => {
-    const startPerf =
-      typeof performance !== "undefined" ? performance.now() : null;
+  const perfSpanImpl = (label: string, startMeta: PerfMetadata = null): EndPerfSpan => {
+    const startPerf = typeof performance !== "undefined" ? performance.now() : null;
     try {
       emit(`${label}.start`, startMeta);
     } catch {}
@@ -167,11 +158,7 @@ const buildDevImpl = () => {
             : null;
         emit(
           `${label}.end`,
-          endMeta
-            ? { ...endMeta, durMs: dur }
-            : dur !== null
-            ? { durMs: dur }
-            : null,
+          endMeta ? { ...endMeta, durMs: dur } : dur !== null ? { durMs: dur } : null,
         );
       } catch {}
     };
@@ -181,17 +168,22 @@ const buildDevImpl = () => {
     try {
       cachedSessionId = sessionId;
       lastMarkPerfNow = null;
-      chromeApi().storage.local.get(null).then((all) => {
-        const cleared: Record<string, unknown[]> = {};
-        for (const k of Object.keys(all || {})) {
-          if (k === STORAGE_KEY_BASE || k.startsWith(`${STORAGE_KEY_BASE}.`)) {
-            cleared[k] = [];
+      chromeApi()
+        .storage.local.get(null)
+        .then((all) => {
+          const cleared: Record<string, unknown[]> = {};
+          for (const k of Object.keys(all || {})) {
+            if (k === STORAGE_KEY_BASE || k.startsWith(`${STORAGE_KEY_BASE}.`)) {
+              cleared[k] = [];
+            }
           }
-        }
-        if (Object.keys(cleared).length > 0) {
-          chromeApi().storage.local.set(cleared).catch(() => {});
-        }
-      }).catch(() => {});
+          if (Object.keys(cleared).length > 0) {
+            chromeApi()
+              .storage.local.set(cleared)
+              .catch(() => {});
+          }
+        })
+        .catch(() => {});
     } catch {}
   };
 
@@ -202,7 +194,7 @@ const buildDevImpl = () => {
       for (const k of Object.keys(all || {})) {
         if (k === STORAGE_KEY_BASE || k.startsWith(`${STORAGE_KEY_BASE}.`)) {
           const arr = all[k];
-        if (Array.isArray(arr)) merged.push(...(arr as PerfEntry[]));
+          if (Array.isArray(arr)) merged.push(...(arr as PerfEntry[]));
         }
       }
       merged.sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
@@ -212,13 +204,8 @@ const buildDevImpl = () => {
     }
   };
 
-  const formatTimeline = (
-    entries: PerfEntry[],
-    sessionId: string | null = null,
-  ): string => {
-    const filtered = sessionId
-      ? entries.filter((e) => e.sessionId === sessionId)
-      : entries;
+  const formatTimeline = (entries: PerfEntry[], sessionId: string | null = null): string => {
+    const filtered = sessionId ? entries.filter((e) => e.sessionId === sessionId) : entries;
     if (!filtered.length) return "[perf] no entries";
     const t0 = filtered[0].t;
     const lines = ["[perf] timeline (relative to first mark):"];
@@ -237,11 +224,7 @@ const buildDevImpl = () => {
 
   try {
     const target =
-      typeof globalThis !== "undefined"
-        ? globalThis
-        : typeof self !== "undefined"
-        ? self
-        : null;
+      typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : null;
     if (target) {
       const perfTarget = target as typeof globalThis & {
         dumpPerf?: (sessionId?: string | null) => Promise<PerfEntry[]>;
@@ -265,15 +248,12 @@ const buildDevImpl = () => {
   const forwardBatchToBg = (batch: PerfEntry[]): void => {
     if (!batch || !batch.length) return;
     try {
-      if (
-        chromeApi().runtime &&
-        typeof chromeApi().runtime?.sendMessage === "function"
-      ) {
+      if (chromeApi().runtime && typeof chromeApi().runtime?.sendMessage === "function") {
         // Fire-and-forget; the SW receives and persists. Wrapped because
         // sendMessage rejects on no-receiver, which we don't care about
         // (BG SW may be momentarily asleep on a perf-only message).
-        chromeApi().runtime
-          ?.sendMessage?.({ type: "perf-forward", ctx: CTX, entries: batch })
+        chromeApi()
+          .runtime?.sendMessage?.({ type: "perf-forward", ctx: CTX, entries: batch })
           .catch(() => {});
       }
     } catch {}

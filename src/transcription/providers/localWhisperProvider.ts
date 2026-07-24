@@ -119,9 +119,7 @@ async function getTranscriber(
     const device = normalizeWhisperDevice(opts.device) || (await pickDevice());
     return pipeline("automatic-speech-recognition", model, {
       device,
-      dtype:
-        normalizeWhisperDataType(opts.dtype) ||
-        (device === "webgpu" ? "fp16" : "q8"),
+      dtype: normalizeWhisperDataType(opts.dtype) || (device === "webgpu" ? "fp16" : "q8"),
       progress_callback: (p: unknown) => {
         // model-load progress (0..1) — surface as early progress
         const progress =
@@ -154,7 +152,9 @@ async function pickDevice(): Promise<DeviceType> {
  */
 function normalize(output: unknown, mode: "word" | "segment"): Transcript {
   const chunks =
-    typeof output === "object" && output !== null && "chunks" in output &&
+    typeof output === "object" &&
+    output !== null &&
+    "chunks" in output &&
     Array.isArray((output as { chunks?: unknown }).chunks)
       ? (output as { chunks: unknown[] }).chunks
       : [];
@@ -173,7 +173,7 @@ function normalize(output: unknown, mode: "word" | "segment"): Transcript {
       const toks = text.split(/\s+/).filter(Boolean);
       const span = Math.max(0, end - start) / toks.length;
       toks.forEach((tok, i) =>
-        words.push({ text: tok, start: start + i * span, end: start + (i + 1) * span })
+        words.push({ text: tok, start: start + i * span, end: start + (i + 1) * span }),
       );
     }
   }
@@ -181,9 +181,7 @@ function normalize(output: unknown, mode: "word" | "segment"): Transcript {
 }
 
 const isCrossAttnError = (error: unknown): boolean =>
-  /cross attention/i.test(
-    String(error instanceof Error ? error.message : error),
-  );
+  /cross attention/i.test(String(error instanceof Error ? error.message : error));
 
 const localWhisperProvider: TranscriptionProvider = {
   id: "local-whisper",
@@ -228,8 +226,7 @@ const localWhisperProvider: TranscriptionProvider = {
     onProgress?.(0.5);
 
     const transcriber = await getTranscriber(opts, onProgress);
-    const language =
-      input.language && input.language !== "auto" ? input.language : undefined;
+    const language = input.language && input.language !== "auto" ? input.language : undefined;
     const base = {
       chunk_length_s: Number(opts.chunkLengthS) || 30,
       language,

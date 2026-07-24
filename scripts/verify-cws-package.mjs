@@ -58,7 +58,10 @@ const validateGitWorkingTree = (workingTree, label, errors) => {
   if (!Number.isFinite(workingTree.fileCount) || workingTree.fileCount < 0) {
     errors.push(`${label} git.workingTree.fileCount must be a non-negative number.`);
   }
-  if (typeof workingTree.statusSha256 !== "string" || workingTree.statusSha256.trim().length === 0) {
+  if (
+    typeof workingTree.statusSha256 !== "string" ||
+    workingTree.statusSha256.trim().length === 0
+  ) {
     errors.push(`${label} git.workingTree.statusSha256 is required.`);
   }
 };
@@ -76,9 +79,12 @@ const appendNonPassingEvidenceDetails = (label, evidence, errors) => {
     errors.push(`${label} is non-passing: ${evidence.remainingReleaseWork.trim()}`);
   }
   if (evidence.failedStep && typeof evidence.failedStep === "object") {
-    const script = typeof evidence.failedStep.script === "string" ? evidence.failedStep.script : "unknown";
+    const script =
+      typeof evidence.failedStep.script === "string" ? evidence.failedStep.script : "unknown";
     const exitCode =
-      typeof evidence.failedStep.exitCode === "number" ? ` exit code ${evidence.failedStep.exitCode}` : "";
+      typeof evidence.failedStep.exitCode === "number"
+        ? ` exit code ${evidence.failedStep.exitCode}`
+        : "";
     const reason =
       typeof evidence.failedStep.reason === "string" && evidence.failedStep.reason.trim()
         ? ` (${evidence.failedStep.reason.trim()})`
@@ -187,7 +193,9 @@ const hasCwsEvidence = requireFile(CWS_EVIDENCE_PATH, "CWS package evidence", er
 const packageEvidence = hasPackageEvidence
   ? readJson(PACKAGE_EVIDENCE_PATH, "package release evidence", errors)
   : null;
-const cwsEvidence = hasCwsEvidence ? readJson(CWS_EVIDENCE_PATH, "CWS package evidence", errors) : null;
+const cwsEvidence = hasCwsEvidence
+  ? readJson(CWS_EVIDENCE_PATH, "CWS package evidence", errors)
+  : null;
 
 if (packageEvidence && packageEvidence.kind !== "sayless.releasePackage") {
   errors.push('package release evidence kind must be "sayless.releasePackage".');
@@ -205,7 +213,10 @@ if (cwsEvidence) {
   }
 }
 if (cwsEvidence && !cwsEvidenceIsNonPassingMarker) {
-  if (typeof cwsEvidence.releaseVersion !== "string" || cwsEvidence.releaseVersion.trim().length === 0) {
+  if (
+    typeof cwsEvidence.releaseVersion !== "string" ||
+    cwsEvidence.releaseVersion.trim().length === 0
+  ) {
     errors.push("CWS package evidence releaseVersion is required.");
   }
   validateGitProvenance(cwsEvidence.git, "CWS package evidence", errors);
@@ -236,7 +247,9 @@ if (
   !packageEvidenceIsNonPassingMarker &&
   cwsEvidence.packageEvidence?.releaseVersion !== packageEvidence.releaseVersion
 ) {
-  errors.push("CWS package evidence packageEvidence.releaseVersion must match package release evidence.");
+  errors.push(
+    "CWS package evidence packageEvidence.releaseVersion must match package release evidence.",
+  );
 }
 if (
   cwsEvidence?.git &&
@@ -256,7 +269,9 @@ if (
   !packageEvidenceIsNonPassingMarker &&
   !workingTreesEqual(cwsEvidence.git.workingTree, packageEvidence.git.workingTree)
 ) {
-  errors.push("CWS package evidence git workingTree fingerprint must match package release evidence.");
+  errors.push(
+    "CWS package evidence git workingTree fingerprint must match package release evidence.",
+  );
 }
 if (
   cwsEvidence &&
@@ -267,7 +282,9 @@ if (
   timestampMs(packageEvidence.generatedAt) !== null &&
   timestampMs(cwsEvidence.generatedAt) < timestampMs(packageEvidence.generatedAt)
 ) {
-  errors.push("CWS package evidence generatedAt must be at or after package release evidence generatedAt.");
+  errors.push(
+    "CWS package evidence generatedAt must be at or after package release evidence generatedAt.",
+  );
 }
 if (
   cwsEvidence &&
@@ -276,7 +293,9 @@ if (
   !packageEvidenceIsNonPassingMarker &&
   cwsEvidence.packageEvidence?.generatedAt !== packageEvidence.generatedAt
 ) {
-  errors.push("CWS package evidence packageEvidence.generatedAt must match package release evidence.");
+  errors.push(
+    "CWS package evidence packageEvidence.generatedAt must match package release evidence.",
+  );
 }
 
 if (
@@ -322,10 +341,15 @@ if (cwsEvidence && !cwsEvidenceIsNonPassingMarker) {
   if (!cwsEvidence.packageEvidence?.path) {
     errors.push("CWS package evidence packageEvidence.path is required.");
   } else if (
-    !isCanonicalRelativePath(cwsEvidence.packageEvidence.path, "release-artifacts/package-release.json") ||
+    !isCanonicalRelativePath(
+      cwsEvidence.packageEvidence.path,
+      "release-artifacts/package-release.json",
+    ) ||
     resolveRootPath(cwsEvidence.packageEvidence.path) !== PACKAGE_EVIDENCE_PATH
   ) {
-    errors.push("CWS package evidence packageEvidence.path must point to release-artifacts/package-release.json.");
+    errors.push(
+      "CWS package evidence packageEvidence.path must point to release-artifacts/package-release.json.",
+    );
   }
 }
 
@@ -339,7 +363,9 @@ if (packageEvidence && !packageEvidenceIsNonPassingMarker && hasExtensionZip) {
     errors.push("package release evidence does not match current extension.zip size.");
   }
   if (packageEvidence.zip?.formattedBytes !== formatBytes(extensionBytes)) {
-    errors.push("package release evidence formatted zip size must match current extension.zip size.");
+    errors.push(
+      "package release evidence formatted zip size must match current extension.zip size.",
+    );
   }
 }
 if (packageEvidence && !packageEvidenceIsNonPassingMarker) {
@@ -475,7 +501,10 @@ if (packageEvidence && !packageEvidenceIsNonPassingMarker) {
         ? join(ROOT, "release-artifacts", "release-qa-automated.json")
         : join(ROOT, "release-artifacts", "manual-qa-evidence.json");
     const expectedRelativePath = relative(ROOT, expectedPath);
-    if (!isCanonicalRelativePath(evidence.path, expectedRelativePath) || evidencePath !== expectedPath) {
+    if (
+      !isCanonicalRelativePath(evidence.path, expectedRelativePath) ||
+      evidencePath !== expectedPath
+    ) {
       errors.push(`package release evidence ${label} path must point to ${expectedRelativePath}.`);
     }
     if (!requireFile(evidencePath, label, errors)) continue;
@@ -501,7 +530,9 @@ if (packageEvidence && !packageEvidenceIsNonPassingMarker) {
         errors.push("automated QA evidence generatedAt must match package release evidence.");
       }
       if (evidenceJson?.releaseVersion !== evidence.releaseVersion) {
-        errors.push("package release evidence automated QA releaseVersion must match automated QA evidence.");
+        errors.push(
+          "package release evidence automated QA releaseVersion must match automated QA evidence.",
+        );
       }
     } else if (label === "manual QA evidence") {
       if (evidenceJson?.kind !== "sayless.manualQaEvidence") {
@@ -525,7 +556,9 @@ if (packageEvidence && !packageEvidenceIsNonPassingMarker) {
         );
       }
       if (evidenceJson?.releaseVersion !== evidence.releaseVersion) {
-        errors.push("package release evidence manual QA releaseVersion must match manual QA evidence.");
+        errors.push(
+          "package release evidence manual QA releaseVersion must match manual QA evidence.",
+        );
       }
     }
   }

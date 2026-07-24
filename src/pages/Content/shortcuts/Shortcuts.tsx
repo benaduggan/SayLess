@@ -85,15 +85,12 @@ const Shortcuts = ({ shortcuts }: { shortcuts?: boolean }) => {
       });
     };
 
-    const getShadowRoot = () =>
-      contentStateRef.current?.shadowRef?.shadowRoot || null;
+    const getShadowRoot = () => contentStateRef.current?.shadowRef?.shadowRoot || null;
 
     const toggleColorPicker = () => {
       const shadowRoot = getShadowRoot();
       const trigger = shadowRoot
-        ? (shadowRoot.querySelector(
-            "[data-color-trigger]"
-          ) as HTMLElement | null)
+        ? (shadowRoot.querySelector("[data-color-trigger]") as HTMLElement | null)
         : document.querySelector<HTMLElement>("[data-color-trigger]");
       if (trigger) {
         trigger.click();
@@ -103,12 +100,8 @@ const Shortcuts = ({ shortcuts }: { shortcuts?: boolean }) => {
     const openImagePicker = () => {
       const shadowRoot = getShadowRoot();
       const fileInput = shadowRoot
-        ? (shadowRoot.querySelector(
-            '[data-image-upload="true"]'
-          ) as HTMLInputElement | null)
-        : document.querySelector<HTMLInputElement>(
-            '[data-image-upload="true"]'
-          );
+        ? (shadowRoot.querySelector('[data-image-upload="true"]') as HTMLInputElement | null)
+        : document.querySelector<HTMLInputElement>('[data-image-upload="true"]');
       if (fileInput) {
         fileInput.click();
       }
@@ -134,9 +127,7 @@ const Shortcuts = ({ shortcuts }: { shortcuts?: boolean }) => {
 
     const toggleCursorEffect = (effect: string) => {
       const state = contentStateRef.current;
-      const current = Array.isArray(state.cursorEffects)
-        ? state.cursorEffects
-        : [];
+      const current = Array.isArray(state.cursorEffects) ? state.cursorEffects : [];
       const next = current.includes(effect)
         ? current.filter((item) => item !== effect)
         : [...current, effect];

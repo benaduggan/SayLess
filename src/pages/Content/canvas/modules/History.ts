@@ -23,18 +23,13 @@ type HistoryStateSource =
 
 type HistoryStateSetter = (state: CanvasHistoryState) => void;
 
-const getState = (
-  stateOrRef: HistoryStateSource
-): CanvasHistoryState | null | undefined =>
+const getState = (stateOrRef: HistoryStateSource): CanvasHistoryState | null | undefined =>
   stateOrRef && "current" in stateOrRef
     ? (stateOrRef as { current?: CanvasHistoryState | null }).current
     : stateOrRef;
 
 // Undo and redo functionality for Fabric.js
-const undoCanvas = (
-  stateOrRef: HistoryStateSource,
-  setToolSettings: HistoryStateSetter
-): void => {
+const undoCanvas = (stateOrRef: HistoryStateSource, setToolSettings: HistoryStateSetter): void => {
   const state = getState(stateOrRef);
   if (!state?.canvas) return;
 
@@ -73,10 +68,7 @@ const undoCanvas = (
   }
 };
 
-const redoCanvas = (
-  stateOrRef: HistoryStateSource,
-  setToolSettings: HistoryStateSetter
-): void => {
+const redoCanvas = (stateOrRef: HistoryStateSource, setToolSettings: HistoryStateSetter): void => {
   const state = getState(stateOrRef);
   if (!state?.canvas) return;
 
@@ -101,10 +93,7 @@ const redoCanvas = (
   }
 };
 
-const saveCanvas = (
-  stateOrRef: HistoryStateSource,
-  setToolSettings: HistoryStateSetter
-): void => {
+const saveCanvas = (stateOrRef: HistoryStateSource, setToolSettings: HistoryStateSetter): void => {
   const state = getState(stateOrRef);
   if (!state?.canvas) return;
 
@@ -137,7 +126,7 @@ const saveCanvas = (
 const checkChanges = (
   canvas: HistoryCanvas,
   stateRef: HistoryStateSource,
-  setToolSettings: HistoryStateSetter
+  setToolSettings: HistoryStateSetter,
 ): { removeEventListeners(): void } => {
   const onChange = (): void => {
     // always save with latest state

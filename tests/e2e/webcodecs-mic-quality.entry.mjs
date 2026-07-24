@@ -1,9 +1,4 @@
-import {
-  AudioSampleSink,
-  BlobSource,
-  Input,
-  WEBM,
-} from "mediabunny";
+import { AudioSampleSink, BlobSource, Input, WEBM } from "mediabunny";
 
 import { WebCodecsRecorder } from "../../src/pages/Recorder/webcodecs/WebCodecsRecorder.ts";
 
@@ -23,10 +18,7 @@ const rms = (samples) => {
 
 const estimateDominantFrequency = (samples, sampleRate, minHz, maxHz) => {
   const startLag = Math.max(1, Math.floor(sampleRate / maxHz));
-  const endLag = Math.min(
-    samples.length - 2,
-    Math.ceil(sampleRate / minHz),
-  );
+  const endLag = Math.min(samples.length - 2, Math.ceil(sampleRate / minHz));
   let bestLag = startLag;
   let bestScore = -Infinity;
 
@@ -213,12 +205,7 @@ const runCase = async ({
   const middleStart = Math.floor(decoded.samples.length * 0.25);
   const middleEnd = Math.floor(decoded.samples.length * 0.75);
   const middle = decoded.samples.subarray(middleStart, middleEnd);
-  const frequencyHz = estimateDominantFrequency(
-    middle,
-    decoded.sampleRate,
-    300,
-    600,
-  );
+  const frequencyHz = estimateDominantFrequency(middle, decoded.sampleRate, 300, 600);
   const middleRms = rms(middle);
   const diag = result.finalizedPayload.diag || {};
   const audioElapsedSeconds = (diag.audioElapsedUs || 0) / 1_000_000;
@@ -239,12 +226,9 @@ const runCase = async ({
     frequencyHz,
     middleRms,
     audioElapsedSeconds,
-    droppedAudioForBackpressure:
-      result.finalizedPayload.droppedForBackpressure?.audio ?? null,
-    peakAudioEncodeQueueSize:
-      result.finalizedPayload.peakEncodeQueueSize?.audio ?? null,
-    audioSampleRateMismatchRebuilds:
-      diag.audioSampleRateMismatchRebuilds ?? null,
+    droppedAudioForBackpressure: result.finalizedPayload.droppedForBackpressure?.audio ?? null,
+    peakAudioEncodeQueueSize: result.finalizedPayload.peakEncodeQueueSize?.audio ?? null,
+    audioSampleRateMismatchRebuilds: diag.audioSampleRateMismatchRebuilds ?? null,
   };
 
   if (Math.abs(audioDuration - targetDurationSeconds) > 0.35) {

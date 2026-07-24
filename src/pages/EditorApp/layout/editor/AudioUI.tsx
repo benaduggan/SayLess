@@ -1,6 +1,6 @@
 import { useState, useContext, useRef } from "react";
 import type { ChangeEvent } from "react";
-import styles from "../../styles/player/_RightPanel.module.scss";
+import styles from "../../styles/player/_RightPanel.module.css";
 
 import * as Slider from "@radix-ui/react-slider";
 
@@ -74,9 +74,7 @@ const AudioUI = () => {
           </div>
           <div
             className={styles.buttonRight}
-            onClick={() =>
-              setContentState((prev) => ({ ...prev, editErrorType: null }))
-            }
+            onClick={() => setContentState((prev) => ({ ...prev, editErrorType: null }))}
           >
             {chrome.i18n.getMessage("permissionsModalDismiss")}
           </div>
@@ -88,12 +86,9 @@ const AudioUI = () => {
             <ReactSVG src={URL + "editor/icons/alert.svg"} />
           </div>
           <div className={styles.buttonMiddle}>
-            <div className={styles.buttonTitle}>
-              Project audio needs relinking
-            </div>
+            <div className={styles.buttonTitle}>Project audio needs relinking</div>
             <div className={styles.buttonDescription}>
-              Choose the original audio file again. Its portable project
-              reference was preserved.
+              Choose the original audio file again. Its portable project reference was preserved.
             </div>
           </div>
         </div>
@@ -112,10 +107,7 @@ const AudioUI = () => {
           (!edlCtx?.audioTrack ||
             contentState.removeProjectAudio ||
             edlCtx.audioAssetStatus === "missing") && (
-            <div
-              className={styles.uploadArea}
-              onClick={() => inputRef.current?.click()}
-            >
+            <div className={styles.uploadArea} onClick={() => inputRef.current?.click()}>
               <ReactSVG src={URL + "editor/icons/upload.svg"} />
               <div className={styles.uploadDetails}>
                 <div className={styles.uploadText}>
@@ -128,20 +120,14 @@ const AudioUI = () => {
             </div>
           )}
         {(audio || edlCtx?.audioTrack) && !contentState.removeProjectAudio && (
-          <div
-            className={styles.audioDetails}
-            data-testid="project-audio-details"
-          >
+          <div className={styles.audioDetails} data-testid="project-audio-details">
             <div className={styles.audioDetailsLeft}>
               <ReactSVG src={URL + "editor/icons/attachment.svg"} />
             </div>
             <div className={styles.audioDetailsMiddle}>
               <span>{audio?.name || edlCtx?.audioTrack?.fileName}</span>
             </div>
-            <div
-              className={styles.audioDetailsRight}
-              data-testid="project-audio-remove"
-            >
+            <div className={styles.audioDetailsRight} data-testid="project-audio-remove">
               <ReactSVG
                 src={URL + "editor/icons/cross.svg"}
                 onClick={() => {

@@ -1,11 +1,7 @@
 // chrome.storage / chrome.tabs proxy handlers for the offscreen recorder.
 
 import { registerMessage } from "../../../messaging/messageRouter";
-import {
-  errorMessage,
-  offscreenChrome,
-  type ExtensionStorageArea,
-} from "./chromeTypes";
+import { errorMessage, offscreenChrome, type ExtensionStorageArea } from "./chromeTypes";
 
 const getArea = (area: unknown): ExtensionStorageArea => {
   if (typeof area !== "string") throw new Error("Storage area must be a string");

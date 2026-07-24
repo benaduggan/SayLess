@@ -19,9 +19,7 @@ export const closeOffscreenDocumentWithFlush = async ({
   let offDoc = null;
   try {
     const existingContexts = await chromeApi.runtime.getContexts({});
-    offDoc =
-      existingContexts.find((c) => c.contextType === "OFFSCREEN_DOCUMENT") ||
-      null;
+    offDoc = existingContexts.find((c) => c.contextType === "OFFSCREEN_DOCUMENT") || null;
   } catch (err) {
     console.warn("closeOffscreenDocumentWithFlush getContexts:", err);
   }

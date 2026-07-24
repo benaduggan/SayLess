@@ -9,10 +9,7 @@ interface RecordChromeApi {
   };
   storage: {
     local: {
-      get: (
-        keys: string[],
-        callback: (result: Record<string, unknown>) => void,
-      ) => void;
+      get: (keys: string[], callback: (result: Record<string, unknown>) => void) => void;
     };
   };
 }
@@ -21,9 +18,7 @@ const chromeApi = (): RecordChromeApi =>
   (globalThis as typeof globalThis & { chrome: RecordChromeApi }).chrome;
 
 const asRecord = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {};
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
 
 export const sendMessageRecord = (
   message: Record<string, unknown>,
@@ -32,10 +27,7 @@ export const sendMessageRecord = (
   return new Promise<unknown>((resolve, reject) => {
     chromeApi().storage.local.get(["recordingTab", "offscreen"], (result) => {
       if (chromeApi().runtime.lastError) {
-        console.warn(
-          "sendMessageRecord: storage error",
-          chromeApi().runtime.lastError?.message,
-        );
+        console.warn("sendMessageRecord: storage error", chromeApi().runtime.lastError?.message);
         return reject(chromeApi().runtime.lastError?.message);
       }
 
@@ -43,8 +35,10 @@ export const sendMessageRecord = (
         chromeApi().runtime.sendMessage(message, (response) => {
           if (chromeApi().runtime.lastError) {
             reject(chromeApi().runtime.lastError?.message);
+          } else if (responseCallback) {
+            responseCallback(response);
           } else {
-            responseCallback ? responseCallback(response) : resolve(response);
+            resolve(response);
           }
         });
       } else if (result.recordingTab) {
@@ -53,11 +47,10 @@ export const sendMessageRecord = (
           .catch((err) => {
             const errStr = String(err);
             const isDeadTab =
-              errStr.includes("Receiving end does not exist") ||
-              errStr.includes("No tab with id");
+              errStr.includes("Receiving end does not exist") || errStr.includes("No tab with id");
             console.warn(
               `sendMessageRecord: failed to message recordingTab ${result.recordingTab}${isDeadTab ? " (stale/dead tab)" : ""}`,
-              err
+              err,
             );
             reject(err);
           });
@@ -69,20 +62,14 @@ export const sendMessageRecord = (
         chromeApi().storage.local.get(["recorderSession"], (sessionResult) => {
           const sessionValue = sessionResult.recorderSession;
           const session = asRecord(sessionValue);
-          const recorderTabId =
-            Number(session.recorderTabId || session.tabId) || null;
-          const sessionLive =
-            session.status === "recording" || session.status === "starting";
+          const recorderTabId = Number(session.recorderTabId || session.tabId) || null;
+          const sessionLive = session.status === "recording" || session.status === "starting";
           if (sessionLive && recorderTabId) {
-            sendMessageTab(recorderTabId, message, responseCallback)
-              .then(resolve)
-              .catch(reject);
+            sendMessageTab(recorderTabId, message, responseCallback).then(resolve).catch(reject);
           } else {
             console.warn(
               "sendMessageRecord: no recording tab available",
-              sessionValue
-                ? { sessionStatus: session.status, recorderTabId }
-                : { session: null }
+              sessionValue ? { sessionStatus: session.status, recorderTabId } : { session: null },
             );
             reject(new Error("No recording tab available"));
           }

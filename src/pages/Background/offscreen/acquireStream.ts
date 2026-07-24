@@ -2,10 +2,7 @@
 // can't call getDisplayMedia / tabCapture; SW acquires a streamId and hands
 // it over. Picker anchors to initiatingTabId so it appears on the user's tab.
 
-import {
-  offscreenChrome,
-  type ExtensionTab,
-} from "./chromeTypes";
+import { offscreenChrome, type ExtensionTab } from "./chromeTypes";
 
 const DEFAULT_SCREEN_SOURCES = ["screen", "window", "tab", "audio"];
 
@@ -22,9 +19,7 @@ export interface AcquireStreamRequest {
   sources?: string[];
 }
 
-const getInitiatingTab = async (
-  tabId?: number | null,
-): Promise<ExtensionTab | null> => {
+const getInitiatingTab = async (tabId?: number | null): Promise<ExtensionTab | null> => {
   if (!tabId) return null;
   try {
     return await offscreenChrome().tabs.get(tabId);
@@ -41,8 +36,7 @@ const acquireScreenStream = ({
   anchorTab: ExtensionTab | null;
 }): Promise<AcquiredStream> =>
   new Promise<AcquiredStream>((resolve, reject) => {
-    const requested =
-      Array.isArray(sources) && sources.length ? sources : DEFAULT_SCREEN_SOURCES;
+    const requested = Array.isArray(sources) && sources.length ? sources : DEFAULT_SCREEN_SOURCES;
     try {
       console.log("[SayLess][acquireStream] chooseDesktopMedia invoked", {
         requested,
@@ -72,7 +66,7 @@ const acquireScreenStream = ({
             source: "desktop",
             canRequestAudioTrack: !!opts?.canRequestAudioTrack,
           });
-        }
+        },
       );
     } catch (err) {
       reject(err);
@@ -91,20 +85,17 @@ const acquireTabStream = ({
     }
     try {
       const chromeApi = offscreenChrome();
-      chromeApi.tabCapture.getMediaStreamId(
-        { targetTabId },
-        (streamId) => {
-          if (chromeApi.runtime.lastError) {
-            reject(new Error(chromeApi.runtime.lastError.message));
-            return;
-          }
-          if (!streamId) {
-            resolve({ streamId: "", source: "cancelled" });
-            return;
-          }
-          resolve({ streamId, source: "tab" });
+      chromeApi.tabCapture.getMediaStreamId({ targetTabId }, (streamId) => {
+        if (chromeApi.runtime.lastError) {
+          reject(new Error(chromeApi.runtime.lastError.message));
+          return;
         }
-      );
+        if (!streamId) {
+          resolve({ streamId: "", source: "cancelled" });
+          return;
+        }
+        resolve({ streamId, source: "tab" });
+      });
     } catch (err) {
       reject(err);
     }

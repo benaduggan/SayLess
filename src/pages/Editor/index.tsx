@@ -18,7 +18,7 @@ if (container) {
         <EditorApp />
         <EditorPageBridge />
       </EdlProvider>
-    </ContentState>
+    </ContentState>,
   );
 }
 

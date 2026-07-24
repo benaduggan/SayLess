@@ -96,14 +96,7 @@ const Waveform = (): React.JSX.Element => {
     };
   }, []);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      width="324"
-      height="30"
-      style={{ background: "#f5f6fa" }}
-    />
-  );
+  return <canvas ref={canvasRef} width="324" height="30" style={{ background: "#f5f6fa" }} />;
 };
 
 export default Waveform;

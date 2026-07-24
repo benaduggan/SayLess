@@ -53,12 +53,7 @@ const CropperWrap = () => {
         height: nextCoordinates.height,
       }));
     }
-  }, [
-    contentState.width,
-    contentState.height,
-    contentState.top,
-    contentState.left,
-  ]);
+  }, [contentState.width, contentState.height, contentState.top, contentState.left]);
 
   const onChange = (cropper: CropperRef) => {
     if (!cropper) return;

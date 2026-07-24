@@ -39,17 +39,17 @@ export const sendChunks = async (
     });
 
     if (chunkCount === 0) {
-      console.warn(
-        "[SayLess][BG] sendChunks: no chunks available after waiting",
-      );
+      console.warn("[SayLess][BG] sendChunks: no chunks available after waiting");
       try {
-        const chromeApi = (globalThis as typeof globalThis & {
-          chrome: {
-            storage: {
-              local: { set: (values: Record<string, unknown>) => Promise<void> };
+        const chromeApi = (
+          globalThis as typeof globalThis & {
+            chrome: {
+              storage: {
+                local: { set: (values: Record<string, unknown>) => Promise<void> };
+              };
             };
-          };
-        }).chrome;
+          }
+        ).chrome;
         await chromeApi.storage.local.set({
           lastChunkSendFailure: {
             ts: Date.now(),

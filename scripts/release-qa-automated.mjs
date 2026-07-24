@@ -26,13 +26,12 @@ const PACKAGE_PATH = join(ROOT, "package.json");
 const PACKAGE_LOCK_PATH = join(ROOT, "package-lock.json");
 const SOURCE_MANIFEST_PATH = join(ROOT, "src", "manifest.json");
 const BUILD_MANIFEST_PATH = join(BUILD_DIR, "manifest.json");
-const BUILT_EXTENSION_EVIDENCE_PATH = join(
-  EVIDENCE_DIR,
-  "built-extension-surface.json"
-);
+const BUILT_EXTENSION_EVIDENCE_PATH = join(EVIDENCE_DIR, "built-extension-surface.json");
 
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const commands = [
+  { label: "lint", command: npm, args: ["run", "lint"] },
+  { label: "format:check", command: npm, args: ["run", "format:check"] },
   { label: "typecheck", command: npm, args: ["run", "typecheck"] },
   { label: "test:unit", command: npm, args: ["run", "test:unit"] },
   {
@@ -199,9 +198,7 @@ const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 
 const readBuiltExtensionEvidence = () => {
   if (!existsSync(BUILT_EXTENSION_EVIDENCE_PATH)) {
-    throw new Error(
-      "built-extension surface evidence is missing after its browser smoke."
-    );
+    throw new Error("built-extension surface evidence is missing after its browser smoke.");
   }
   const browserEvidence = readJson(BUILT_EXTENSION_EVIDENCE_PATH);
   if (
@@ -215,9 +212,7 @@ const readBuiltExtensionEvidence = () => {
     Number.isNaN(Date.parse(browserEvidence.generatedAt)) ||
     Date.parse(browserEvidence.generatedAt) < startedAt.getTime()
   ) {
-    throw new Error(
-      "built-extension surface evidence is incomplete, stale, or invalid."
-    );
+    throw new Error("built-extension surface evidence is incomplete, stale, or invalid.");
   }
   return browserEvidence;
 };
@@ -226,9 +221,7 @@ const arrayFrom = (value) => (Array.isArray(value) ? value : []);
 
 const releaseManifestSurface = (manifest) => {
   const permissions = arrayFrom(manifest.permissions).slice().sort();
-  const optionalPermissions = arrayFrom(manifest.optional_permissions)
-    .slice()
-    .sort();
+  const optionalPermissions = arrayFrom(manifest.optional_permissions).slice().sort();
   const hostPermissions = arrayFrom(manifest.host_permissions).slice().sort();
   const allPermissions = new Set([...permissions, ...optionalPermissions]);
   const csp =
@@ -236,8 +229,7 @@ const releaseManifestSurface = (manifest) => {
       ? manifest.content_security_policy.extension_pages
       : "";
   const remoteConnectSrc =
-    /\bconnect-src\b[^;]*(?:https?:|wss?:)/i.test(csp) ||
-    /\bconnect-src\b[^;]*\*/i.test(csp);
+    /\bconnect-src\b[^;]*(?:https?:|wss?:)/i.test(csp) || /\bconnect-src\b[^;]*\*/i.test(csp);
   return {
     permissions,
     optionalPermissions,
@@ -367,6 +359,4 @@ writeFileAtomic(EVIDENCE_PATH, `${JSON.stringify(evidence, null, 2)}\n`);
 console.log(`\nAutomated release QA passed.`);
 console.log(`Evidence: ${relative(ROOT, EVIDENCE_PATH)}`);
 console.log(`Build size: ${evidence.build.formattedBytes}`);
-console.log(
-  `Bundled Whisper assets: ${evidence.bundledWhisper.formattedBytes}`
-);
+console.log(`Bundled Whisper assets: ${evidence.bundledWhisper.formattedBytes}`);

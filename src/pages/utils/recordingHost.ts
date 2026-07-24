@@ -5,22 +5,20 @@ const hasWindow = typeof window !== "undefined";
 const urlParams = new URLSearchParams(hasWindow ? window.location.search : "");
 const isInjectedIframe = urlParams.has("injected");
 
-const isOffscreenUrl =
-  hasWindow && window.location.pathname.endsWith("/offscreenrecorder.html");
+const isOffscreenUrl = hasWindow && window.location.pathname.endsWith("/offscreenrecorder.html");
 
 const isIframeUrl =
   hasWindow &&
   (isInjectedIframe ||
-    (window.top !== window.self &&
-      !document.referrer.startsWith("chrome-extension://")));
+    (window.top !== window.self && !document.referrer.startsWith("chrome-extension://")));
 
 export type RecordingHost = "offscreen" | "iframe" | "tab";
 
 export const RECORDING_HOST: RecordingHost = isOffscreenUrl
   ? "offscreen"
   : isIframeUrl
-  ? "iframe"
-  : "tab";
+    ? "iframe"
+    : "tab";
 
 export const IS_OFFSCREEN_HOST = RECORDING_HOST === "offscreen";
 export const IS_IFRAME_HOST = RECORDING_HOST === "iframe";

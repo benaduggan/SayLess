@@ -1,10 +1,4 @@
-import React, {
-  useLayoutEffect,
-  useEffect,
-  useContext,
-  useState,
-  useRef,
-} from "react";
+import React, { useLayoutEffect, useEffect, useContext, useState, useRef } from "react";
 import * as Toolbar from "@radix-ui/react-toolbar";
 
 import { Rnd } from "react-rnd";
@@ -46,8 +40,7 @@ import {
 import MicToggle from "../components/MicToggle";
 
 const ToolbarWrap = () => {
-  const [contentState, setContentState, t, setT] =
-    useContext(contentStateContext);
+  const [contentState, setContentState, t, setT] = useContext(contentStateContext);
   const [mode, setMode] = React.useState("");
   const modeRef = React.useRef(mode);
   const [hovering, setHovering] = React.useState(false);
@@ -131,9 +124,7 @@ const ToolbarWrap = () => {
           ? `${hours.toString().padStart(2, "0")}:${minutes
               .toString()
               .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
-          : `${minutes.toString().padStart(2, "0")}:${seconds
-              .toString()
-              .padStart(2, "0")}`;
+          : `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 
       if (hours > 0) {
         if (timeRef.current) timeRef.current.style.width = "58px";
@@ -203,10 +194,7 @@ const ToolbarWrap = () => {
     }
   };
 
-  const handleDrop = (
-    _e: RndDragEvent | null,
-    d: Pick<DraggableData, "x" | "y">
-  ) => {
+  const handleDrop = (_e: RndDragEvent | null, d: Pick<DraggableData, "x" | "y">) => {
     if (!ToolbarRef.current || !DragRef.current) return;
     setShake("");
     setDragging("");
@@ -391,9 +379,7 @@ const ToolbarWrap = () => {
       <Toast />
       <div
         className={
-          contentState.paused && contentState.recording
-            ? "ToolbarPaused"
-            : "ToolbarPaused hidden"
+          contentState.paused && contentState.recording ? "ToolbarPaused" : "ToolbarPaused hidden"
         }
       ></div>
       <div className={"ToolbarBounds" + " " + shake}></div>
@@ -404,9 +390,7 @@ const ToolbarWrap = () => {
           width: "auto",
           height: "auto",
         }}
-        className={
-          "react-draggable" + " " + elastic + " " + shake + " " + dragging
-        }
+        className={"react-draggable" + " " + elastic + " " + shake + " " + dragging}
         dragHandleClassName="grab"
         enableResizing={false}
         onDragStart={handleDragStart}
@@ -440,15 +424,10 @@ const ToolbarWrap = () => {
           </ToolTrigger>
           {!contentState.recording && (
             <div
-              className={`popup-controls toolbar-controls ${
-                hovering ? "open" : ""
-              }`}
+              className={`popup-controls toolbar-controls ${hovering ? "open" : ""}`}
               onClick={() => {
                 if (contentState.openToast) {
-                  contentState.openToast(
-                    chrome.i18n.getMessage("reopenToolbarToast"),
-                    () => {}
-                  );
+                  contentState.openToast(chrome.i18n.getMessage("reopenToolbarToast"), () => {});
                 }
 
                 setVisuallyHidden(true);
@@ -485,16 +464,11 @@ const ToolbarWrap = () => {
               </div>
             </div>
           )}
-          <div
-            className={"ToolbarRecordingControls"}
-            id="local-tour-recording-toolbar-controls"
-          >
+          <div className={"ToolbarRecordingControls"} id="local-tour-recording-toolbar-controls">
             <ToolTrigger
               type="button"
               content={chrome.i18n.getMessage("finishRecordingTooltip")}
-              disabled={
-                !contentState.recording || contentState.finalizingRecording
-              }
+              disabled={!contentState.recording || contentState.finalizingRecording}
               onClick={() => {
                 contentState.stopRecording();
               }}
@@ -502,9 +476,7 @@ const ToolbarWrap = () => {
               <StopIcon width="20" height="20" />
             </ToolTrigger>
             <div
-              className={`ToolbarRecordingTime ${
-                contentState.timeWarning ? "TimerWarning" : ""
-              }`}
+              className={`ToolbarRecordingTime ${contentState.timeWarning ? "TimerWarning" : ""}`}
               ref={timeRef}
             >
               {timestamp}
@@ -512,9 +484,7 @@ const ToolbarWrap = () => {
             <ToolTrigger
               type="button"
               content={chrome.i18n.getMessage("restartRecordingTooltip")}
-              disabled={
-                !contentState.recording || contentState.finalizingRecording
-              }
+              disabled={!contentState.recording || contentState.finalizingRecording}
               onClick={() => {
                 contentState.tryRestartRecording();
               }}
@@ -525,9 +495,7 @@ const ToolbarWrap = () => {
               <ToolTrigger
                 type="button"
                 content={chrome.i18n.getMessage("pauseRecordingTooltip")}
-                disabled={
-                  !contentState.recording || contentState.finalizingRecording
-                }
+                disabled={!contentState.recording || contentState.finalizingRecording}
                 onClick={() => {
                   contentState.pauseRecording();
                 }}
@@ -540,9 +508,7 @@ const ToolbarWrap = () => {
                 type="button"
                 resume
                 content={chrome.i18n.getMessage("resumeRecordingTooltip")}
-                disabled={
-                  !contentState.recording || contentState.finalizingRecording
-                }
+                disabled={!contentState.recording || contentState.finalizingRecording}
                 onClick={() => {
                   contentState.resumeRecording();
                 }}
@@ -553,9 +519,7 @@ const ToolbarWrap = () => {
             <ToolTrigger
               type="button"
               content={chrome.i18n.getMessage("cancelRecordingTooltip")}
-              disabled={
-                !contentState.recording || contentState.finalizingRecording
-              }
+              disabled={!contentState.recording || contentState.finalizingRecording}
               onClick={() => {
                 if (contentState.tryDismissRecording !== undefined) {
                   contentState.tryDismissRecording();
@@ -618,12 +582,8 @@ const ToolbarWrap = () => {
                 disabled={contentState.recordingType === "camera"}
               >
                 {contentState.cursorMode === "target" && <TargetCursorIcon />}
-                {contentState.cursorMode === "highlight" && (
-                  <HighlightCursorIcon />
-                )}
-                {contentState.cursorMode === "spotlight" && (
-                  <SpotlightCursorIcon />
-                )}
+                {contentState.cursorMode === "highlight" && <HighlightCursorIcon />}
+                {contentState.cursorMode === "spotlight" && <SpotlightCursorIcon />}
                 {contentState.cursorMode === "none" && <CursorIcon />}
               </ToolTrigger>
               <CursorToolbar
@@ -634,24 +594,21 @@ const ToolbarWrap = () => {
             </div>
             <Toolbar.Separator className="ToolbarSeparator" />
             <MicToggle />
-            {(!contentState.cameraActive ||
-              contentState.defaultVideoInput === "none") &&
+            {(!contentState.cameraActive || contentState.defaultVideoInput === "none") &&
               contentState.recordingType != "camera-only" && (
                 <ToolTrigger
                   type="button"
                   content={
                     contentState.cameraActive && contentState.cameraPermission
                       ? chrome.i18n.getMessage("disableCameraTooltip")
-                      : !contentState.cameraActive &&
-                        contentState.cameraPermission
-                      ? chrome.i18n.getMessage("enableCameraTooltip")
-                      : chrome.i18n.getMessage("noCameraPermissionsTooltip")
+                      : !contentState.cameraActive && contentState.cameraPermission
+                        ? chrome.i18n.getMessage("enableCameraTooltip")
+                        : chrome.i18n.getMessage("noCameraPermissionsTooltip")
                   }
                   value="camera"
                   onClick={enableCamera}
                   disabled={
-                    !contentState.cameraPermission ||
-                    contentState.defaultVideoInput === "none"
+                    !contentState.cameraPermission || contentState.defaultVideoInput === "none"
                   }
                 >
                   <CameraIcon />

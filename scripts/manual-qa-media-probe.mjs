@@ -5,10 +5,7 @@ import { createReadStream, openAsBlob, statSync } from "node:fs";
 import { basename, extname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ALL_FORMATS, BlobSource, Input } from "mediabunny";
-import {
-  buildReleaseCoverage,
-  buildReleaseThresholds,
-} from "./manual-qa-media-coverage.mjs";
+import { buildReleaseCoverage, buildReleaseThresholds } from "./manual-qa-media-coverage.mjs";
 import {
   displayReportPath,
   parseReportOutputOption,
@@ -31,16 +28,16 @@ const unknownOptions = args.filter(
   (arg) =>
     arg.startsWith("-") &&
     !arg.startsWith("--output=") &&
-    !["--json", "--require-complete", "--help", "-h"].includes(arg)
+    !["--json", "--require-complete", "--help", "-h"].includes(arg),
 );
 const inputPaths = args.filter((arg) => !arg.startsWith("-"));
 
 const usage = () => {
   console.log(
-    "Usage: npm run qa:release:manual:media -- [--json] [--require-complete] [--output=<report.json>] <media-file> [media-file ...]"
+    "Usage: npm run qa:release:manual:media -- [--json] [--require-complete] [--output=<report.json>] <media-file> [media-file ...]",
   );
   console.log(
-    "Reads local media metadata only; playback, audibility, sync, and visual checks remain manual."
+    "Reads local media metadata only; playback, audibility, sync, and visual checks remain manual.",
   );
 };
 
@@ -54,11 +51,7 @@ if (help) {
   process.exit(0);
 }
 if (unknownOptions.length) {
-  fail(
-    `unknown option${
-      unknownOptions.length === 1 ? "" : "s"
-    }: ${unknownOptions.join(", ")}`
-  );
+  fail(`unknown option${unknownOptions.length === 1 ? "" : "s"}: ${unknownOptions.join(", ")}`);
 }
 if (!inputPaths.length) {
   usage();
@@ -77,8 +70,7 @@ const formatBytes = (bytes) => {
   return `${value.toFixed(1)} ${units[unitIndex]}`;
 };
 
-const roundedSeconds = (value) =>
-  Number.isFinite(value) ? Number(value.toFixed(6)) : null;
+const roundedSeconds = (value) => (Number.isFinite(value) ? Number(value.toFixed(6)) : null);
 
 const canonicalFormat = ({ formatName, mimeType, extension }) => {
   const value = `${formatName} ${mimeType} ${extension}`.toLowerCase();
@@ -99,9 +91,7 @@ const sha256File = async (path) => {
 
 const safeDisplayPath = (absolutePath) => {
   const rootRelative = relative(ROOT, absolutePath);
-  return rootRelative && !rootRelative.startsWith("..")
-    ? rootRelative
-    : basename(absolutePath);
+  return rootRelative && !rootRelative.startsWith("..") ? rootRelative : basename(absolutePath);
 };
 
 const probeFile = async (path) => {
@@ -127,24 +117,22 @@ const probeFile = async (path) => {
     if (!(await input.canRead())) {
       throw new Error(`${path}: media container is unsupported or unreadable.`);
     }
-    const [format, mimeType, durationSeconds, videoTrack, audioTrack, sha256] =
-      await Promise.all([
-        input.getFormat(),
-        input.getMimeType(),
-        input.computeDuration(),
-        input.getPrimaryVideoTrack(),
-        input.getPrimaryAudioTrack(),
-        sha256File(absolutePath),
-      ]);
-    const [width, height, videoCodec, channels, sampleRate, audioCodec] =
-      await Promise.all([
-        videoTrack?.getDisplayWidth() ?? null,
-        videoTrack?.getDisplayHeight() ?? null,
-        videoTrack?.getCodec() ?? null,
-        audioTrack?.getNumberOfChannels() ?? null,
-        audioTrack?.getSampleRate() ?? null,
-        audioTrack?.getCodec() ?? null,
-      ]);
+    const [format, mimeType, durationSeconds, videoTrack, audioTrack, sha256] = await Promise.all([
+      input.getFormat(),
+      input.getMimeType(),
+      input.computeDuration(),
+      input.getPrimaryVideoTrack(),
+      input.getPrimaryAudioTrack(),
+      sha256File(absolutePath),
+    ]);
+    const [width, height, videoCodec, channels, sampleRate, audioCodec] = await Promise.all([
+      videoTrack?.getDisplayWidth() ?? null,
+      videoTrack?.getDisplayHeight() ?? null,
+      videoTrack?.getCodec() ?? null,
+      audioTrack?.getNumberOfChannels() ?? null,
+      audioTrack?.getSampleRate() ?? null,
+      audioTrack?.getCodec() ?? null,
+    ]);
     const fileName = basename(absolutePath);
     const formatName = format.name;
     const mediaFormat = canonicalFormat({
@@ -237,11 +225,7 @@ try {
 if (asJson) {
   console.log(JSON.stringify(report, null, 2));
 } else {
-  console.log(
-    `Manual QA media probe: ${files.length} file${
-      files.length === 1 ? "" : "s"
-    }`
-  );
+  console.log(`Manual QA media probe: ${files.length} file${files.length === 1 ? "" : "s"}`);
   for (const file of files) {
     console.log(`\n${file.fileName}`);
     console.log(`  Format: ${file.format} (${file.mimeType})`);
@@ -249,22 +233,20 @@ if (asJson) {
     console.log(`  Duration: ${file.durationSeconds} seconds`);
     if (file.video) {
       console.log(
-        `  Video: ${file.video.width}x${file.video.height}, ${
-          file.video.codec || "unknown codec"
-        }`
+        `  Video: ${file.video.width}x${file.video.height}, ${file.video.codec || "unknown codec"}`,
       );
     }
     if (file.audio) {
       console.log(
         `  Audio: ${file.audio.channels} channel${
           file.audio.channels === 1 ? "" : "s"
-        }, ${file.audio.sampleRate} Hz, ${file.audio.codec || "unknown codec"}`
+        }, ${file.audio.sampleRate} Hz, ${file.audio.codec || "unknown codec"}`,
       );
     }
     console.log(`  SHA-256: ${file.sha256}`);
   }
   console.log(
-    `\nMeasurable release media coverage: ${report.releaseCoverage.status} (${report.releaseCoverage.passedCheckCount}/${report.releaseCoverage.totalCheckCount} checks)`
+    `\nMeasurable release media coverage: ${report.releaseCoverage.status} (${report.releaseCoverage.passedCheckCount}/${report.releaseCoverage.totalCheckCount} checks)`,
   );
   for (const check of report.releaseCoverage.checks) {
     console.log(`  ${check.passed ? "PASS" : "TODO"}: ${check.label}`);
@@ -277,12 +259,9 @@ if (asJson) {
   console.log(`\n${report.reminder}`);
 }
 
-if (
-  requireComplete &&
-  report.releaseCoverage.status !== "measurable-set-complete"
-) {
+if (requireComplete && report.releaseCoverage.status !== "measurable-set-complete") {
   console.error(
-    `MANUAL QA MEDIA PROBE FAIL: measurable release media coverage is incomplete (${report.releaseCoverage.passedCheckCount}/${report.releaseCoverage.totalCheckCount} checks).`
+    `MANUAL QA MEDIA PROBE FAIL: measurable release media coverage is incomplete (${report.releaseCoverage.passedCheckCount}/${report.releaseCoverage.totalCheckCount} checks).`,
   );
   process.exitCode = 1;
 }

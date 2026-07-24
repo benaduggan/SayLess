@@ -1,6 +1,6 @@
 import { useContext, useRef, useEffect, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
-import styles from "../../styles/edit/_Waveform.module.scss";
+import styles from "../../styles/edit/_Waveform.module.css";
 import { useEditorContent } from "../../context/ContentState";
 
 const WaveformGenerator = () => {
@@ -12,8 +12,7 @@ const WaveformGenerator = () => {
   const [showGhost, setShowGhost] = useState(false);
   const mouseDown = useRef(false);
 
-  const blobToArrayBuffer = (blob: Blob): Promise<ArrayBuffer> =>
-    blob.arrayBuffer();
+  const blobToArrayBuffer = (blob: Blob): Promise<ArrayBuffer> => blob.arrayBuffer();
 
   const loadWaveform = async (blob: Blob) => {
     const container = waveformContainerRef.current;
@@ -28,16 +27,12 @@ const WaveformGenerator = () => {
       });
       const audioArrayBuffer = await blobToArrayBuffer(blob);
 
-      await wavesurferRef.current.loadBlob(
-        new Blob([audioArrayBuffer], { type: "audio/wav" })
-      );
+      await wavesurferRef.current.loadBlob(new Blob([audioArrayBuffer], { type: "audio/wav" }));
 
       wavesurferRef.current.on("seeking", (currentTime) => {
-        const containerRect =
-          container.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
         const cursorX =
-          containerRect.width *
-          (currentTime / (wavesurferRef.current?.getDuration() || 1));
+          containerRect.width * (currentTime / (wavesurferRef.current?.getDuration() || 1));
         if (customCursorRef.current) {
           customCursorRef.current.style.left = `${cursorX}px`;
         }
@@ -119,8 +114,7 @@ const WaveformGenerator = () => {
     video.onloadedmetadata = async () => {
       const containerRect = waveformContainerRef.current?.getBoundingClientRect();
       if (!containerRect) return;
-      const cursorX =
-        containerRect.width * ((Number(contentState.time) || 0) / video.duration);
+      const cursorX = containerRect.width * ((Number(contentState.time) || 0) / video.duration);
       if (customCursorRef.current) customCursorRef.current.style.left = `${cursorX}px`;
 
       URL.revokeObjectURL(video.src);

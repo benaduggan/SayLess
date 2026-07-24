@@ -3,7 +3,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 import * as Select from "@radix-ui/react-select";
 
-import styles from "../../styles/edit/_Dropdown.module.scss";
+import styles from "../../styles/edit/_Dropdown.module.css";
 
 // Icons
 //import DropdownIcon from "../../public/assets/icons/dropdown.svg";
@@ -99,7 +99,8 @@ const Dropdown = (props: DropdownProps) => {
       selectedPreset.name === "none" ||
       selectedPreset.width == null ||
       selectedPreset.height == null
-    ) return;
+    )
+      return;
     const preset = selectedPreset;
     const presetWidth = Number(preset.width);
     const presetHeight = Number(preset.height);
@@ -148,9 +149,7 @@ const Dropdown = (props: DropdownProps) => {
       value={value}
       onValueChange={(newValue) => {
         setValue(newValue);
-        setLabel(
-          presets.find((preset) => preset.name === newValue)?.label || "None",
-        );
+        setLabel(presets.find((preset) => preset.name === newValue)?.label || "None");
         setContentState((prevContentState) => ({
           ...prevContentState,
           cropPreset: newValue,
@@ -158,9 +157,7 @@ const Dropdown = (props: DropdownProps) => {
       }}
     >
       <Select.Trigger className={styles.SelectTrigger} aria-label="Crop preset">
-        {props.icon && (
-          <Select.Icon className={styles.SelectIconType}></Select.Icon>
-        )}
+        {props.icon && <Select.Icon className={styles.SelectIconType}></Select.Icon>}
         <div className={styles.SelectValue}>
           <Select.Value placeholder="Select a source">{label}</Select.Value>
         </div>
@@ -170,9 +167,7 @@ const Dropdown = (props: DropdownProps) => {
       </Select.Trigger>
       <Select.Portal className={styles.Portal}>
         <Select.Content position="popper" className={styles.SelectContent}>
-          <Select.ScrollUpButton
-            className={styles.SelectScrollButton}
-          ></Select.ScrollUpButton>
+          <Select.ScrollUpButton className={styles.SelectScrollButton}></Select.ScrollUpButton>
           <Select.Viewport className={styles.SelectViewport}>
             <Select.Group>
               <SelectItem value="none">None</SelectItem>
@@ -186,13 +181,11 @@ const Dropdown = (props: DropdownProps) => {
                     <SelectItem value={preset.name} key={index}>
                       {preset.label}
                     </SelectItem>
-                  )
+                  ),
               )}
             </Select.Group>
           </Select.Viewport>
-          <Select.ScrollDownButton
-            className={styles.SelectScrollButton}
-          ></Select.ScrollDownButton>
+          <Select.ScrollDownButton className={styles.SelectScrollButton}></Select.ScrollDownButton>
         </Select.Content>
       </Select.Portal>
     </Select.Root>
@@ -211,7 +204,7 @@ const SelectItem = forwardRef<HTMLDivElement, SelectItemProps>(
         </Select.ItemIndicator>
       </Select.Item>
     );
-  }
+  },
 );
 
 export default Dropdown;

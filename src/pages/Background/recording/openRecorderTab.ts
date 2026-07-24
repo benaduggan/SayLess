@@ -31,15 +31,11 @@ const openRecorderTab = async (
       switchTab = false;
     }
   } else {
-    switchTab = Boolean(activeTab.url?.includes(
-      chrome.runtime.getURL("playground.html")
-    ));
+    switchTab = Boolean(activeTab.url?.includes(chrome.runtime.getURL("playground.html")));
   }
 
   // Region recordings point recordingTab at the user's tab; never close that.
-  const { recordingTab: prevRecTab } = await chrome.storage.local.get([
-    "recordingTab",
-  ]);
+  const { recordingTab: prevRecTab } = await chrome.storage.local.get(["recordingTab"]);
   if (typeof prevRecTab === "number") {
     try {
       const prevTab = await chrome.tabs.get(prevRecTab);
@@ -58,11 +54,7 @@ const openRecorderTab = async (
     useOffscreenRecorder,
     recordingType: storedRecordingType,
     customRegion: storedCustomRegion,
-  } = await chrome.storage.local.get([
-    "useOffscreenRecorder",
-    "recordingType",
-    "customRegion",
-  ]);
+  } = await chrome.storage.local.get(["useOffscreenRecorder", "recordingType", "customRegion"]);
   const recordingType = request?.recordingType ?? storedRecordingType ?? null;
   const customRegion = request?.customRegion ?? storedCustomRegion ?? false;
   // all modes run offscreen except customRegion: its track.cropTo(CropTarget)
@@ -79,10 +71,7 @@ const openRecorderTab = async (
     try {
       await createRecorderOffscreen();
     } catch (err) {
-      console.error(
-        "[SayLess][BG] openRecorderTab: offscreen create failed",
-        err,
-      );
+      console.error("[SayLess][BG] openRecorderTab: offscreen create failed", err);
       chrome.runtime
         .sendMessage({
           type: "recording-error",
@@ -127,9 +116,7 @@ const openRecorderTab = async (
           // offscreen recorder not ready yet; retry
         }
       }
-      console.warn(
-        "[SayLess][BG] offscreen recorder loaded-send exhausted retries",
-      );
+      console.warn("[SayLess][BG] offscreen recorder loaded-send exhausted retries");
     })();
     setTimeout(() => {
       handleGetStreamingData().catch(() => {});
@@ -148,16 +135,10 @@ const openRecorderTab = async (
       const setupUrl = chrome.runtime.getURL("setup.html");
       const allTabs = await chrome.tabs.query({});
       const stale = allTabs.filter(
-        (t) =>
-          t.id != null &&
-          t.id !== activeTab?.id &&
-          t.url &&
-          t.url.startsWith(setupUrl),
+        (t) => t.id != null && t.id !== activeTab?.id && t.url && t.url.startsWith(setupUrl),
       );
       if (stale.length > 0) {
-        await chrome.tabs.remove(
-          stale.flatMap((t) => (typeof t.id === "number" ? [t.id] : [])),
-        );
+        await chrome.tabs.remove(stale.flatMap((t) => (typeof t.id === "number" ? [t.id] : [])));
       }
     } catch {}
   })();
@@ -172,10 +153,7 @@ const openRecorderTab = async (
   endTabCreate({ tabId: tab?.id });
   // tabs.create can fulfill with no id in rare MV3 states (window-closed, profile-locked)
   if (!tab || typeof tab.id !== "number") {
-    console.error(
-      "[SayLess][BG] openRecorderTab: tabs.create returned no usable tab",
-      tab,
-    );
+    console.error("[SayLess][BG] openRecorderTab: tabs.create returned no usable tab", tab);
     chrome.runtime
       .sendMessage({
         type: "recording-error",
@@ -222,11 +200,7 @@ const openRecorderTab = async (
       } catch {}
     } catch (err) {
       if (attempt === backoffsMs.length - 1) {
-        console.warn(
-          "[SayLess] autoDiscardable failed for recorder tab",
-          tab.id,
-          String(err),
-        );
+        console.warn("[SayLess] autoDiscardable failed for recorder tab", tab.id, String(err));
         chrome.storage.local.set({
           lastAutoDiscardableError: {
             ts: Date.now(),
@@ -252,9 +226,9 @@ const openRecorderTab = async (
       perfMark("BG.openRecorderTab tab-status-complete", { tabId });
       traceStep("recorderTabCreated");
       // tabPreferred lets the recorder use it synchronously without racing storage
-      const isPlayground = Boolean(activeTab.url?.includes(
-        chrome.runtime.getURL("playground.html")
-      ));
+      const isPlayground = Boolean(
+        activeTab.url?.includes(chrome.runtime.getURL("playground.html")),
+      );
       perfMark("BG.openRecorderTab loaded.sent");
       // `loaded` is sent at status:complete, before the recorder's React
       // app has mounted its message listener, so the first send is

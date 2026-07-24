@@ -4,8 +4,6 @@
 // are JSON; chunk values write the Blob directly. Keys keep their
 // track prefix on iterate() to match what callers got from localforage.
 
-export {};
-
 declare global {
   interface FileSystemDirectoryHandle {
     entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
@@ -31,24 +29,21 @@ export interface OpfsChunkValue {
 type WritableChunkValue = { chunk: Blob };
 
 const errorName = (error: unknown): string | undefined =>
-  error instanceof DOMException || error instanceof Error
-    ? error.name
-    : undefined;
+  error instanceof DOMException || error instanceof Error ? error.name : undefined;
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
 const runtimeSendMessage = (message: unknown): void => {
-  const chromeApi = (globalThis as typeof globalThis & {
-    chrome?: { runtime?: { sendMessage?: (value: unknown) => unknown } };
-  }).chrome;
+  const chromeApi = (
+    globalThis as typeof globalThis & {
+      chrome?: { runtime?: { sendMessage?: (value: unknown) => unknown } };
+    }
+  ).chrome;
   chromeApi?.runtime?.sendMessage?.(message);
 };
 
-const opfsDiag = (
-  event: string,
-  data: Record<string, unknown> = {},
-): void => {
+const opfsDiag = (event: string, data: Record<string, unknown> = {}): void => {
   try {
     runtimeSendMessage({
       type: "diag-forward",
@@ -58,10 +53,7 @@ const opfsDiag = (
   } catch {}
 };
 
-const safeRemove = async (
-  parent: FileSystemDirectoryHandle,
-  name: string,
-): Promise<void> => {
+const safeRemove = async (parent: FileSystemDirectoryHandle, name: string): Promise<void> => {
   try {
     await parent.removeEntry(name);
   } catch (err) {
@@ -85,27 +77,19 @@ export class OpfsKvStore {
     this._dirPromise = null;
   }
 
-  private async _dir(
-    options?: { create?: true },
-  ): Promise<FileSystemDirectoryHandle>;
-  private async _dir(
-    options: { create: false },
-  ): Promise<FileSystemDirectoryHandle | null>;
-  private async _dir(
-    { create = true }: { create?: boolean } = {},
-  ): Promise<FileSystemDirectoryHandle | null> {
+  private async _dir(options?: { create?: true }): Promise<FileSystemDirectoryHandle>;
+  private async _dir(options: { create: false }): Promise<FileSystemDirectoryHandle | null>;
+  private async _dir({
+    create = true,
+  }: { create?: boolean } = {}): Promise<FileSystemDirectoryHandle | null> {
     if (this._dirPromise && create) return this._dirPromise;
     if (!create) {
       // read-only path. returns null if the tree doesn't exist so callers
       // can treat missing dirs as "no chunks".
       const root = await navigator.storage.getDirectory();
-      const chunksRoot = await root
-        .getDirectoryHandle(ROOT_DIR_NAME)
-        .catch(() => null);
+      const chunksRoot = await root.getDirectoryHandle(ROOT_DIR_NAME).catch(() => null);
       if (!chunksRoot) return null;
-      const session = await chunksRoot
-        .getDirectoryHandle(this.sessionId)
-        .catch(() => null);
+      const session = await chunksRoot.getDirectoryHandle(this.sessionId).catch(() => null);
       if (!session) return null;
       return session.getDirectoryHandle(this.track).catch(() => null);
     }
@@ -267,9 +251,7 @@ export class OpfsKvStore {
       const root = await navigator.storage.getDirectory();
       const chunksRoot = await root.getDirectoryHandle(ROOT_DIR_NAME).catch(() => null);
       if (!chunksRoot) return;
-      const session = await chunksRoot
-        .getDirectoryHandle(this.sessionId)
-        .catch(() => null);
+      const session = await chunksRoot.getDirectoryHandle(this.sessionId).catch(() => null);
       if (!session) return;
       await removeDirRecursive(session, this.track);
       this._dirPromise = null;
@@ -343,9 +325,7 @@ export const destroySessionDir = async (sessionId: string): Promise<void> => {
 export const listSessionDirs = async (): Promise<string[]> => {
   try {
     const root = await navigator.storage.getDirectory();
-    const chunksRoot = await root
-      .getDirectoryHandle(ROOT_DIR_NAME)
-      .catch(() => null);
+    const chunksRoot = await root.getDirectoryHandle(ROOT_DIR_NAME).catch(() => null);
     if (!chunksRoot) return [];
     const names: string[] = [];
     for await (const [name, handle] of chunksRoot.entries()) {
@@ -364,9 +344,7 @@ export const isOpfsSupported = (): boolean => {
       return false;
     }
     if (typeof FileSystemFileHandle === "undefined") return false;
-    if (
-      typeof FileSystemFileHandle.prototype?.createWritable !== "function"
-    ) {
+    if (typeof FileSystemFileHandle.prototype?.createWritable !== "function") {
       return false;
     }
     return true;

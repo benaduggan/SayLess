@@ -138,7 +138,10 @@ const validateGitWorkingTree = (label, workingTree, errors) => {
   if (!Number.isFinite(workingTree.fileCount) || workingTree.fileCount < 0) {
     errors.push(`${label} git.workingTree.fileCount must be a non-negative number.`);
   }
-  if (typeof workingTree.statusSha256 !== "string" || workingTree.statusSha256.trim().length === 0) {
+  if (
+    typeof workingTree.statusSha256 !== "string" ||
+    workingTree.statusSha256.trim().length === 0
+  ) {
     errors.push(`${label} git.workingTree.statusSha256 is required.`);
   }
 };
@@ -156,9 +159,12 @@ const appendNonPassingEvidenceDetails = (label, evidence, errors) => {
     errors.push(`${label} is non-passing: ${evidence.remainingReleaseWork.trim()}`);
   }
   if (evidence.failedStep && typeof evidence.failedStep === "object") {
-    const script = typeof evidence.failedStep.script === "string" ? evidence.failedStep.script : "unknown";
+    const script =
+      typeof evidence.failedStep.script === "string" ? evidence.failedStep.script : "unknown";
     const exitCode =
-      typeof evidence.failedStep.exitCode === "number" ? ` exit code ${evidence.failedStep.exitCode}` : "";
+      typeof evidence.failedStep.exitCode === "number"
+        ? ` exit code ${evidence.failedStep.exitCode}`
+        : "";
     const reason =
       typeof evidence.failedStep.reason === "string" && evidence.failedStep.reason.trim()
         ? ` (${evidence.failedStep.reason.trim()})`
@@ -203,7 +209,10 @@ if (packageEvidence) {
   }
 }
 if (packageEvidence && !packageEvidenceIsNonPassingMarker) {
-  if (typeof packageEvidence.releaseVersion !== "string" || packageEvidence.releaseVersion.trim().length === 0) {
+  if (
+    typeof packageEvidence.releaseVersion !== "string" ||
+    packageEvidence.releaseVersion.trim().length === 0
+  ) {
     errors.push("package release evidence releaseVersion is required.");
   }
   if (!isIsoDate(packageEvidence.generatedAt)) {
@@ -224,7 +233,9 @@ if (packageEvidence && !packageEvidenceIsNonPassingMarker && hasExtensionZip) {
     errors.push("package release evidence does not match current extension.zip size.");
   }
   if (packageEvidence.zip?.formattedBytes !== formatBytes(extensionBytes)) {
-    errors.push("package release evidence formatted zip size must match current extension.zip size.");
+    errors.push(
+      "package release evidence formatted zip size must match current extension.zip size.",
+    );
   }
 }
 if (packageEvidence && !packageEvidenceIsNonPassingMarker) {
@@ -303,8 +314,13 @@ if (packageEvidence && !packageEvidenceIsNonPassingMarker) {
     }
     const evidencePath = resolveRootPath(evidence.path);
     const expectedRelativePath = relative(ROOT, expectedPath);
-    if (!isCanonicalRelativePath(evidence.path, expectedRelativePath) || evidencePath !== expectedPath) {
-      errors.push(`package release evidence ${label} path must point to ${relative(ROOT, expectedPath)}.`);
+    if (
+      !isCanonicalRelativePath(evidence.path, expectedRelativePath) ||
+      evidencePath !== expectedPath
+    ) {
+      errors.push(
+        `package release evidence ${label} path must point to ${relative(ROOT, expectedPath)}.`,
+      );
     }
     if (!requireFile(evidencePath, label, errors)) continue;
     if (sha256File(evidencePath) !== evidence.sha256) {
@@ -332,14 +348,18 @@ if (packageEvidence && !packageEvidenceIsNonPassingMarker) {
         errors.push("package release evidence releaseVersion must match automated QA evidence.");
       }
       if (evidence.releaseVersion !== evidenceJson?.releaseVersion) {
-        errors.push("package release evidence automated QA releaseVersion must match automated QA evidence.");
+        errors.push(
+          "package release evidence automated QA releaseVersion must match automated QA evidence.",
+        );
       }
       if (
         timestampMs(packageEvidence.generatedAt) !== null &&
         timestampMs(evidenceJson?.generatedAt) !== null &&
         timestampMs(packageEvidence.generatedAt) < timestampMs(evidenceJson.generatedAt)
       ) {
-        errors.push("package release evidence generatedAt must be at or after automated QA evidence generatedAt.");
+        errors.push(
+          "package release evidence generatedAt must be at or after automated QA evidence generatedAt.",
+        );
       }
       validateGitProvenance("automated QA evidence", evidenceJson?.git, errors);
       validateGitWorkingTree("automated QA evidence", evidenceJson?.git?.workingTree, errors);
@@ -352,7 +372,9 @@ if (packageEvidence && !packageEvidenceIsNonPassingMarker) {
         errors.push("package release evidence git provenance must match automated QA evidence.");
       }
       if (!workingTreesEqual(packageEvidence.git?.workingTree, evidenceJson?.git?.workingTree)) {
-        errors.push("package release evidence git workingTree fingerprint must match automated QA evidence.");
+        errors.push(
+          "package release evidence git workingTree fingerprint must match automated QA evidence.",
+        );
       }
     } else if (label === "manual QA evidence") {
       if (evidenceJson?.kind !== "sayless.manualQaEvidence") {
@@ -374,14 +396,18 @@ if (packageEvidence && !packageEvidenceIsNonPassingMarker) {
         errors.push("package release evidence releaseVersion must match manual QA evidence.");
       }
       if (evidence.releaseVersion !== evidenceJson?.releaseVersion) {
-        errors.push("package release evidence manual QA releaseVersion must match manual QA evidence.");
+        errors.push(
+          "package release evidence manual QA releaseVersion must match manual QA evidence.",
+        );
       }
       if (
         timestampMs(packageEvidence.generatedAt) !== null &&
         timestampMs(evidenceJson?.testedAt) !== null &&
         timestampMs(packageEvidence.generatedAt) < timestampMs(evidenceJson.testedAt)
       ) {
-        errors.push("package release evidence generatedAt must be at or after manual QA evidence testedAt.");
+        errors.push(
+          "package release evidence generatedAt must be at or after manual QA evidence testedAt.",
+        );
       }
       if (evidenceJson?.automatedEvidenceGeneratedAt !== evidence.automatedEvidenceGeneratedAt) {
         errors.push(

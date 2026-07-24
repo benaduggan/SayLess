@@ -3,7 +3,7 @@
  *
  * Verifies that the rebuilt editor grid keeps the media, timeline, and
  * transcript pane usable at desktop and compact viewports. This intentionally
- * tests the production SCSS class contract instead of only unit-testing style
+ * tests the production CSS class contract instead of only unit-testing style
  * strings.
  */
 const { chromium } = require("@playwright/test");
@@ -48,7 +48,7 @@ const bundleHarness = (work) =>
               },
             },
             {
-              test: /\.module\.scss$/,
+              test: /\.module\.css$/,
               use: [
                 "style-loader",
                 {
@@ -60,16 +60,16 @@ const bundleHarness = (work) =>
                     },
                   },
                 },
-                "sass-loader",
+                "postcss-loader",
               ],
             },
             {
-              test: /\.scss$/,
-              exclude: /\.module\.scss$/,
+              test: /\.css$/,
+              exclude: /\.module\.css$/,
               use: [
                 "style-loader",
                 { loader: "css-loader", options: { url: false } },
-                "sass-loader",
+                "postcss-loader",
               ],
             },
             {
@@ -91,17 +91,11 @@ const bundleHarness = (work) =>
           }
         }
         if (stats.hasErrors()) {
-          reject(
-            new Error(
-              info.errors
-                .map((error) => error.message || String(error))
-                .join("\n")
-            )
-          );
+          reject(new Error(info.errors.map((error) => error.message || String(error)).join("\n")));
           return;
         }
         resolve();
-      }
+      },
     );
   });
 
@@ -122,75 +116,55 @@ const assertLayout = (name, data) => {
   assert(
     data.editor.height >= viewport.height - 1,
     `${name}: editor does not fill viewport`,
-    data.editor
+    data.editor,
   );
   assert(
     data.media.top >= 79 && data.media.top <= 81,
     `${name}: media content is not below fixed nav`,
-    data.media
+    data.media,
   );
-  assert(
-    data.workspace.height > 0,
-    `${name}: workspace collapsed`,
-    data.workspace
-  );
+  assert(data.workspace.height > 0, `${name}: workspace collapsed`, data.workspace);
   assert(
     data.media.height >= 600 || viewport.width > 1100,
     `${name}: media column collapsed in compact layout`,
-    data.media
+    data.media,
   );
-  assert(
-    data.player.height > 240,
-    `${name}: player area is too short`,
-    data.player
-  );
+  assert(data.player.height > 240, `${name}: player area is too short`, data.player);
   assert(
     data.plyr.width > 250 && data.plyr.height > 140,
     `${name}: video player is not usable`,
-    data.plyr
+    data.plyr,
   );
-  assert(
-    data.timeline.height >= 176,
-    `${name}: timeline is too short to operate`,
-    data.timeline
-  );
-  assert(
-    data.timelineTrack.height >= 68,
-    `${name}: timeline track collapsed`,
-    data.timelineTrack
-  );
+  assert(data.timeline.height >= 176, `${name}: timeline is too short to operate`, data.timeline);
+  assert(data.timelineTrack.height >= 68, `${name}: timeline track collapsed`, data.timelineTrack);
   assert(
     data.timeline.bottom <= viewport.height + 1,
     `${name}: timeline is below the first viewport`,
-    data.timeline
+    data.timeline,
   );
   assert(
     data.timeline.top >= data.player.top,
     `${name}: timeline overlaps above player area`,
-    data.timeline
+    data.timeline,
   );
-  assert(
-    data.player.bottom <= data.timeline.top + 1,
-    `${name}: player overlaps timeline`,
-    {
-      player: data.player,
-      timeline: data.timeline,
-    }
-  );
+  assert(data.player.bottom <= data.timeline.top + 1, `${name}: player overlaps timeline`, {
+    player: data.player,
+    timeline: data.timeline,
+  });
   assert(
     data.transcriptPanel.width > 0,
     `${name}: transcript panel collapsed`,
-    data.transcriptPanel
+    data.transcriptPanel,
   );
   assert(
     data.transcriptBody.overflowY === "auto",
     `${name}: transcript body is not independently scrollable`,
-    data.transcriptBody
+    data.transcriptBody,
   );
   assert(
     data.transcriptBody.scrollHeight > data.transcriptBody.clientHeight,
     `${name}: transcript body did not retain overflow content`,
-    data.transcriptBody
+    data.transcriptBody,
   );
   if (viewport.width > 1100) {
     const playerTopGap = data.plyr.top - data.media.top;
@@ -200,12 +174,12 @@ const assertLayout = (name, data) => {
       {
         bodyScrollHeight: data.bodyScrollHeight,
         viewport,
-      }
+      },
     );
     assert(
       data.transcriptPanel.top >= 79 && data.transcriptPanel.top <= 81,
       `${name}: desktop transcript panel is not below fixed nav`,
-      data.transcriptPanel
+      data.transcriptPanel,
     );
     assert(
       data.transcriptPanel.top === data.media.top,
@@ -213,7 +187,7 @@ const assertLayout = (name, data) => {
       {
         media: data.media,
         transcriptPanel: data.transcriptPanel,
-      }
+      },
     );
     assert(
       playerTopGap >= 0 && playerTopGap <= 72,
@@ -222,22 +196,22 @@ const assertLayout = (name, data) => {
         playerTopGap,
         media: data.media,
         player: data.plyr,
-      }
+      },
     );
     assert(
       data.transcriptPanel.bottom <= viewport.height + 1,
       `${name}: desktop transcript panel extends below viewport`,
-      data.transcriptPanel
+      data.transcriptPanel,
     );
     assert(
       nearViewport(data.transcriptPanel, viewport),
       `${name}: desktop transcript panel is outside viewport`,
-      data.transcriptPanel
+      data.transcriptPanel,
     );
     assert(
       data.transcriptPanel.width >= 360,
       `${name}: desktop transcript panel too narrow`,
-      data.transcriptPanel
+      data.transcriptPanel,
     );
     assert(
       data.transcriptPanel.left >= data.media.right - 1,
@@ -245,12 +219,12 @@ const assertLayout = (name, data) => {
       {
         media: data.media,
         transcriptPanel: data.transcriptPanel,
-      }
+      },
     );
     assert(
       data.media.bottom <= viewport.height + 1,
       `${name}: desktop media column extends below viewport`,
-      data.media
+      data.media,
     );
     assert(
       data.media.right <= data.transcriptPanel.left + 1,
@@ -259,18 +233,18 @@ const assertLayout = (name, data) => {
         media: data.media,
         transcriptPanel: data.transcriptPanel,
         viewport,
-      }
+      },
     );
   } else {
     assert(
       data.transcriptPanel.top >= data.timeline.bottom - 1,
       `${name}: compact transcript should stack below media`,
-      data.transcriptPanel
+      data.transcriptPanel,
     );
     assert(
       data.transcriptPanel.width >= viewport.width - 1,
       `${name}: compact transcript should span viewport`,
-      data.transcriptPanel
+      data.transcriptPanel,
     );
   }
 };
@@ -282,14 +256,11 @@ const assertLayout = (name, data) => {
   await bundleHarness(work);
   fs.writeFileSync(
     path.join(work, "harness.html"),
-    "<!doctype html><meta charset=utf-8><title>Editor layout harness</title><script type=module src=./bundle.js></script>"
+    "<!doctype html><meta charset=utf-8><title>Editor layout harness</title><script type=module src=./bundle.js></script>",
   );
 
   const server = http.createServer((req, res) => {
-    const f = path.join(
-      work,
-      req.url === "/" ? "/harness.html" : req.url.split("?")[0]
-    );
+    const f = path.join(work, req.url === "/" ? "/harness.html" : req.url.split("?")[0]);
     if (!fs.existsSync(f)) {
       res.writeHead(404);
       return res.end();
@@ -353,9 +324,7 @@ const assertLayout = (name, data) => {
       await page.evaluate((ratio) => {
         window.EDITOR_LAYOUT_SMOKE.setVideoRatio(ratio || "16 / 9");
       }, viewport.videoRatio);
-      const data = await page.evaluate(() =>
-        window.EDITOR_LAYOUT_SMOKE.measure()
-      );
+      const data = await page.evaluate(() => window.EDITOR_LAYOUT_SMOKE.measure());
       assertLayout(viewport.name, data);
       measurements.push({
         name: viewport.name,
@@ -377,8 +346,7 @@ const assertLayout = (name, data) => {
         transcript: {
           top: Math.round(data.transcriptPanel.top),
           width: Math.round(data.transcriptPanel.width),
-          scrollable:
-            data.transcriptBody.scrollHeight > data.transcriptBody.clientHeight,
+          scrollable: data.transcriptBody.scrollHeight > data.transcriptBody.clientHeight,
         },
       });
     }

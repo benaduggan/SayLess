@@ -3,9 +3,7 @@ import { listenerChrome } from "../listeners/chromeTypes";
 export const executeScripts = async (): Promise<void> => {
   const chromeApi = listenerChrome();
   const contentScripts = chromeApi.runtime.getManifest().content_scripts || [];
-  const tabQueries = contentScripts.map((cs) =>
-    chromeApi.tabs.query({ url: cs.matches }),
-  );
+  const tabQueries = contentScripts.map((cs) => chromeApi.tabs.query({ url: cs.matches }));
   const tabResults = await Promise.all(tabQueries);
 
   const executeScriptPromises: Promise<unknown>[] = [];

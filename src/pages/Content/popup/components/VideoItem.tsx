@@ -111,9 +111,7 @@ const VideoItem: React.FC<VideoItemProps> = ({
           )}
           <div className="video-item-info">
             <div className="video-item-info-title">{title}</div>
-            <div className="video-item-info-date">
-              {formatRelativeTime(date)}
-            </div>
+            <div className="video-item-info-date">{formatRelativeTime(date)}</div>
             {meta && <div className="video-item-info-meta">{meta}</div>}
             {status && (
               <div

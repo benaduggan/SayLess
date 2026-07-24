@@ -58,9 +58,7 @@ const startLoopbackPriorityBoost = (state: TabKeepaliveHandle): void => {
     pc1.addTrack(track, stream);
     pc1
       .createOffer()
-      .then((offer) =>
-        pc1.setLocalDescription(offer).then(() => pc2.setRemoteDescription(offer)),
-      )
+      .then((offer) => pc1.setLocalDescription(offer).then(() => pc2.setRemoteDescription(offer)))
       .then(() => pc2.createAnswer())
       .then((answer) =>
         pc2.setLocalDescription(answer).then(() => pc1.setRemoteDescription(answer)),
@@ -94,9 +92,7 @@ const startLoopbackPriorityBoost = (state: TabKeepaliveHandle): void => {
 const startAudioOscillator = (state: TabKeepaliveHandle): void => {
   try {
     const Ctx =
-      typeof window !== "undefined"
-        ? window.AudioContext || window.webkitAudioContext
-        : null;
+      typeof window !== "undefined" ? window.AudioContext || window.webkitAudioContext : null;
     if (!Ctx) return;
     const ctx = new Ctx();
     const osc = ctx.createOscillator();
@@ -161,9 +157,7 @@ export const startTabKeepalive = (): TabKeepaliveHandle | null => {
   return state;
 };
 
-export const stopTabKeepalive = (
-  handle?: TabKeepaliveHandle | null,
-): void => {
+export const stopTabKeepalive = (handle?: TabKeepaliveHandle | null): void => {
   if (!handle) return;
   try {
     if (handle.pcTick) clearInterval(handle.pcTick);
@@ -179,8 +173,12 @@ export const stopTabKeepalive = (
   } catch {}
   try {
     if (handle.oscillator) {
-      try { handle.oscillator.stop(); } catch {}
-      try { handle.oscillator.disconnect(); } catch {}
+      try {
+        handle.oscillator.stop();
+      } catch {}
+      try {
+        handle.oscillator.disconnect();
+      } catch {}
     }
   } catch {}
   try {

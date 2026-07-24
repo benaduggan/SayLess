@@ -49,9 +49,7 @@ const buildAudioConstraints = (id: string | null): MediaTrackConstraints => {
     noiseSuppression: { ideal: false },
     autoGainControl: { ideal: true },
   };
-  return id && id !== "none"
-    ? { ...base, deviceId: { exact: id } }
-    : base;
+  return id && id !== "none" ? { ...base, deviceId: { exact: id } } : base;
 };
 
 const recordMicInputDiagnostics = (
@@ -82,10 +80,11 @@ const recordMicInputDiagnostics = (
       });
     } catch {}
     if (trackSampleRate && trackSampleRate <= 24000) {
-      console.warn(
-        "[recorder] mic acquired at low sample rate; likely Bluetooth HFP profile",
-        { trackSampleRate, trackChannelCount, label },
-      );
+      console.warn("[recorder] mic acquired at low sample rate; likely Bluetooth HFP profile", {
+        trackSampleRate,
+        trackChannelCount,
+        label,
+      });
       try {
         chromeApi().runtime.sendMessage({
           type: "diag-forward",
@@ -133,9 +132,7 @@ export async function startAudioStream(
     "audioinput",
   ]);
   const desiredLabel =
-    defaultAudioInputLabel ||
-    audioinput?.find((device) => device.deviceId === id)?.label ||
-    "";
+    defaultAudioInputLabel || audioinput?.find((device) => device.deviceId === id)?.label || "";
 
   try {
     const stream = await getUserMediaWithFallback({

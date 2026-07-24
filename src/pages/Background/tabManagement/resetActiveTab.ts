@@ -11,12 +11,12 @@ interface ResetActiveTabMessage {
   [key: string]: unknown;
 }
 
-export const restartActiveTab = async (
-  message: ResetActiveTabMessage = {},
-): Promise<void> => {
+export const restartActiveTab = async (message: ResetActiveTabMessage = {}): Promise<void> => {
   try {
-    const { recordingUiTabId, activeTab: storedActiveTab } =
-      await chrome.storage.local.get(["recordingUiTabId", "activeTab"]);
+    const { recordingUiTabId, activeTab: storedActiveTab } = await chrome.storage.local.get([
+      "recordingUiTabId",
+      "activeTab",
+    ]);
     const preferredTabId =
       message.sourceTabId ||
       (typeof recordingUiTabId === "number" ? recordingUiTabId : null) ||
@@ -65,10 +65,10 @@ export const resetActiveTab = async (
         tab = await chrome.tabs.get(activeTab);
       } catch (err) {
         // source tab closed between picker-confirm and ready-to-record
-        console.warn(
-          "[SayLess][resetActiveTab] source tab gone, surfacing recording-error",
-          { activeTab, err: String(err).slice(0, 120) },
-        );
+        console.warn("[SayLess][resetActiveTab] source tab gone, surfacing recording-error", {
+          activeTab,
+          err: String(err).slice(0, 120),
+        });
         // chrome.runtime.sendMessage from SW doesn't fire SW's own listeners
         await handleRecordingError({
           error: "stream-error",
@@ -161,8 +161,6 @@ export const resetActiveTab = async (
   }
 };
 
-export const resetActiveTabRestart = async (
-  message: ResetActiveTabMessage = {},
-): Promise<void> => {
+export const resetActiveTabRestart = async (message: ResetActiveTabMessage = {}): Promise<void> => {
   await resetActiveTab(true, message);
 };

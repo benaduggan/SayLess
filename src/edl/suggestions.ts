@@ -60,11 +60,7 @@ const normalizeToken = (text: unknown): string =>
     .toLowerCase()
     .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "");
 
-const rangeText = (
-  words: readonly Word[],
-  startIndex: number,
-  endIndex: number,
-): string =>
+const rangeText = (words: readonly Word[], startIndex: number, endIndex: number): string =>
   words
     .slice(startIndex, endIndex + 1)
     .map((word) => word.text)
@@ -110,8 +106,7 @@ const rangesOverlap = (
   a: Pick<EditSuggestion, "start" | "end">,
   b: Pick<EditSuggestion, "start" | "end">,
   tolerance = 0.08,
-): boolean =>
-  a.start < b.end - tolerance && b.start < a.end - tolerance;
+): boolean => a.start < b.end - tolerance && b.start < a.end - tolerance;
 
 export const buildTranscriptSuggestions = (
   transcript: Transcript | null | undefined,
@@ -131,9 +126,7 @@ export const buildTranscriptSuggestions = (
     if (!token) continue;
 
     const phrase = phraseFillers.find((candidate) =>
-      candidate.every(
-        (part, offset) => normalizeToken(words[i + offset]?.text) === part,
-      ),
+      candidate.every((part, offset) => normalizeToken(words[i + offset]?.text) === part),
     );
     if (phrase) {
       const endIndex = i + phrase.length - 1;
@@ -222,10 +215,7 @@ export const buildAudioSilenceSuggestions = (
     return [];
   }
 
-  const length = Math.max(
-    0,
-    ...channels.map((channel) => Number(channel?.length) || 0),
-  );
+  const length = Math.max(0, ...channels.map((channel) => Number(channel?.length) || 0));
   if (!length) return [];
 
   const frameSize = Math.max(1, Math.round(sampleRate * frameSeconds));
@@ -291,9 +281,7 @@ export const buildAudioSilenceSuggestions = (
 };
 
 export const mergeEditSuggestions = (
-  ...groups: Array<
-    ReadonlyArray<EditSuggestion | null | undefined> | null | undefined
-  >
+  ...groups: Array<ReadonlyArray<EditSuggestion | null | undefined> | null | undefined>
 ): EditSuggestion[] => {
   const suggestions = groups
     .flatMap((group) => group ?? [])
@@ -310,11 +298,7 @@ export const mergeEditSuggestions = (
   for (const suggestion of suggestions) {
     const duplicateSilence =
       suggestion.kind === "silence" &&
-      merged.some(
-        (existing) =>
-          existing.kind === "silence" &&
-          rangesOverlap(existing, suggestion),
-      );
+      merged.some((existing) => existing.kind === "silence" && rangesOverlap(existing, suggestion));
     if (!duplicateSilence) merged.push(suggestion);
   }
   return merged;

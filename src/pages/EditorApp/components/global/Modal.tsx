@@ -91,9 +91,7 @@ const Modal = () => {
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="AlertDialogOverlay" />
         <AlertDialog.Content className="AlertDialogContent">
-          <AlertDialog.Title className="AlertDialogTitle">
-            {title}
-          </AlertDialog.Title>
+          <AlertDialog.Title className="AlertDialogTitle">{title}</AlertDialog.Title>
           <AlertDialog.Description className="AlertDialogDescription">
             {description}
             {learnmore && " "}

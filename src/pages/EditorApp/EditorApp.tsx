@@ -1,5 +1,5 @@
-import "./styles/edit/_VideoPlayer.scss";
-import "./styles/global/_app.scss";
+import "./styles/edit/_VideoPlayer.css";
+import "./styles/global/_app.css";
 
 import React, { useEffect, useRef, useContext, Suspense, lazy } from "react";
 // Editor (trim/cut/timeline UI) only mounts when user enters edit mode.
@@ -119,13 +119,11 @@ const EditorApp = () => {
     <div ref={parentRef}>
       <Modal />
       <Toast />
-      {contentState.ffmpeg &&
-        contentState.ready &&
-        contentState.mode === "edit" && (
-          <Suspense fallback={null}>
-            <Editor />
-          </Suspense>
-        )}
+      {contentState.ffmpeg && contentState.ready && contentState.mode === "edit" && (
+        <Suspense fallback={null}>
+          <Editor />
+        </Suspense>
+      )}
       {contentState.mode != "edit" && contentState.ready && <Player />}
       {!contentState.ready && (
         <div className="wrap">
@@ -139,9 +137,7 @@ const EditorApp = () => {
                   ? `(${Math.round(contentState.processingProgress)}%)`
                   : progress.current)}
             </div>
-            <div className="subtitle">
-              {chrome.i18n.getMessage("sandboxProgressDescription")}
-            </div>
+            <div className="subtitle">{chrome.i18n.getMessage("sandboxProgressDescription")}</div>
             {typeof contentState.openModal === "function" && (
               <div
                 className="button-stop"

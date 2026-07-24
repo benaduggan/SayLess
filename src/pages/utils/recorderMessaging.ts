@@ -4,9 +4,11 @@
 import { classifyError } from "./errorCodes";
 
 const sendRuntimeMessage = (message: unknown): void => {
-  const chromeApi = (globalThis as typeof globalThis & {
-    chrome: { runtime: { sendMessage: (value: unknown) => unknown } };
-  }).chrome;
+  const chromeApi = (
+    globalThis as typeof globalThis & {
+      chrome: { runtime: { sendMessage: (value: unknown) => unknown } };
+    }
+  ).chrome;
   chromeApi.runtime.sendMessage(message);
 };
 
@@ -14,8 +16,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const IS_INJECTED_IFRAME = urlParams.has("injected");
 const IS_IFRAME_CONTEXT =
   IS_INJECTED_IFRAME ||
-  (window.top !== window.self &&
-    !document.referrer.startsWith("chrome-extension://"));
+  (window.top !== window.self && !document.referrer.startsWith("chrome-extension://"));
 
 export function sendRecordingError(why: unknown, cancel = false): void {
   const errorType = !cancel ? "stream-error" : "cancel-modal";
@@ -42,9 +43,8 @@ export function sendStopRecording(
     typeof reason === "string"
       ? { reason }
       : {
-          ...(reason || {}),
-          reason:
-            typeof reason?.reason === "string" ? reason.reason : "generic",
+          ...reason,
+          reason: typeof reason?.reason === "string" ? reason.reason : "generic",
         };
 
   sendRuntimeMessage({

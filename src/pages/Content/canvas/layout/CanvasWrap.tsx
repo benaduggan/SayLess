@@ -13,12 +13,7 @@ import TextTool from "../modules/TextTool";
 import PenTool from "../modules/PenTool";
 import SelectTool from "../modules/SelectTool";
 
-import {
-  undoCanvas,
-  redoCanvas,
-  saveCanvas,
-  checkChanges,
-} from "../modules/History";
+import { undoCanvas, redoCanvas, saveCanvas, checkChanges } from "../modules/History";
 
 const CanvasWrap = (_props: Record<string, never>) => {
   const [contentState, setContentState] = useContext(contentStateContext);
@@ -65,7 +60,7 @@ const CanvasWrap = (_props: Record<string, never>) => {
         ...contentState,
         canvas: canvas,
       },
-      setContentState
+      setContentState,
     );
   }, []);
 
@@ -91,8 +86,7 @@ const CanvasWrap = (_props: Record<string, never>) => {
 
     const tool = contentState.tool;
 
-    const shouldDraw =
-      contentState.drawingMode && (tool === "pen" || tool === "highlighter");
+    const shouldDraw = contentState.drawingMode && (tool === "pen" || tool === "highlighter");
 
     canvas.isDrawingMode = shouldDraw;
 
@@ -172,31 +166,11 @@ const CanvasWrap = (_props: Record<string, never>) => {
     const canvas = fabricRef.current;
 
     // Pass a ref getter instead of snapshot state
-    const arrowDrawing = ArrowTool(
-      canvas,
-      contentStateRef,
-      setContentState,
-      saveCanvas as any
-    );
+    const arrowDrawing = ArrowTool(canvas, contentStateRef, setContentState, saveCanvas as any);
     const eraserDrawing = EraserTool(canvas, contentStateRef, setContentState);
-    const shapeDrawing = ShapeTool(
-      canvas,
-      contentStateRef,
-      setContentState,
-      saveCanvas as any
-    );
-    const textDrawing = TextTool(
-      canvas,
-      contentStateRef,
-      setContentState,
-      saveCanvas as any
-    );
-    const penDrawing = PenTool(
-      canvas,
-      contentStateRef,
-      setContentState,
-      saveCanvas as any
-    );
+    const shapeDrawing = ShapeTool(canvas, contentStateRef, setContentState, saveCanvas as any);
+    const textDrawing = TextTool(canvas, contentStateRef, setContentState, saveCanvas as any);
+    const penDrawing = PenTool(canvas, contentStateRef, setContentState, saveCanvas as any);
 
     return () => {
       arrowDrawing.removeEventListeners();
@@ -213,11 +187,7 @@ const CanvasWrap = (_props: Record<string, never>) => {
     const canvas = fabricRef.current;
 
     const selection = SelectTool(canvas, contentStateRef, setContentState);
-    const objectChanges = checkChanges(
-      canvas,
-      contentStateRef,
-      setContentState
-    );
+    const objectChanges = checkChanges(canvas, contentStateRef, setContentState);
 
     return () => {
       selection.removeEventListeners();
@@ -251,17 +221,12 @@ const CanvasWrap = (_props: Record<string, never>) => {
       const state = contentStateRef.current;
       if (!state) return;
 
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key.toLowerCase() === "z" &&
-        !event.shiftKey
-      ) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
         undoCanvas(state, setContentState);
       }
       if (
         (event.ctrlKey || event.metaKey) &&
-        (event.key.toLowerCase() === "y" ||
-          (event.shiftKey && event.key.toLowerCase() === "z"))
+        (event.key.toLowerCase() === "y" || (event.shiftKey && event.key.toLowerCase() === "z"))
       ) {
         redoCanvas(state, setContentState);
       }
@@ -294,10 +259,7 @@ const CanvasWrap = (_props: Record<string, never>) => {
         style={{
           height: "100vh",
           width: "100vw",
-          zIndex:
-            contentState.drawingMode && !contentState.recording
-              ? 99999999999
-              : 99999999,
+          zIndex: contentState.drawingMode && !contentState.recording ? 99999999999 : 99999999,
         }}
       >
         <canvas id="canvas-screenity" ref={canvasRef} className="canvas" />

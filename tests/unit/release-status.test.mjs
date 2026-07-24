@@ -2,14 +2,7 @@ import assert from "node:assert/strict";
 import JSZip from "jszip";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -25,19 +18,16 @@ import {
 const ROOT = new URL("../..", import.meta.url).pathname;
 const STATUS = join(ROOT, "scripts", "release-status.mjs");
 const MANUAL_QA_PROFILE = join(ROOT, "scripts", "manual-qa-profile.mjs");
-const MANUAL_QA_VERIFIER = join(
-  ROOT,
-  "scripts",
-  "verify-manual-qa-evidence.mjs"
-);
+const MANUAL_QA_VERIFIER = join(ROOT, "scripts", "verify-manual-qa-evidence.mjs");
 
 const writeJson = (path, value) => {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 };
 
-const sha256File = (path) =>
-  createHash("sha256").update(readFileSync(path)).digest("hex");
+const sha256File = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
 const requiredAutomatedCommands = [
+  "lint",
+  "format:check",
   "typecheck",
   "test:unit",
   "test:e2e:offline-whisper-assets",
@@ -70,14 +60,8 @@ const makeFixture = () => {
   });
   writeJson(join(dir, "src", "manifest.json"), { version: "9.9.9" });
   writeJson(join(dir, "build", "manifest.json"), { version: "9.9.9" });
-  writeFileSync(
-    join(dir, "build", "editor.html"),
-    "<html>SayLess local fixture</html>"
-  );
-  writeFileSync(
-    join(dir, "build", "assets", "whisper", "model.bin"),
-    "local whisper bytes"
-  );
+  writeFileSync(join(dir, "build", "editor.html"), "<html>SayLess local fixture</html>");
+  writeFileSync(join(dir, "build", "assets", "whisper", "model.bin"), "local whisper bytes");
   const buildDir = join(dir, "build");
   const whisperDir = join(buildDir, "assets", "whisper");
   const buildFingerprint = dirFingerprint(buildDir);
@@ -184,16 +168,10 @@ const makeReadyFixture = async () => {
   await writeBuildZip(extensionZipPath, buildDir);
   writeFileSync(cwsZipPath, readFileSync(extensionZipPath));
 
-  const automatedEvidence = JSON.parse(
-    readFileSync(automatedEvidencePath, "utf8")
-  );
+  const automatedEvidence = JSON.parse(readFileSync(automatedEvidencePath, "utf8"));
   const manualEvidence = JSON.parse(readFileSync(manualEvidencePath, "utf8"));
-  const packageGeneratedAt = new Date(
-    Date.parse(manualEvidence.testedAt) + 1_000
-  ).toISOString();
-  const cwsGeneratedAt = new Date(
-    Date.parse(packageGeneratedAt) + 1_000
-  ).toISOString();
+  const packageGeneratedAt = new Date(Date.parse(manualEvidence.testedAt) + 1_000).toISOString();
+  const cwsGeneratedAt = new Date(Date.parse(packageGeneratedAt) + 1_000).toISOString();
   const extensionBytes = statSync(extensionZipPath).size;
   const cwsBytes = statSync(cwsZipPath).size;
   const buildFingerprint = dirFingerprint(buildDir);
@@ -280,15 +258,11 @@ const runStatus = (root, args = [], extraEnv = {}) =>
   });
 
 const readCanonicalManualTemplate = (root) => {
-  const result = spawnSync(
-    process.execPath,
-    [MANUAL_QA_VERIFIER, "--print-template"],
-    {
-      cwd: ROOT,
-      encoding: "utf8",
-      env: { ...process.env, SAYLESS_MANUAL_QA_ROOT: root },
-    }
-  );
+  const result = spawnSync(process.execPath, [MANUAL_QA_VERIFIER, "--print-template"], {
+    cwd: ROOT,
+    encoding: "utf8",
+    env: { ...process.env, SAYLESS_MANUAL_QA_ROOT: root },
+  });
   assert.equal(result.status, 0, result.stderr);
   return JSON.parse(result.stdout);
 };
@@ -312,10 +286,7 @@ test("release status reports next manual QA template action without creating art
     assert.equal(report.manualQa.status, "missing");
     assert.equal(report.manualQa.verifierPassed, false);
     assert.equal(report.manualQa.verifierErrorCount, 2);
-    assert.match(
-      report.manualQa.verifierSummary[0],
-      /manual QA evidence file is missing/
-    );
+    assert.match(report.manualQa.verifierSummary[0], /manual QA evidence file is missing/);
     assert.deepEqual(report.manualQa.todo, [
       "Generate release-artifacts/manual-qa-evidence.json with npm run qa:release:manual:template.",
       "Run npm run qa:release:manual:profile -- --sync-template --launch to synchronize the worksheet and launch the current build in a clean Chrome profile.",
@@ -324,17 +295,12 @@ test("release status reports next manual QA template action without creating art
     assert.equal(report.releasePackage.status, "failed");
     assert.equal(
       report.releasePackage.remainingReleaseWork,
-      "Release package has not passed. Rerun npm run package:release after automated and manual release QA pass."
+      "Release package has not passed. Rerun npm run package:release after automated and manual release QA pass.",
     );
-    assert.equal(
-      report.releasePackage.failedStep.script,
-      "scripts/verify-manual-qa-evidence.mjs"
-    );
+    assert.equal(report.releasePackage.failedStep.script, "scripts/verify-manual-qa-evidence.mjs");
     assert.equal(report.cwsPackage.status, "missing");
     assert.throws(() =>
-      readFileSync(
-        join(fixture, "release-artifacts", "manual-qa-evidence.json")
-      )
+      readFileSync(join(fixture, "release-artifacts", "manual-qa-evidence.json")),
     );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -348,27 +314,18 @@ test("release status prints a concise human summary", () => {
 
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /Release status: blocked/);
-    assert.match(
-      result.stdout,
-      /Next action: npm run qa:release:manual:template/
-    );
+    assert.match(result.stdout, /Next action: npm run qa:release:manual:template/);
     assert.match(result.stdout, /Next steps:/);
     assert.match(result.stdout, /npm run qa:release:manual:profile/);
     assert.match(
       result.stdout,
-      /complete docs\/RELEASE_QA\.md, fill release-artifacts\/manual-qa-evidence\.json/
+      /complete docs\/RELEASE_QA\.md, fill release-artifacts\/manual-qa-evidence\.json/,
     );
     assert.match(result.stdout, /automatedQa: passed/);
     assert.match(result.stdout, /manualQa: missing/);
-    assert.match(
-      result.stdout,
-      /2 verifier issue\(s\); first: manual QA evidence file is missing/
-    );
+    assert.match(result.stdout, /2 verifier issue\(s\); first: manual QA evidence file is missing/);
     assert.match(result.stdout, /Manual QA todo:/);
-    assert.match(
-      result.stdout,
-      /Generate release-artifacts\/manual-qa-evidence\.json/
-    );
+    assert.match(result.stdout, /Generate release-artifacts\/manual-qa-evidence\.json/);
     assert.match(result.stdout, /releasePackage: failed/);
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -382,14 +339,8 @@ test("release status require-ready fails closed when evidence is blocked", () =>
 
     assert.equal(result.status, 1);
     assert.match(result.stdout, /Release status: blocked/);
-    assert.match(
-      result.stderr,
-      /Release status must be ready before this action can continue/
-    );
-    assert.match(
-      result.stderr,
-      /Next action: npm run qa:release:manual:template/
-    );
+    assert.match(result.stderr, /Release status must be ready before this action can continue/);
+    assert.match(result.stderr, /Next action: npm run qa:release:manual:template/);
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }
@@ -398,25 +349,19 @@ test("release status require-ready fails closed when evidence is blocked", () =>
 test("release status blocks stale automated evidence before manual QA", () => {
   const fixture = makeFixture();
   try {
-    writeFileSync(
-      join(fixture, "build", "editor.html"),
-      "<html>stale build after QA</html>"
-    );
+    writeFileSync(join(fixture, "build", "editor.html"), "<html>stale build after QA</html>");
 
     const jsonResult = runStatus(fixture, ["--json"]);
     assert.equal(jsonResult.status, 0, jsonResult.stderr);
     const report = JSON.parse(jsonResult.stdout);
     assert.equal(report.overall, "blocked");
     assert.equal(report.nextAction, "npm run qa:release:auto");
-    assert.deepEqual(report.nextActions, [
-      "npm run qa:release:auto",
-      "npm run qa:release:status",
-    ]);
+    assert.deepEqual(report.nextActions, ["npm run qa:release:auto", "npm run qa:release:status"]);
     assert.equal(report.automatedQa.gateStatus, "invalid");
     assert.equal(report.automatedQa.verifierPassed, false);
     assert.match(
       report.automatedQa.verifierSummary.join("\n"),
-      /automated QA evidence build\.(bytes|formattedBytes|sha256) must match current build/
+      /automated QA evidence build\.(bytes|formattedBytes|sha256) must match current build/,
     );
 
     const humanResult = runStatus(fixture);
@@ -431,11 +376,7 @@ test("release status blocks stale automated evidence before manual QA", () => {
 test("release status blocks incomplete automated command evidence before manual QA", () => {
   const fixture = makeFixture();
   try {
-    const evidencePath = join(
-      fixture,
-      "release-artifacts",
-      "release-qa-automated.json"
-    );
+    const evidencePath = join(fixture, "release-artifacts", "release-qa-automated.json");
     const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
     writeJson(evidencePath, {
       ...evidence,
@@ -450,7 +391,7 @@ test("release status blocks incomplete automated command evidence before manual 
         .map((command) =>
           command.label === "build:release"
             ? { ...command, command: "npm run fake-release-build" }
-            : command
+            : command,
         ),
       skippedCommands: [],
     });
@@ -460,27 +401,24 @@ test("release status blocks incomplete automated command evidence before manual 
     const report = JSON.parse(jsonResult.stdout);
     assert.equal(report.overall, "blocked");
     assert.equal(report.nextAction, "npm run qa:release:auto");
-    assert.deepEqual(report.nextActions, [
-      "npm run qa:release:auto",
-      "npm run qa:release:status",
-    ]);
+    assert.deepEqual(report.nextActions, ["npm run qa:release:auto", "npm run qa:release:status"]);
     assert.equal(report.automatedQa.gateStatus, "invalid");
     assert.equal(report.automatedQa.verifierPassed, false);
     assert.match(
       report.automatedQa.verifierSummary.join("\n"),
-      /git\.commit must be a 40-character SHA-1 commit/
+      /git\.commit must be a 40-character SHA-1 commit/,
     );
     assert.match(
       report.automatedQa.verifierSummary.join("\n"),
-      /automated QA evidence command build:release must be "npm run build:release"/
+      /automated QA evidence command build:release must be "npm run build:release"/,
     );
     assert.match(
       report.automatedQa.verifierSummary.join("\n"),
-      /automated QA evidence command verify:release is required/
+      /automated QA evidence command verify:release is required/,
     );
     assert.match(
       report.automatedQa.verifierSummary.join("\n"),
-      /automated QA evidence command test:e2e:offline-transcription-speech must be completed or skipped/
+      /automated QA evidence command test:e2e:offline-transcription-speech must be completed or skipped/,
     );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -490,11 +428,7 @@ test("release status blocks incomplete automated command evidence before manual 
 test("release status blocks automated git worktree drift before manual QA", () => {
   const fixture = makeFixture();
   try {
-    const evidencePath = join(
-      fixture,
-      "release-artifacts",
-      "release-qa-automated.json"
-    );
+    const evidencePath = join(fixture, "release-artifacts", "release-qa-automated.json");
     const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
     writeJson(evidencePath, {
       ...evidence,
@@ -515,7 +449,7 @@ test("release status blocks automated git worktree drift before manual QA", () =
     assert.equal(report.automatedQa.gateStatus, "invalid");
     assert.match(
       report.automatedQa.verifierSummary.join("\n"),
-      /git\.workingTree\.sha256 must match the current git worktree/
+      /git\.workingTree\.sha256 must match the current git worktree/,
     );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -525,11 +459,7 @@ test("release status blocks automated git worktree drift before manual QA", () =
 test("release status blocks malformed browser-observed extension identity", () => {
   const fixture = makeFixture();
   try {
-    const evidencePath = join(
-      fixture,
-      "release-artifacts",
-      "release-qa-automated.json"
-    );
+    const evidencePath = join(fixture, "release-artifacts", "release-qa-automated.json");
     const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
     writeJson(evidencePath, {
       ...evidence,
@@ -547,11 +477,11 @@ test("release status blocks malformed browser-observed extension identity", () =
     assert.equal(report.automatedQa.gateStatus, "invalid");
     assert.match(
       report.automatedQa.verifierSummary.join("\n"),
-      /builtExtension\.id must be a browser-observed/
+      /builtExtension\.id must be a browser-observed/,
     );
     assert.match(
       report.automatedQa.verifierSummary.join("\n"),
-      /builtExtension\.cleanChromeProfile must be true/
+      /builtExtension\.cleanChromeProfile must be true/,
     );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -575,7 +505,7 @@ test("release status tells releasers to complete manual evidence when the templa
     assert.equal(report.overall, "blocked");
     assert.equal(
       report.nextAction,
-      "npm run qa:release:manual:profile -- --sync-template --launch"
+      "npm run qa:release:manual:profile -- --sync-template --launch",
     );
     assert.deepEqual(report.nextActions, [
       "npm run qa:release:manual:profile -- --sync-template --launch",
@@ -588,44 +518,26 @@ test("release status tells releasers to complete manual evidence when the templa
     assert.equal(report.manualQa.templateSyncRequired, true);
     assert.match(
       report.manualQa.templateSyncReasons.join("\n"),
-      /canonical template fields are missing/
+      /canonical template fields are missing/,
     );
+    assert.match(report.manualQa.verifierSummary[0], /manual QA evidence status must be "passed"/);
+    assert.match(report.manualQa.todo.join("\n"), /npm run qa:release:manual:profile/);
+    assert.match(report.manualQa.todo.join("\n"), /Record at least two real recordings/);
     assert.match(
-      report.manualQa.verifierSummary[0],
-      /manual QA evidence status must be "passed"/
+      report.manualQa.todo.join("\n"),
+      /npm run qa:release:manual:media -- --json --require-complete --output=release-artifacts\/manual-qa-media-probe\.json <files\.\.\.>/,
     );
     assert.match(
       report.manualQa.todo.join("\n"),
-      /npm run qa:release:manual:profile/
-    );
-    assert.match(
-      report.manualQa.todo.join("\n"),
-      /Record at least two real recordings/
-    );
-    assert.match(
-      report.manualQa.todo.join("\n"),
-      /npm run qa:release:manual:media -- --json --require-complete --output=release-artifacts\/manual-qa-media-probe\.json <files\.\.\.>/
-    );
-    assert.match(
-      report.manualQa.todo.join("\n"),
-      /npm run qa:release:manual:sidecars -- --json --require-complete --output=release-artifacts\/manual-qa-sidecar-probe\.json <files\.\.\.>/
+      /npm run qa:release:manual:sidecars -- --json --require-complete --output=release-artifacts\/manual-qa-sidecar-probe\.json <files\.\.\.>/,
     );
     assert.match(report.manualQa.todo.join("\n"), /at least 25 MiB/);
+    assert.match(report.manualQa.todo.join("\n"), /Fill offline transcription evidence/);
+    assert.match(report.manualQa.todo.join("\n"), /Fill per-recording crop evidence/);
+    assert.match(report.manualQa.todo.join("\n"), /real WAV, M4A, and MP3 inputs/);
     assert.match(
       report.manualQa.todo.join("\n"),
-      /Fill offline transcription evidence/
-    );
-    assert.match(
-      report.manualQa.todo.join("\n"),
-      /Fill per-recording crop evidence/
-    );
-    assert.match(
-      report.manualQa.todo.join("\n"),
-      /real WAV, M4A, and MP3 inputs/
-    );
-    assert.match(
-      report.manualQa.todo.join("\n"),
-      /account-tier\/license-key\/activation\/contact-sales/
+      /account-tier\/license-key\/activation\/contact-sales/,
     );
     assert.match(report.manualQa.todo.join("\n"), /qa:release:manual:progress/);
 
@@ -633,11 +545,11 @@ test("release status tells releasers to complete manual evidence when the templa
     assert.equal(humanResult.status, 0, humanResult.stderr);
     assert.match(
       humanResult.stdout,
-      /Next action: npm run qa:release:manual:profile -- --sync-template --launch/
+      /Next action: npm run qa:release:manual:profile -- --sync-template --launch/,
     );
     assert.match(
       humanResult.stdout,
-      /complete docs\/RELEASE_QA\.md, fill release-artifacts\/manual-qa-evidence\.json/
+      /complete docs\/RELEASE_QA\.md, fill release-artifacts\/manual-qa-evidence\.json/,
     );
     assert.match(humanResult.stdout, /manualQa: invalid/);
     assert.match(humanResult.stdout, /Manual QA todo:/);
@@ -647,7 +559,7 @@ test("release status tells releasers to complete manual evidence when the templa
     assert.match(humanResult.stdout, /Fill project-audio evidence/);
     assert.match(
       humanResult.stdout,
-      /Fill publication-surface evidence for release notes, screenshots, and docs\/STORE_LISTING\.md store text/
+      /Fill publication-surface evidence for release notes, screenshots, and docs\/STORE_LISTING\.md store text/,
     );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -671,10 +583,7 @@ test("release status opens the clean profile without redundant sync for a curren
     assert.equal(jsonResult.status, 0, jsonResult.stderr);
     const report = JSON.parse(jsonResult.stdout);
     assert.equal(report.overall, "blocked");
-    assert.equal(
-      report.nextAction,
-      "npm run qa:release:manual:profile -- --launch"
-    );
+    assert.equal(report.nextAction, "npm run qa:release:manual:profile -- --launch");
     assert.deepEqual(report.nextActions, [
       "npm run qa:release:manual:profile -- --launch",
       "npm run qa:release:manual:progress",
@@ -684,7 +593,7 @@ test("release status opens the clean profile without redundant sync for a curren
     assert.deepEqual(report.manualQa.templateSyncReasons, []);
     assert.match(
       report.manualQa.todo[0],
-      /^Run npm run qa:release:manual:profile -- --launch to launch/
+      /^Run npm run qa:release:manual:profile -- --launch to launch/,
     );
     assert.doesNotMatch(report.manualQa.todo[0], /--sync-template/);
 
@@ -692,11 +601,11 @@ test("release status opens the clean profile without redundant sync for a curren
     assert.equal(humanResult.status, 0, humanResult.stderr);
     assert.match(
       humanResult.stdout,
-      /Next action: npm run qa:release:manual:profile -- --launch\n/
+      /Next action: npm run qa:release:manual:profile -- --launch\n/,
     );
     assert.doesNotMatch(
       humanResult.stdout,
-      /Next action: npm run qa:release:manual:profile -- --sync-template --launch/
+      /Next action: npm run qa:release:manual:profile -- --sync-template --launch/,
     );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -718,12 +627,7 @@ test("release status resumes the recorded active clean profile after strict vali
     const profileDir = join(fixture, "active manual profile");
     const profileResult = spawnSync(
       process.execPath,
-      [
-        MANUAL_QA_PROFILE,
-        "--json",
-        "--launch",
-        `--profile-dir=${profileDir}`,
-      ],
+      [MANUAL_QA_PROFILE, "--json", "--launch", `--profile-dir=${profileDir}`],
       {
         cwd: ROOT,
         encoding: "utf8",
@@ -732,7 +636,7 @@ test("release status resumes the recorded active clean profile after strict vali
           SAYLESS_CHROME: process.execPath,
           SAYLESS_MANUAL_QA_PROFILE_ROOT: fixture,
         },
-      }
+      },
     );
     assert.equal(profileResult.status, 0, profileResult.stderr);
 
@@ -749,14 +653,8 @@ test("release status resumes the recorded active clean profile after strict vali
     assert.equal(report.manualQa.activeSession.exists, true);
     assert.equal(report.manualQa.activeSession.usable, true);
     assert.equal(report.manualQa.activeSession.profileDir, profileDir);
-    assert.equal(
-      report.manualQa.activeSession.resumeAction,
-      expectedResumeAction
-    );
-    assert.match(
-      report.manualQa.todo[0],
-      /--resume-profile --launch to launch/
-    );
+    assert.equal(report.manualQa.activeSession.resumeAction, expectedResumeAction);
+    assert.match(report.manualQa.todo[0], /--resume-profile --launch to launch/);
 
     const humanResult = runStatus(fixture, [], {
       SAYLESS_CHROME: process.execPath,
@@ -765,10 +663,7 @@ test("release status resumes the recorded active clean profile after strict vali
     assert.match(humanResult.stdout, /Active clean-profile session: resumable/);
     assert.match(humanResult.stdout, /Next action: .*--resume-profile --launch/);
 
-    const markerPath = join(
-      profileDir,
-      ".sayless-manual-qa-profile.json"
-    );
+    const markerPath = join(profileDir, ".sayless-manual-qa-profile.json");
     const marker = JSON.parse(readFileSync(markerPath, "utf8"));
     writeJson(markerPath, { ...marker, buildSha256: "f".repeat(64) });
     const staleResult = runStatus(fixture, ["--json"], {
@@ -776,15 +671,9 @@ test("release status resumes the recorded active clean profile after strict vali
     });
     assert.equal(staleResult.status, 0, staleResult.stderr);
     const staleReport = JSON.parse(staleResult.stdout);
-    assert.equal(
-      staleReport.nextAction,
-      "npm run qa:release:manual:profile -- --launch"
-    );
+    assert.equal(staleReport.nextAction, "npm run qa:release:manual:profile -- --launch");
     assert.equal(staleReport.manualQa.activeSession.usable, false);
-    assert.match(
-      staleReport.manualQa.activeSession.reason,
-      /recorded session cannot be resumed/
-    );
+    assert.match(staleReport.manualQa.activeSession.reason, /recorded session cannot be resumed/);
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }
@@ -805,8 +694,7 @@ test("release status requires sync while retired zoom placeholders remain", () =
         ...template.zoom,
         recordingId: "replace-with-tab-or-region-recording-id",
         sourceHadClickMetadata: false,
-        notes:
-          "Replace with observed zoom suggestion, preview, and export behavior.",
+        notes: "Replace with observed zoom suggestion, preview, and export behavior.",
       },
     });
 
@@ -815,12 +703,12 @@ test("release status requires sync while retired zoom placeholders remain", () =
     const report = JSON.parse(result.stdout);
     assert.equal(
       report.nextAction,
-      "npm run qa:release:manual:profile -- --sync-template --launch"
+      "npm run qa:release:manual:profile -- --sync-template --launch",
     );
     assert.equal(report.manualQa.templateSyncRequired, true);
     assert.match(
       report.manualQa.templateSyncReasons.join("\n"),
-      /retired template placeholders are still present/
+      /retired template placeholders are still present/,
     );
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -846,10 +734,7 @@ test("release status does not display unverified manual evidence as passed", () 
     assert.equal(report.manualQa.verifierPassed, false);
     assert.ok(report.manualQa.verifierErrorCount > 0);
     assert.ok(report.manualQa.verifierSummary[0].length > 0);
-    assert.match(
-      report.manualQa.todo[0],
-      /Fix release-artifacts\/manual-qa-evidence\.json/
-    );
+    assert.match(report.manualQa.todo[0], /Fix release-artifacts\/manual-qa-evidence\.json/);
     assert.equal(report.nextAction, "npm run qa:release:manual");
     assert.deepEqual(report.nextActions, [
       "fix release-artifacts/manual-qa-evidence.json",
@@ -899,10 +784,7 @@ test("release status reports publication handoff only when all evidence verifies
     assert.match(humanResult.stdout, /Release status: ready/);
     assert.match(humanResult.stdout, /Release handoff:/);
     assert.match(humanResult.stdout, /npm run release:cws:publish/);
-    assert.match(
-      humanResult.stdout,
-      /attach release-artifacts\/cws-package\.json/
-    );
+    assert.match(humanResult.stdout, /attach release-artifacts\/cws-package\.json/);
     assert.match(humanResult.stdout, /attach docs\/STORE_LISTING\.md/);
     assert.match(humanResult.stdout, /attach extension\.zip/);
     assert.match(humanResult.stdout, /attach build-cws\.zip/);

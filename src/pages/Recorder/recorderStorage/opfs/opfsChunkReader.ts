@@ -4,11 +4,7 @@
  */
 const MIN_VALID_RECORDING_BYTES = 4096;
 
-import type {
-  ChunkReader,
-  ChunkReadResult,
-  RecordingBackendRef,
-} from "../chunkWriterInterface.ts";
+import type { ChunkReader, ChunkReadResult, RecordingBackendRef } from "../chunkWriterInterface.ts";
 
 export class OpfsChunkReader implements ChunkReader {
   private _fileName: string | null;
@@ -30,9 +26,7 @@ export class OpfsChunkReader implements ChunkReader {
     const file = await handle.getFile();
     if (file.size < MIN_VALID_RECORDING_BYTES) {
       const err = Object.assign(
-        new Error(
-          `opfs-file-too-small: ${file.size} bytes < ${MIN_VALID_RECORDING_BYTES}`,
-        ),
+        new Error(`opfs-file-too-small: ${file.size} bytes < ${MIN_VALID_RECORDING_BYTES}`),
         { code: "opfs-file-too-small" },
       );
       throw err;

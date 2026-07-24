@@ -1,11 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Background from "./components/Background";
 import { useCameraContext } from "./context/CameraContext";
-import {
-  getCameraStream,
-  stopCameraStream,
-  surfaceHandler,
-} from "./utils/cameraUtils";
+import { getCameraStream, stopCameraStream, surfaceHandler } from "./utils/cameraUtils";
 import { setupHandlers } from "./messaging/handlers";
 
 const Camera = () => {
@@ -34,10 +30,7 @@ const Camera = () => {
     setIsCameraMode,
   } = useCameraContext();
 
-  const updateLoadingState = (
-    key: keyof typeof loadingStates,
-    value: boolean,
-  ): void => {
+  const updateLoadingState = (key: keyof typeof loadingStates, value: boolean): void => {
     setLoadingStates((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -57,8 +50,7 @@ const Camera = () => {
 
   useEffect(() => {
     chrome.storage.local.get(["recordingType"], (result) => {
-      recordingTypeRef.current =
-        result.recordingType === "camera" ? "camera" : "screen";
+      recordingTypeRef.current = result.recordingType === "camera" ? "camera" : "screen";
       updateLoadingState("recordingType", false);
       setIsCameraMode(recordingTypeRef.current === "camera");
     });
@@ -91,9 +83,7 @@ const Camera = () => {
   useEffect(() => {
     if (!loadingStates.modelLoading) return;
     const id = setTimeout(() => {
-      console.warn(
-        "[SayLess] modelLoading hard-capped at 30s; clearing spinner",
-      );
+      console.warn("[SayLess] modelLoading hard-capped at 30s; clearing spinner");
       try {
         chrome.runtime.sendMessage({
           type: "diag-forward",
@@ -117,9 +107,7 @@ const Camera = () => {
     updateLoadingState("videoElement", true);
     chrome.storage.local.get(["defaultVideoInput"], (result) => {
       const defaultVideoInput =
-        typeof result.defaultVideoInput === "string"
-          ? result.defaultVideoInput
-          : "none";
+        typeof result.defaultVideoInput === "string" ? result.defaultVideoInput : "none";
       const constraints: MediaStreamConstraints =
         defaultVideoInput !== "none"
           ? { video: { deviceId: { exact: defaultVideoInput } } }
@@ -137,7 +125,7 @@ const Camera = () => {
             updateLoadingState("videoElement", false);
             isAcquiringRef.current = false;
           },
-        }
+        },
       );
     });
   };
@@ -145,17 +133,11 @@ const Camera = () => {
   useEffect(() => {
     // Acquire the stream only when camera is enabled AND a recording is
     // pending or active. Mounting alone must not trigger getUserMedia.
-    chrome.storage.local.get(
-      ["recording", "pendingRecording", "cameraActive"],
-      (result) => {
-        if (
-          result.cameraActive &&
-          (result.recording || result.pendingRecording)
-        ) {
-          acquireStream();
-        }
-      },
-    );
+    chrome.storage.local.get(["recording", "pendingRecording", "cameraActive"], (result) => {
+      if (result.cameraActive && (result.recording || result.pendingRecording)) {
+        acquireStream();
+      }
+    });
   }, [videoRef.current]);
 
   // Release the camera light when no recording is active. The iframe stays
@@ -164,18 +146,15 @@ const Camera = () => {
   useEffect(() => {
     let inflightAcquire = false;
     const evaluate = async () => {
-      const { recording, pendingRecording, cameraActive } =
-        await chrome.storage.local.get([
-          "recording",
-          "pendingRecording",
-          "cameraActive",
-        ]);
+      const { recording, pendingRecording, cameraActive } = await chrome.storage.local.get([
+        "recording",
+        "pendingRecording",
+        "cameraActive",
+      ]);
       // Hold the stream only when cameraActive AND a recording is
       // active/pending. Without the gate, tab recordings without camera
       // would re-acquire and surface camera-denied errors.
-      const wantStream = Boolean(
-        cameraActive && (recording || pendingRecording),
-      );
+      const wantStream = Boolean(cameraActive && (recording || pendingRecording));
       const hasStream = Boolean(streamRef.current?.active);
       if (!wantStream && hasStream) {
         stopCameraStream(streamRef, videoRef);
@@ -192,16 +171,9 @@ const Camera = () => {
         }
       }
     };
-    const listener = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string,
-    ) => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
       if (area !== "local") return;
-      if (
-        "recording" in changes ||
-        "pendingRecording" in changes ||
-        "cameraActive" in changes
-      ) {
+      if ("recording" in changes || "pendingRecording" in changes || "cameraActive" in changes) {
         evaluate();
       }
     };
@@ -215,14 +187,11 @@ const Camera = () => {
   useEffect(() => {
     if (!videoRef.current || !streamRef.current?.active) return;
 
-    chrome.storage.local.get(
-      ["surface", "recording"],
-      (result) => {
-        if (result.recording && result.surface) {
-          surfaceHandler({ surface: String(result.surface) }, videoRef);
-        }
-      },
-    );
+    chrome.storage.local.get(["surface", "recording"], (result) => {
+      if (result.recording && result.surface) {
+        surfaceHandler({ surface: String(result.surface) }, videoRef);
+      }
+    });
   }, [videoRef.current, streamRef.current?.active]);
 
   const handleEnterPip = () => {

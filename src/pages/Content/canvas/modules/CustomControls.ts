@@ -8,9 +8,7 @@ import {
 } from "./../../images/popup/images";
 
 // Custom controls for the canvas, with rounded square handles and a circular rotate handle
-type ControlRenderArgs = Parameters<
-  InstanceType<typeof fabric.Control>["render"]
->;
+type ControlRenderArgs = Parameters<InstanceType<typeof fabric.Control>["render"]>;
 
 const CustomControls = (canvas: InstanceType<typeof fabric.Canvas>): void => {
   fabric.Object.prototype.set({
@@ -41,9 +39,7 @@ const CustomControls = (canvas: InstanceType<typeof fabric.Canvas>): void => {
   const img = new Image();
   img.src = HandleControl;
 
-  function renderIcon(
-    ...[ctx, left, top, _styleOverride, fabricObject]: ControlRenderArgs
-  ): void {
+  function renderIcon(...[ctx, left, top, _styleOverride, fabricObject]: ControlRenderArgs): void {
     const size = 25;
     ctx.save();
     ctx.translate(left, top);
@@ -101,8 +97,7 @@ const CustomControls = (canvas: InstanceType<typeof fabric.Canvas>): void => {
   // fabric v6 leaves prototype.controls undefined; initialize it so
   // the v5 `controls.tl = …` pattern below doesn't throw.
   if (!fabric.Object.prototype.controls) {
-    fabric.Object.prototype.controls =
-      {} as typeof fabric.Object.prototype.controls;
+    fabric.Object.prototype.controls = {} as typeof fabric.Object.prototype.controls;
   }
   const objectControls = fabric.Object.prototype.controls;
 
@@ -200,8 +195,7 @@ const CustomControls = (canvas: InstanceType<typeof fabric.Canvas>): void => {
   // Also use same controls for Textbox. v6 has the same undefined-by-
   // default behavior on Textbox.prototype.controls.
   if (!fabric.Textbox.prototype.controls) {
-    fabric.Textbox.prototype.controls =
-      {} as typeof fabric.Textbox.prototype.controls;
+    fabric.Textbox.prototype.controls = {} as typeof fabric.Textbox.prototype.controls;
   }
   const textboxControls = fabric.Textbox.prototype.controls;
   textboxControls.tl = new fabric.Control({

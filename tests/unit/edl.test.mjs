@@ -1,12 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  createEdl,
-  addEdit,
-  removeEdit,
-  mergeRanges,
-} from "../../src/edl/model.ts";
+import { createEdl, addEdit, removeEdit, mergeRanges } from "../../src/edl/model.ts";
 import { compose, sourceToOutput, outputToSource } from "../../src/edl/compose.ts";
 import { editWords, wordRange } from "../../src/edl/fromTranscript.ts";
 
@@ -20,7 +15,7 @@ test("mergeRanges merges overlapping and adjacent", () => {
     [
       { start: 0, end: 3 },
       { start: 5, end: 6 },
-    ]
+    ],
   );
 });
 
@@ -35,7 +30,7 @@ test("addEdit clamps to source and ignores empty ranges", () => {
     [
       [0, 3],
       [8, 10],
-    ]
+    ],
   );
 });
 

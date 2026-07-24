@@ -72,17 +72,11 @@ const bundleHarness = (work) =>
           }
         }
         if (stats.hasErrors()) {
-          reject(
-            new Error(
-              info.errors
-                .map((error) => error.message || String(error))
-                .join("\n")
-            )
-          );
+          reject(new Error(info.errors.map((error) => error.message || String(error)).join("\n")));
           return;
         }
         resolve();
-      }
+      },
     );
   });
 
@@ -115,7 +109,7 @@ const createServer = (work) =>
   await bundleHarness(work);
   fs.writeFileSync(
     path.join(work, "harness.html"),
-    "<!doctype html><meta charset=utf-8><title>Offline Whisper assets</title><script type=module src=./bundle.js></script>"
+    "<!doctype html><meta charset=utf-8><title>Offline Whisper assets</title><script type=module src=./bundle.js></script>",
   );
 
   const server = createServer(work);
@@ -141,15 +135,14 @@ const createServer = (work) =>
     });
     result = await page.evaluate(async () => {
       const startedAt = performance.now();
-      const status =
-        await window.OFFLINE_WHISPER_ASSETS.checkLocalWhisperModelStatus({
+      const status = await window.OFFLINE_WHISPER_ASSETS.checkLocalWhisperModelStatus({
+        runtime: {
           runtime: {
-            runtime: {
-              getURL: (assetPath) => `/${assetPath}`,
-            },
+            getURL: (assetPath) => `/${assetPath}`,
           },
-          fetchImpl: window.fetch.bind(window),
-        });
+        },
+        fetchImpl: window.fetch.bind(window),
+      });
       return {
         ...status,
         durationMs: Math.round(performance.now() - startedAt),
@@ -172,9 +165,7 @@ const createServer = (work) =>
     result.totalBytes >= MIN_EXPECTED_MODEL_BYTES &&
     result.durationMs <= MAX_READY_MS;
 
-  console.log(
-    ok ? "OFFLINE WHISPER ASSETS PASS" : "OFFLINE WHISPER ASSETS FAIL"
-  );
+  console.log(ok ? "OFFLINE WHISPER ASSETS PASS" : "OFFLINE WHISPER ASSETS FAIL");
   process.exit(ok ? 0 : 1);
 })().catch((err) => {
   console.error("RUNNER ERROR", err);

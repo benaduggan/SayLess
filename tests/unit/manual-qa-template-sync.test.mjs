@@ -38,8 +38,7 @@ const canonicalTemplate = {
   zoom: {
     recordingIds: ["replace-with-recording-a", "replace-with-recording-b"],
     observations: [{ recordingId: "replace-with-recording-a" }],
-    notes:
-      "Replace with observed varied-dimension zoom behavior across both recordings.",
+    notes: "Replace with observed varied-dimension zoom behavior across both recordings.",
   },
 };
 
@@ -69,10 +68,8 @@ test("shared manual template synchronization converges after nested merge and pl
       mp4ExportVerified: false,
       keepRemoveVerified: false,
       persistedAfterReopen: false,
-      exportInspection:
-        "Replace with how the MP4 export was inspected for the saved zoom framing.",
-      notes:
-        "Replace with observed zoom suggestion, preview, and export behavior.",
+      exportInspection: "Replace with how the MP4 export was inspected for the saved zoom framing.",
+      notes: "Replace with observed zoom suggestion, preview, and export behavior.",
       legacyTesterComment: "Preserve this entered note",
     },
   };
@@ -83,14 +80,8 @@ test("shared manual template synchronization converges after nested merge and pl
     automatedEvidence,
   });
   assert.equal(before.required, true);
-  assert.match(
-    before.reasons.join("\n"),
-    /canonical template fields are missing/
-  );
-  assert.match(
-    before.reasons.join("\n"),
-    /retired template placeholders are still present/
-  );
+  assert.match(before.reasons.join("\n"), /canonical template fields are missing/);
+  assert.match(before.reasons.join("\n"), /retired template placeholders are still present/);
   assert.match(before.reasons.join("\n"), /release version is stale/);
 
   const synchronized = buildSynchronizedManualTemplate({
@@ -100,30 +91,18 @@ test("shared manual template synchronization converges after nested merge and pl
     automatedEvidenceGeneratedAt: automatedEvidence.generatedAt,
   });
   assert.equal(synchronized.environment.os, "replace-with-os");
-  assert.equal(
-    synchronized.environment.chromeVersion,
-    "replace-with-chrome-version"
-  );
-  assert.equal(
-    synchronized.environment.unpackedExtensionId,
-    "preserve-user-extension-id"
-  );
+  assert.equal(synchronized.environment.chromeVersion, "replace-with-chrome-version");
+  assert.equal(synchronized.environment.unpackedExtensionId, "preserve-user-extension-id");
   assert.equal(synchronized.environment.extensionSource, "build");
   assert.equal(synchronized.environment.cleanChromeProfile, true);
-  assert.deepEqual(
-    synchronized.manualSession,
-    canonicalTemplate.manualSession
-  );
+  assert.deepEqual(synchronized.manualSession, canonicalTemplate.manualSession);
   assert.equal("email" in synchronized.tester, false);
   assert.deepEqual(synchronized.zoom.recordingIds, [
     "replace-with-recording-a",
     "replace-with-recording-b",
   ]);
   assert.equal(synchronized.zoom.notes, canonicalTemplate.zoom.notes);
-  assert.equal(
-    synchronized.zoom.legacyTesterComment,
-    "Preserve this entered note"
-  );
+  assert.equal(synchronized.zoom.legacyTesterComment, "Preserve this entered note");
   for (const retiredField of [
     "recordingId",
     "sourceHadClickMetadata",
@@ -149,7 +128,7 @@ test("shared manual template synchronization converges after nested merge and pl
       releaseVersion: automatedEvidence.releaseVersion,
       automatedEvidenceGeneratedAt: automatedEvidence.generatedAt,
     }),
-    synchronized
+    synchronized,
   );
 });
 
@@ -211,19 +190,10 @@ test("shared manual template migration preserves entered values in retired field
     automatedEvidenceGeneratedAt: automatedEvidence.generatedAt,
   });
 
-  assert.equal(
-    synchronized.zoom.recordingId,
-    "user-entered-legacy-recording-id"
-  );
+  assert.equal(synchronized.zoom.recordingId, "user-entered-legacy-recording-id");
   assert.equal(synchronized.zoom.sourceHadClickMetadata, true);
-  assert.equal(
-    synchronized.zoom.notes,
-    "Observed legacy zoom evidence that must remain intact."
-  );
-  assert.equal(
-    synchronized.tester.email,
-    "entered-release-operator@example.test"
-  );
+  assert.equal(synchronized.zoom.notes, "Observed legacy zoom evidence that must remain intact.");
+  assert.equal(synchronized.tester.email, "entered-release-operator@example.test");
 });
 
 test("shared manual template synchronization prefills only untouched machine environment placeholders", () => {
@@ -240,13 +210,10 @@ test("shared manual template synchronization prefills only untouched machine env
     environmentPrefill: detectedEnvironment,
   });
   assert.equal(synchronized.environment.os, detectedEnvironment.os);
-  assert.equal(
-    synchronized.environment.chromeVersion,
-    detectedEnvironment.chromeVersion
-  );
+  assert.equal(synchronized.environment.chromeVersion, detectedEnvironment.chromeVersion);
   assert.equal(
     synchronized.environment.unpackedExtensionId,
-    detectedEnvironment.unpackedExtensionId
+    detectedEnvironment.unpackedExtensionId,
   );
 
   const preserved = buildSynchronizedManualTemplate({
@@ -265,14 +232,8 @@ test("shared manual template synchronization prefills only untouched machine env
     environmentPrefill: detectedEnvironment,
   });
   assert.equal(preserved.environment.os, "Tester-confirmed macOS 15.4");
-  assert.equal(
-    preserved.environment.chromeVersion,
-    "Tester-confirmed Chrome 137 stable"
-  );
-  assert.equal(
-    preserved.environment.unpackedExtensionId,
-    "pppppppppppppppppppppppppppppppp"
-  );
+  assert.equal(preserved.environment.chromeVersion, "Tester-confirmed Chrome 137 stable");
+  assert.equal(preserved.environment.unpackedExtensionId, "pppppppppppppppppppppppppppppppp");
 
   const withoutChromeDetection = buildSynchronizedManualTemplate({
     canonicalTemplate,
@@ -284,7 +245,7 @@ test("shared manual template synchronization prefills only untouched machine env
   assert.equal(withoutChromeDetection.environment.os, "Linux 6.8");
   assert.equal(
     withoutChromeDetection.environment.chromeVersion,
-    canonicalTemplate.environment.chromeVersion
+    canonicalTemplate.environment.chromeVersion,
   );
 
   const migratedRetiredIdPlaceholder = buildSynchronizedManualTemplate({
@@ -302,6 +263,6 @@ test("shared manual template synchronization prefills only untouched machine env
   });
   assert.equal(
     migratedRetiredIdPlaceholder.environment.unpackedExtensionId,
-    detectedEnvironment.unpackedExtensionId
+    detectedEnvironment.unpackedExtensionId,
   );
 });

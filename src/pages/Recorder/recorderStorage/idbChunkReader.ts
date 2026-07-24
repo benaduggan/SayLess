@@ -23,9 +23,7 @@ export class IdbChunkReader implements ChunkReader {
       if (dt !== 0) return dt;
       return (a.index ?? 0) - (b.index ?? 0);
     });
-    const parts = items.map((c) =>
-      c.chunk instanceof Blob ? c.chunk : new Blob([c.chunk]),
-    );
+    const parts = items.map((c) => (c.chunk instanceof Blob ? c.chunk : new Blob([c.chunk])));
     if (!parts.length) return { blob: null, byteSize: 0, chunkCount: 0 };
     const inferredType = parts[0]?.type || "video/mp4";
     const blob = new Blob(parts, { type: inferredType });

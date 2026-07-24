@@ -54,8 +54,7 @@ interface RecorderChromeApi {
 const chromeApi = (): RecorderChromeApi =>
   (globalThis as typeof globalThis & { chrome: RecorderChromeApi }).chrome;
 
-const WORKER_URL = () =>
-  chromeApi().runtime.getURL("recorderopfsworker.bundle.js");
+const WORKER_URL = () => chromeApi().runtime.getURL("recorderopfsworker.bundle.js");
 
 // Write is short (chunks ~200KB; commit fast or hung). Close is long:
 // syncHandle.flush() on multi-GB recordings on slow disks can exceed
@@ -110,9 +109,7 @@ export class OpfsChunkWriter implements ChunkWriter {
   private _markDead(err: unknown): void {
     if (this._dead) return;
     this._dead = true;
-    const tagged = (err instanceof Error
-      ? err
-      : new Error(String(err))) as TaggedWriterError;
+    const tagged = (err instanceof Error ? err : new Error(String(err))) as TaggedWriterError;
     tagged.code = OPFS_WRITER_FAILED_CODE;
     tagged.fileName = this._fileName;
     this._deathError = tagged;
@@ -152,9 +149,7 @@ export class OpfsChunkWriter implements ChunkWriter {
       }
     };
     this.worker.onerror = (e) => {
-      const err = new Error(
-        String(e?.message || "opfs-worker-crashed"),
-      ) as TaggedWriterError;
+      const err = new Error(String(e?.message || "opfs-worker-crashed")) as TaggedWriterError;
       err.errorName = "WorkerError";
       this._markDead(err);
     };
@@ -195,10 +190,7 @@ export class OpfsChunkWriter implements ChunkWriter {
       throw new Error("opfs-chunk-writer-reused");
     }
     const extension = opts.extension === "webm" ? "webm" : "mp4";
-    const resp = await this._request(
-      { type: "open", recordingId, extension },
-      OPEN_TIMEOUT_MS,
-    );
+    const resp = await this._request({ type: "open", recordingId, extension }, OPEN_TIMEOUT_MS);
     if (this._aborted || this._closed) {
       // open reply lands after abort; skip storage write so it doesn't
       // overwrite a real recording's backendRef.
@@ -255,10 +247,10 @@ export class OpfsChunkWriter implements ChunkWriter {
       chunkCount: this._chunkCount,
       timeoutMs: closeTimeoutMs,
     });
-    const tBeforeReq = (typeof performance !== "undefined" ? performance.now() : Date.now());
+    const tBeforeReq = typeof performance !== "undefined" ? performance.now() : Date.now();
     try {
       const resp = await this._request({ type: "close" }, closeTimeoutMs);
-      const tAfterReq = (typeof performance !== "undefined" ? performance.now() : Date.now());
+      const tAfterReq = typeof performance !== "undefined" ? performance.now() : Date.now();
       this._byteSize = resp.byteSize ?? this._byteSize;
       this._chunkCount = resp.chunkCount ?? this._chunkCount;
       this._fileName = resp.fileName || this._fileName;
@@ -321,7 +313,8 @@ export class OpfsChunkWriter implements ChunkWriter {
     } catch {}
     try {
       await this._request({ type: "abort" }, ABORT_TIMEOUT_MS);
-    } catch {} finally {
+    } catch {
+    } finally {
       this._teardown();
     }
   }

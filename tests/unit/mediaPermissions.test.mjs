@@ -6,11 +6,7 @@ import {
   queryMediaPermissionStates,
 } from "../../src/pages/Permissions/mediaPermissions.ts";
 
-const createMocks = ({
-  camera = "prompt",
-  microphone = "prompt",
-  requestResults = {},
-} = {}) => {
+const createMocks = ({ camera = "prompt", microphone = "prompt", requestResults = {} } = {}) => {
   const states = { camera, microphone };
   const getUserMediaCalls = [];
   const stopped = [];

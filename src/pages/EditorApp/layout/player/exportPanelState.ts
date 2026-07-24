@@ -2,24 +2,19 @@ import type { ExportJob } from "../../context/exportJobState.ts";
 import type { ExportSettings } from "../../../localRecordings/projectSchema.ts";
 import type { SaveBlobResult } from "../../../utils/localFileExport.ts";
 
-export interface ExportRetrySettings
-  extends Omit<ExportSettings, "captionStyle" | "gif"> {
+export interface ExportRetrySettings extends Omit<ExportSettings, "captionStyle" | "gif"> {
   captionStyle: Partial<ExportSettings["captionStyle"]>;
   gif: Partial<ExportSettings["gif"]>;
 }
 
-type ExportSettingsInput = Partial<
-  Omit<ExportSettings, "captionStyle" | "gif">
-> & {
+type ExportSettingsInput = Partial<Omit<ExportSettings, "captionStyle" | "gif">> & {
   captionStyle?: Partial<ExportSettings["captionStyle"]>;
   gif?: Partial<ExportSettings["gif"]>;
 };
 
 type ExportJobView = Pick<ExportJob, "label" | "status" | "error" | "progress">;
 
-export const buildExportJobTitle = (
-  exportJob: ExportJobView | null
-): string => {
+export const buildExportJobTitle = (exportJob: ExportJobView | null): string => {
   if (!exportJob) return "Export";
   const label = exportJob.label || "Export";
   if (exportJob.status === "completed") return `${label} complete`;
@@ -30,7 +25,7 @@ export const buildExportJobTitle = (
 
 export const buildExportJobDescription = (
   exportJob: ExportJobView | null,
-  processingProgress = 0
+  processingProgress = 0,
 ): string => {
   if (!exportJob) return "";
   if (exportJob.status === "completed") return "Export finished.";
@@ -48,13 +43,12 @@ const isDownloadId = (value: unknown): value is number =>
 
 export const canRevealExportJob = (
   exportJob: ExportJobView | null,
-  lastExportDownloadId: unknown
-): boolean =>
-  exportJob?.status === "completed" && isDownloadId(lastExportDownloadId);
+  lastExportDownloadId: unknown,
+): boolean => exportJob?.status === "completed" && isDownloadId(lastExportDownloadId);
 
 export const revealExportDownload = (
   downloadId: unknown,
-  downloadsApi?: { show: (id: number) => unknown }
+  downloadsApi?: { show: (id: number) => unknown },
 ): boolean => {
   if (!isDownloadId(downloadId) || !downloadsApi) return false;
   try {
@@ -66,7 +60,7 @@ export const revealExportDownload = (
 };
 
 export const buildExportCompletionFromSaveResult = (
-  saveResult: SaveBlobResult | null
+  saveResult: SaveBlobResult | null,
 ): {
   status: "cancelled" | "completed" | "failed";
   downloadId?: number | null;
@@ -83,9 +77,9 @@ export const buildExportCompletionFromSaveResult = (
 
 export const buildExportRetrySnapshot = (
   settings: ExportSettingsInput = {},
-  overrides: ExportSettingsInput = {}
+  overrides: ExportSettingsInput = {},
 ): ExportRetrySettings => {
-  const merged = { ...(settings || {}), ...(overrides || {}) };
+  const merged = { ...settings, ...overrides };
   return {
     format: merged.format || "mp4",
     qualityPreset: merged.qualityPreset || "original",
@@ -94,14 +88,14 @@ export const buildExportRetrySnapshot = (
     includeCaptionSidecar: Boolean(merged.includeCaptionSidecar),
     audioOnly: Boolean(merged.audioOnly),
     audioFormat: merged.audioFormat || "wav",
-    captionStyle: { ...(merged.captionStyle || {}) },
-    gif: { ...(merged.gif || {}) },
+    captionStyle: { ...merged.captionStyle },
+    gif: { ...merged.gif },
   };
 };
 
 export const buildRetryExportSettings = (
   lastExport: ExportRetrySettings | null,
-  exportJob: ExportJobView | null
+  exportJob: ExportJobView | null,
 ): ExportRetrySettings | null => {
   if (!lastExport || exportJob?.status === "running") return null;
   return buildExportRetrySnapshot(lastExport);

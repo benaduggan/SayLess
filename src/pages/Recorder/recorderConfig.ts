@@ -47,8 +47,6 @@ export const VIDEO_QUALITIES: Record<string, VideoResolution> = {
   default: { width: 1920, height: 1080 },
 };
 
-export function getResolutionForQuality(
-  qualityValue = "default",
-): VideoResolution {
+export function getResolutionForQuality(qualityValue = "default"): VideoResolution {
   return VIDEO_QUALITIES[qualityValue] || VIDEO_QUALITIES.default;
 }

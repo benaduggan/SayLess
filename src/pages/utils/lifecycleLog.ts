@@ -78,11 +78,7 @@ export const lifecycleEvent = async (
 };
 
 /** Fire-and-forget convenience. */
-export const lifecycle = (
-  src: unknown,
-  ev: unknown,
-  data: unknown = null,
-): void => {
+export const lifecycle = (src: unknown, ev: unknown, data: unknown = null): void => {
   lifecycleEvent(src, ev, data).catch(() => {});
 };
 
@@ -90,9 +86,7 @@ export const lifecycle = (
 export const getLifecycleLog = async (): Promise<LifecycleEntry[]> => {
   try {
     const result = await chromeApi().storage.local.get([STORAGE_KEY]);
-    return Array.isArray(result[STORAGE_KEY])
-      ? (result[STORAGE_KEY] as LifecycleEntry[])
-      : [];
+    return Array.isArray(result[STORAGE_KEY]) ? (result[STORAGE_KEY] as LifecycleEntry[]) : [];
   } catch {
     return [];
   }
@@ -110,21 +104,54 @@ export const flushLifecycleLog = async (): Promise<void> => {
 // through, and new keys have to be added here on purpose.
 const SAFE_DATA_KEYS = new Set([
   // countdown
-  "runId", "countdownTimeS", "count", "elapsedMs", "endHoldMs",
-  "endedAt", "startDispatchedAt", "postHideDelayMs", "ageMs",
+  "runId",
+  "countdownTimeS",
+  "count",
+  "elapsedMs",
+  "endHoldMs",
+  "endedAt",
+  "startDispatchedAt",
+  "postHideDelayMs",
+  "ageMs",
   // start flow
-  "attemptId", "caller", "tabId",
+  "attemptId",
+  "caller",
+  "tabId",
   // encoder selection
-  "kind", "reason", "container",
+  "kind",
+  "reason",
+  "container",
   // recorder lifecycle
-  "frame", "audioQ", "videoQ", "frameCount", "h", "w", "framerate",
-  "height", "width", "chunks", "durMs", "ok", "codec",
+  "frame",
+  "audioQ",
+  "videoQ",
+  "frameCount",
+  "h",
+  "w",
+  "framerate",
+  "height",
+  "width",
+  "chunks",
+  "durMs",
+  "ok",
+  "codec",
   // status / flag transitions
-  "isRecording", "isTargetTab", "recordingType", "isTarget", "cancelled",
-  "filename", "beep", "wasPreloaded",
+  "isRecording",
+  "isTargetTab",
+  "recordingType",
+  "isTarget",
+  "cancelled",
+  "filename",
+  "beep",
+  "wasPreloaded",
   // back-to-back / restart context
-  "memoryError", "offscreen", "pendingRecording",
-  "recording", "restarting", "region", "sandboxTab",
+  "memoryError",
+  "offscreen",
+  "pendingRecording",
+  "recording",
+  "restarting",
+  "region",
+  "sandboxTab",
 ]);
 const MAX_SAFE_STRING_LEN = 32;
 

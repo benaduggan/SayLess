@@ -216,19 +216,10 @@ test("persistFinalWebCodecsAudioSnapshot merges final counters with startup snap
 
     assert.equal(finalSnapshot.finalAudioElapsedUs, 3_050_000);
     assert.equal(storage.lastRecordingAudioSnapshot.at, 123);
-    assert.equal(
-      storage.lastRecordingAudioSnapshot.trackSettings.sampleRate,
-      16000,
-    );
+    assert.equal(storage.lastRecordingAudioSnapshot.trackSettings.sampleRate, 16000);
     assert.equal(storage.lastRecordingAudioSnapshot.encoderSampleRate, 16000);
-    assert.equal(
-      storage.lastRecordingAudioSnapshot.finalAudioElapsedUs,
-      3_050_000,
-    );
-    assert.equal(
-      storage.lastRecordingAudioSnapshot.finalDroppedAudioForBackpressure,
-      0,
-    );
+    assert.equal(storage.lastRecordingAudioSnapshot.finalAudioElapsedUs, 3_050_000);
+    assert.equal(storage.lastRecordingAudioSnapshot.finalDroppedAudioForBackpressure, 0);
     assert.equal(storage.lastRecordingAudioSnapshot.finalPeakAudioEncodeQueueSize, 2);
   } finally {
     globalThis.chrome = originalChrome;

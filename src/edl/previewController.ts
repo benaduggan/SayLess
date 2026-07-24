@@ -42,10 +42,10 @@ export function attachPreview(
     const t = player.getCurrentTime();
 
     const deletes = mergeRanges(
-      edl.edits.filter((e) => e.kind === "delete").map((e) => ({ start: e.start, end: e.end }))
+      edl.edits.filter((e) => e.kind === "delete").map((e) => ({ start: e.start, end: e.end })),
     );
     const mutes = mergeRanges(
-      edl.edits.filter((e) => e.kind === "mute").map((e) => ({ start: e.start, end: e.end }))
+      edl.edits.filter((e) => e.kind === "mute").map((e) => ({ start: e.start, end: e.end })),
     );
 
     // Skip deleted ranges: if inside one, jump to its end (or to the next kept

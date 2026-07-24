@@ -10,7 +10,7 @@ const AudioNav = lazy(() => import("../editor/AudioNav"));
 import RightPanel from "./RightPanel";
 import Content from "./Content";
 
-import styles from "../../styles/player/_Player.module.scss";
+import styles from "../../styles/player/_Player.module.css";
 
 // Context
 import { useEditorContent } from "../../context/ContentState";

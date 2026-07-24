@@ -26,10 +26,13 @@ const Editor = () => {
   }, []);
 
   return (
-    <div className="saylessEditor" data-testid="editor-layout">
+    <div
+      className="saylessEditor h-dvh overflow-hidden bg-sayless-canvas"
+      data-testid="editor-layout"
+    >
       <EditorNav />
-      <main className="saylessEditor__workspace">
-        <section className="saylessEditor__mediaColumn">
+      <main className="saylessEditor__workspace min-h-0 min-w-0 overflow-hidden">
+        <section className="saylessEditor__mediaColumn min-h-0 min-w-0 overflow-hidden">
           <VideoPlayer onSeek={handleSeek} />
           <TrimUI />
         </section>

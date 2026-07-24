@@ -32,10 +32,7 @@ const textIncludes = (value: unknown, needle: string): boolean =>
     .toLowerCase()
     .includes(needle);
 
-export const isRecordedToday = (
-  entry: LocalVideoEntry | null,
-  now = Date.now()
-): boolean => {
+export const isRecordedToday = (entry: LocalVideoEntry | null, now = Date.now()): boolean => {
   const createdAt = Number(entry?.createdAt || entry?.updatedAt);
   if (!Number.isFinite(createdAt) || createdAt <= 0) return false;
   const start = new Date(now);
@@ -43,10 +40,7 @@ export const isRecordedToday = (
   return createdAt >= start.getTime() && createdAt < start.getTime() + DAY_MS;
 };
 
-export const videoMatchesSearch = (
-  entry: LocalVideoEntry | null,
-  query: unknown
-): boolean => {
+export const videoMatchesSearch = (entry: LocalVideoEntry | null, query: unknown): boolean => {
   const needle = String(query || "")
     .trim()
     .toLowerCase();
@@ -57,7 +51,7 @@ export const videoMatchesSearch = (
         .map((word) =>
           typeof word === "object" && word && "text" in word
             ? (word as { text?: unknown }).text
-            : ""
+            : "",
         )
         .join(" ")
     : transcriptWords;
@@ -81,7 +75,7 @@ export const videoMatchesFilters = (
     health?: LocalVideoHealth | null;
     now?: number;
     largeBytes?: number;
-  } = {}
+  } = {},
 ): boolean => {
   const filters = new Set(activeFilters);
   if (filters.has("today") && !isRecordedToday(entry, now)) return false;
@@ -108,7 +102,7 @@ export const filterLocalVideos = (
     healthById?: Record<string, LocalVideoHealth | null>;
     now?: number;
     largeBytes?: number;
-  } = {}
+  } = {},
 ): LocalVideoEntry[] =>
   (Array.isArray(videos) ? videos : []).filter((entry) => {
     const health = healthById?.[entry?.id] || null;

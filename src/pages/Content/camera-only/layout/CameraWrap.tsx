@@ -2,9 +2,7 @@ import React, { useEffect, useContext, useRef, useState } from "react";
 
 import { contentStateContext } from "../../context/ContentState";
 
-const CameraWrap = (_props: {
-  shadowRef?: React.RefObject<HTMLElement | null>;
-}) => {
+const CameraWrap = (_props: { shadowRef?: React.RefObject<HTMLElement | null> }) => {
   const [contentState, setContentState] = React.useContext(contentStateContext);
 
   return (
@@ -23,9 +21,7 @@ const CameraWrap = (_props: {
           bottom: 0,
           margin: "auto",
         }}
-        className={`screenity-iframe${
-          contentState.cameraFlipped ? " camera-flipped" : ""
-        }`}
+        className={`screenity-iframe${contentState.cameraFlipped ? " camera-flipped" : ""}`}
         src={chrome.runtime.getURL("camera.html")}
         allow="camera; microphone"
       ></iframe>

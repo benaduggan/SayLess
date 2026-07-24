@@ -40,9 +40,7 @@ export const onInstalledListener = (): void => {
 
       // Existing users are already established, so backfill an install time in
       // the past to clear the review prompt's install-age gate immediately.
-      const { extensionInstalledAt } = await chromeApi.storage.local.get(
-        "extensionInstalledAt",
-      );
+      const { extensionInstalledAt } = await chromeApi.storage.local.get("extensionInstalledAt");
       if (typeof extensionInstalledAt !== "number") {
         void chromeApi.storage.local.set({ extensionInstalledAt: 0 });
       }

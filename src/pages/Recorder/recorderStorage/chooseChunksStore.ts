@@ -7,9 +7,11 @@ import localforage from "localforage";
 import { OpfsKvStore, isOpfsSupported } from "./opfsKvStore";
 
 const runtimeSendMessage = (message: unknown): void => {
-  const chromeApi = (globalThis as typeof globalThis & {
-    chrome?: { runtime?: { sendMessage?: (value: unknown) => unknown } };
-  }).chrome;
+  const chromeApi = (
+    globalThis as typeof globalThis & {
+      chrome?: { runtime?: { sendMessage?: (value: unknown) => unknown } };
+    }
+  ).chrome;
   chromeApi?.runtime?.sendMessage?.(message);
 };
 
@@ -29,17 +31,12 @@ export const TRACK_IDB_INSTANCE: Record<RecorderTrack, string> = {
 };
 
 const errorName = (error: unknown): string =>
-  error instanceof DOMException || error instanceof Error
-    ? error.name
-    : "Error";
+  error instanceof DOMException || error instanceof Error ? error.name : "Error";
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-const opfsDiag = (
-  event: string,
-  data: Record<string, unknown> = {},
-): void => {
+const opfsDiag = (event: string, data: Record<string, unknown> = {}): void => {
   try {
     runtimeSendMessage({
       type: "diag-forward",
@@ -115,9 +112,7 @@ export const openExistingChunksStore = ({
   sessionId?: string | null;
   track: RecorderTrack;
   backend: ChunksBackend;
-}):
-  | { store: OpfsKvStore; backend: "opfs" }
-  | { store: LocalForage; backend: "idb" } => {
+}): { store: OpfsKvStore; backend: "opfs" } | { store: LocalForage; backend: "idb" } => {
   const prefix = TRACK_KEY_PREFIX[track];
   if (!prefix) throw new Error(`openExistingChunksStore: unknown track ${track}`);
 

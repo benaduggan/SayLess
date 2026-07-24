@@ -1,7 +1,4 @@
-import {
-  sendMessageTab,
-  getCurrentTab,
-} from "../tabManagement";
+import { sendMessageTab, getCurrentTab } from "../tabManagement";
 import { sendMessageRecord } from "../recording/sendMessageRecord.ts";
 import { clearInMemoryEditorLock } from "../recording/stopRecording";
 
@@ -9,22 +6,18 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
 
 const handleTabMessaging = async (tab: chrome.tabs.Tab): Promise<void> => {
-  const { activeTab, recordingUiTabId, offscreen } =
-    await chrome.storage.local.get([
-      "activeTab",
-      "recordingUiTabId",
-      "offscreen",
-    ]);
+  const { activeTab, recordingUiTabId, offscreen } = await chrome.storage.local.get([
+    "activeTab",
+    "recordingUiTabId",
+    "offscreen",
+  ]);
 
   if (offscreen) {
     try {
       await sendMessageRecord({ type: "stop-recording-tab" });
       return;
     } catch (err) {
-      console.error(
-        "[SayLess][ActionClick] offscreen stop-recording send failed:",
-        err,
-      );
+      console.error("[SayLess][ActionClick] offscreen stop-recording send failed:", err);
       return;
     }
   }
@@ -37,9 +30,7 @@ const handleTabMessaging = async (tab: chrome.tabs.Tab): Promise<void> => {
         : null;
 
   try {
-    const targetTab = preferredTabId
-      ? await chrome.tabs.get(preferredTabId)
-      : null;
+    const targetTab = preferredTabId ? await chrome.tabs.get(preferredTabId) : null;
 
     if (targetTab) {
       await sendMessageTab(preferredTabId, { type: "stop-recording-tab" });
@@ -48,7 +39,10 @@ const handleTabMessaging = async (tab: chrome.tabs.Tab): Promise<void> => {
       if (tab.id != null) chrome.storage.local.set({ activeTab: tab.id });
     }
   } catch (error) {
-    console.error("[SayLess][ActionClick] handleTabMessaging failed, trying direct recorder stop:", error);
+    console.error(
+      "[SayLess][ActionClick] handleTabMessaging failed, trying direct recorder stop:",
+      error,
+    );
     try {
       await sendMessageRecord({ type: "stop-recording-tab" });
     } catch (recorderErr) {
@@ -74,14 +68,19 @@ const openPlaygroundOrPopup = async (tab: chrome.tabs.Tab): Promise<void> => {
 
   const tabUrl = String(tab?.url || "");
   const isForbidden = forbiddenURLs.some((url) => tabUrl.startsWith(url));
-  const isPlaygroundOrSetup =
-    tabUrl.includes("/playground.html") || tabUrl.includes("/setup.html");
+  const isPlaygroundOrSetup = tabUrl.includes("/playground.html") || tabUrl.includes("/setup.html");
 
   // never gate on navigator.onLine; that caused duplicate playground tabs
   if (!isForbidden || isPlaygroundOrSetup) {
     sendMessageTab(tab.id ?? null, { type: "toggle-popup" })
       .then(() => console.log("[SayLess][ActionClick] toggle-popup delivered to tab", tab.id))
-      .catch((err) => console.error("[SayLess][ActionClick] toggle-popup FAILED to tab", tab.id, String(err).slice(0, 120)));
+      .catch((err) =>
+        console.error(
+          "[SayLess][ActionClick] toggle-popup FAILED to tab",
+          tab.id,
+          String(err).slice(0, 120),
+        ),
+      );
     chrome.storage.local.set({ activeTab: tab.id });
   } else {
     const newTab = await chrome.tabs.create({
@@ -129,9 +128,14 @@ export const onActionButtonClickedListener = (): void => {
   chrome.action.onClicked.addListener(async (tab) => {
     try {
       const snap = await chrome.storage.local.get([
-        "recording", "pendingRecording", "restarting", "recorderSession",
-        "recordingTab", "offscreen",
-        "postStopEditorOpening", "postStopEditorOpened",
+        "recording",
+        "pendingRecording",
+        "restarting",
+        "recorderSession",
+        "recordingTab",
+        "offscreen",
+        "postStopEditorOpening",
+        "postStopEditorOpened",
         "editorRecoveryUrl",
       ]);
       console.log("[SayLess][ActionClick] storage:", snap, "tab:", tab.id);
@@ -141,9 +145,7 @@ export const onActionButtonClickedListener = (): void => {
       }
 
       const { recording, pendingRecording, restarting } = snap;
-      const recorderSession = isRecord(snap.recorderSession)
-        ? snap.recorderSession
-        : null;
+      const recorderSession = isRecord(snap.recorderSession) ? snap.recorderSession : null;
       const sessionRecording = recorderSession?.status === "recording";
       // Whitelist of statuses that indicate a session may still have
       // work in flight. Anything else — completed, cancelled, failed,
@@ -153,8 +155,7 @@ export const onActionButtonClickedListener = (): void => {
       // safer than blacklisting: forgetting to add a new terminal
       // status would silently trap users.
       const sessionInFlight =
-        recorderSession?.status === "recording" ||
-        recorderSession?.status === "restarting";
+        recorderSession?.status === "recording" || recorderSession?.status === "restarting";
       const sessionTerminal = Boolean(recorderSession?.status) && !sessionInFlight;
       const isRecordingActive = Boolean(
         recording || pendingRecording || restarting || sessionRecording,
@@ -202,10 +203,14 @@ export const onActionButtonClickedListener = (): void => {
         }
 
         if (!hasActiveRecorder) {
-          console.warn(
-            "[SayLess][ActionClick] branch: stale-reset-then-popup.",
-            { recording, pendingRecording, restarting, sessionRecording, recordingTab, offscreen },
-          );
+          console.warn("[SayLess][ActionClick] branch: stale-reset-then-popup.", {
+            recording,
+            pendingRecording,
+            restarting,
+            sessionRecording,
+            recordingTab,
+            offscreen,
+          });
           clearInMemoryEditorLock();
           await chrome.storage.local.set({
             recording: false,
@@ -220,7 +225,10 @@ export const onActionButtonClickedListener = (): void => {
             activeSceneId: null,
           });
           chrome.runtime
-            .sendMessage({ type: "clear-recording-session-safe", reason: "action-button-stale-reset" })
+            .sendMessage({
+              type: "clear-recording-session-safe",
+              reason: "action-button-stale-reset",
+            })
             .catch(() => {});
           await openPlaygroundOrPopup(tab);
         } else {

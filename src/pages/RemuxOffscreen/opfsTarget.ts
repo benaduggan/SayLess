@@ -8,16 +8,12 @@ export interface OpfsSyncAccessHandle {
 }
 
 type OpfsChunkData = Uint8Array | ArrayBuffer | ArrayLike<number>;
-type OpfsWritableChunk =
-  | OpfsChunkData
-  | { data: OpfsChunkData; position?: number };
+type OpfsWritableChunk = OpfsChunkData | { data: OpfsChunkData; position?: number };
 
 const hasChunkData = (
   chunk: OpfsWritableChunk,
 ): chunk is { data: OpfsChunkData; position?: number } =>
-  typeof chunk === "object" &&
-  chunk !== null &&
-  "data" in chunk;
+  typeof chunk === "object" && chunk !== null && "data" in chunk;
 
 export function createOpfsWritable(
   syncHandle: OpfsSyncAccessHandle,
@@ -28,23 +24,13 @@ export function createOpfsWritable(
       // Mediabunny StreamTarget emits { data, position, type }; fall back
       // to append-mode for plain bytes so the writable works elsewhere.
       const data = hasChunkData(chunk) ? chunk.data : chunk;
-      const position = hasChunkData(chunk)
-        ? (chunk.position ?? writtenBytes)
-        : writtenBytes;
-      const buf =
-        data instanceof Uint8Array
-          ? data
-          : new Uint8Array(data);
+      const position = hasChunkData(chunk) ? (chunk.position ?? writtenBytes) : writtenBytes;
+      const buf = data instanceof Uint8Array ? data : new Uint8Array(data);
       const bytesWritten = syncHandle.write(buf, { at: position });
       // Short write = OPFS quota hit mid-buffer. Hard error so the caller
       // falls back to the in-sandbox tier instead of silently truncating.
-      if (
-        typeof bytesWritten === "number" &&
-        bytesWritten < buf.byteLength
-      ) {
-        throw new Error(
-          `opfs-write-short:${bytesWritten}/${buf.byteLength}`,
-        );
+      if (typeof bytesWritten === "number" && bytesWritten < buf.byteLength) {
+        throw new Error(`opfs-write-short:${bytesWritten}/${buf.byteLength}`);
       }
       const end = position + (bytesWritten ?? buf.byteLength);
       if (end > writtenBytes) writtenBytes = end;

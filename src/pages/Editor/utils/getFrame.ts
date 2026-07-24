@@ -1,8 +1,4 @@
-async function getFrame(
-  _ffmpeg: unknown,
-  videoBlob: Blob,
-  time: number,
-): Promise<Blob> {
+async function getFrame(_ffmpeg: unknown, videoBlob: Blob, time: number): Promise<Blob> {
   return new Promise<Blob>((resolve, reject) => {
     const video = document.createElement("video");
     const canvas = document.createElement("canvas");

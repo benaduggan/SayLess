@@ -23,9 +23,7 @@ const chromeApi = (): TabRemovedChromeApi =>
   (globalThis as typeof globalThis & { chrome: TabRemovedChromeApi }).chrome;
 
 const asRecord = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {};
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
 
 export const onTabRemovedListener = (): void => {
   chromeApi().tabs.onRemoved.addListener((tabId) => {
@@ -65,14 +63,8 @@ export const onTabRemovedListener = (): void => {
       // close orphaned recorder.html when the local sandbox editor closes.
       if (tabId === sandboxTab) {
         void chromeApi().storage.local.set({ sandboxTab: null });
-        const isStillRecording =
-          Boolean(recording) || session.status === "recording";
-        if (
-          !startInFlight &&
-          !isStillRecording &&
-          recordingTab &&
-          recordingTab !== tabId
-        ) {
+        const isStillRecording = Boolean(recording) || session.status === "recording";
+        if (!startInFlight && !isStillRecording && recordingTab && recordingTab !== tabId) {
           try {
             const recTab = await chromeApi().tabs.get(Number(recordingTab));
             const recUrl = recTab?.url || "";
@@ -88,14 +80,12 @@ export const onTabRemovedListener = (): void => {
       // and recordingTab fallback would misclassify a recorder.html close.
       const recordedTabId = tabRecordedID || null;
 
-      const isActivelyRecording =
-        Boolean(recording) || session.status === "recording";
-      const recorderOwnerTabId =
-        Number(session.recorderTabId || session.tabId) || null;
+      const isActivelyRecording = Boolean(recording) || session.status === "recording";
+      const recorderOwnerTabId = Number(session.recorderTabId || session.tabId) || null;
 
       if (tabId === recorderOwnerTabId) {
-        chromeApi().runtime
-          .sendMessage({
+        chromeApi()
+          .runtime.sendMessage({
             type: "clear-recording-session-safe",
             reason: "recorder-owner-tab-removed",
           })
@@ -119,9 +109,7 @@ export const onTabRemovedListener = (): void => {
             "multiLastSceneId",
           ]);
           const hasSavedMultiScenes =
-            preservedMultiMode &&
-            Number(preservedSceneCount) > 0 &&
-            preservedProjectId;
+            preservedMultiMode && Number(preservedSceneCount) > 0 && preservedProjectId;
           await chromeApi().storage.local.set({
             recorderSession: {
               ...session,
@@ -170,11 +158,7 @@ export const onTabRemovedListener = (): void => {
       }
 
       // recorder.html closed mid-recording; nothing else writes recording=false here
-      if (
-        !restarting &&
-        isActivelyRecording &&
-        tabId === recordingTab
-      ) {
+      if (!restarting && isActivelyRecording && tabId === recordingTab) {
         diagEvent("crash", { reason: "recorder-tab-closed", tabId });
         void endDiagSession("crashed");
         console.error("Recorder tab was closed during recording!");
@@ -196,9 +180,7 @@ export const onTabRemovedListener = (): void => {
           "multiLastSceneId",
         ]);
         const hasSavedMultiScenes =
-          preservedMultiMode &&
-          Number(preservedSceneCount) > 0 &&
-          preservedProjectId;
+          preservedMultiMode && Number(preservedSceneCount) > 0 && preservedProjectId;
         void chromeApi().storage.local.set({
           recording: false,
           recordingTab: null,
@@ -229,8 +211,7 @@ export const onTabRemovedListener = (): void => {
         void chromeApi().storage.local.set({ recordingTab: null });
       }
 
-      const pendingOnly =
-        pendingRecording && !isActivelyRecording && !restarting;
+      const pendingOnly = pendingRecording && !isActivelyRecording && !restarting;
       if (tabId === recordingTab && pendingOnly) {
         await chromeApi().storage.local.set({
           pendingRecording: false,
@@ -243,10 +224,7 @@ export const onTabRemovedListener = (): void => {
 
         const candidateTabs = [activeTab, recordingUiTabId, tabRecordedID]
           .map(Number)
-          .filter(
-            (id, idx, arr) =>
-              Number.isInteger(id) && id > 0 && arr.indexOf(id) === idx,
-          );
+          .filter((id, idx, arr) => Number.isInteger(id) && id > 0 && arr.indexOf(id) === idx);
         candidateTabs.forEach((id) => {
           sendMessageTab(id, { type: "stop-pending" }).catch(() => {});
         });

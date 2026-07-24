@@ -13,12 +13,7 @@ type CancellableGif = GIF & {
   freeWorkers?: Array<{ terminate: () => void }>;
 };
 
-const clampNumber = (
-  value: unknown,
-  fallback: number,
-  min: number,
-  max: number
-): number => {
+const clampNumber = (value: unknown, fallback: number, min: number, max: number): number => {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
   return Math.max(min, Math.min(max, number));
@@ -29,7 +24,7 @@ async function toGIF(
   videoBlob: Blob,
   onProgress: (progress: number) => void = () => {},
   options: GifExportOptions = {},
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<Blob> {
   return new Promise<Blob>((resolve, reject) => {
     const video = document.createElement("video");
@@ -85,12 +80,10 @@ async function toGIF(
           options.durationSeconds,
           duration - startSeconds,
           0.1,
-          Math.max(0.1, duration - startSeconds)
+          Math.max(0.1, duration - startSeconds),
         );
         const width = Math.round(clampNumber(options.width, 540, 320, 1920));
-        const height = Math.round(
-          (video.videoHeight / video.videoWidth) * width
-        );
+        const height = Math.round((video.videoHeight / video.videoWidth) * width);
         const quality = 5;
 
         canvas.width = width;
@@ -101,9 +94,7 @@ async function toGIF(
           quality,
           width,
           height,
-          workerScript: chrome.runtime.getURL(
-            "assets/vendor/gif.js/gif.worker.js"
-          ),
+          workerScript: chrome.runtime.getURL("assets/vendor/gif.js/gif.worker.js"),
         });
 
         const frameInterval = 1 / fps;
@@ -149,19 +140,14 @@ async function toGIF(
 
         for (let i = 0; i < totalFrames; i++) {
           throwIfAborted(signal);
-          const time = Math.min(
-            startSeconds + i * frameInterval,
-            duration - 0.001
-          );
+          const time = Math.min(startSeconds + i * frameInterval, duration - 0.001);
           await captureFrame(time);
         }
         throwIfAborted(signal);
 
         gif.on("finished", resolveOnce);
 
-        gif.on("progress", (progress: number) =>
-          onProgress(0.5 + progress * 0.5)
-        );
+        gif.on("progress", (progress: number) => onProgress(0.5 + progress * 0.5));
 
         gif.render();
       } catch (error) {
@@ -170,10 +156,7 @@ async function toGIF(
     });
 
     video.addEventListener("error", () => {
-      rejectOnce(
-        new Error(`Video error: ${video.error?.message || "Unknown error"}`),
-        true
-      );
+      rejectOnce(new Error(`Video error: ${video.error?.message || "Unknown error"}`), true);
     });
 
     objectUrl = URL.createObjectURL(videoBlob);

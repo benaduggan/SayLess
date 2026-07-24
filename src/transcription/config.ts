@@ -36,8 +36,7 @@ interface TranscriptionChromeApi extends RuntimeWithGetUrl {
 }
 
 const getChromeApi = (): TranscriptionChromeApi | undefined =>
-  (globalThis as typeof globalThis & { chrome?: TranscriptionChromeApi })
-    .chrome;
+  (globalThis as typeof globalThis & { chrome?: TranscriptionChromeApi }).chrome;
 
 export const LOCAL_WHISPER_MODEL_ID = "onnx-community/whisper-base_timestamped";
 export const LOCAL_WHISPER_ASSET_ROOT = "assets/whisper/models/";
@@ -59,25 +58,20 @@ export const TRANSCRIPTION_LANGUAGES = [
 ];
 
 const SUPPORTED_LANGUAGE_VALUES = new Set(
-  TRANSCRIPTION_LANGUAGES.map((language) => language.value)
+  TRANSCRIPTION_LANGUAGES.map((language) => language.value),
 );
 
 const allowRemoteModelOverrides = (): boolean =>
   typeof process !== "undefined" && process.env?.SAYLESS_DEV_MODE === "true";
 
-const isRemoteModelPath = (value: unknown): boolean =>
-  /^https?:\/\//i.test(String(value || ""));
+const isRemoteModelPath = (value: unknown): boolean => /^https?:\/\//i.test(String(value || ""));
 const isBundledExtensionModelPath = (value: unknown): boolean =>
-  /^chrome-extension:\/\/[^/]+\/assets\/whisper\/models\/?$/i.test(
-    String(value || "")
-  );
+  /^chrome-extension:\/\/[^/]+\/assets\/whisper\/models\/?$/i.test(String(value || ""));
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
 
-export const normalizeTranscriptionConfigLayer = (
-  value: unknown
-): TranscriptionConfigLayer => {
+export const normalizeTranscriptionConfigLayer = (value: unknown): TranscriptionConfigLayer => {
   if (!isRecord(value)) return {};
 
   const layer: TranscriptionConfigLayer = {};
@@ -88,9 +82,7 @@ export const normalizeTranscriptionConfigLayer = (
     layer.privacyMode = value.privacyMode;
   }
   if (typeof value.defaultLanguage === "string") {
-    layer.defaultLanguage = normalizeTranscriptionLanguage(
-      value.defaultLanguage
-    );
+    layer.defaultLanguage = normalizeTranscriptionLanguage(value.defaultLanguage);
   }
   if (isRecord(value.providerOptions)) {
     const providerOptions: ProviderOptions = {};
@@ -104,18 +96,16 @@ export const normalizeTranscriptionConfigLayer = (
   return layer;
 };
 
-function enforceReleaseOfflineDefaults(
-  config: TranscriptionConfig
-): TranscriptionConfig {
+function enforceReleaseOfflineDefaults(config: TranscriptionConfig): TranscriptionConfig {
   if (allowRemoteModelOverrides()) return config;
 
   return {
     ...config,
     privacyMode: true,
     providerOptions: {
-      ...(config.providerOptions || {}),
+      ...config.providerOptions,
       "local-whisper": {
-        ...(config.providerOptions?.["local-whisper"] || {}),
+        ...config.providerOptions?.["local-whisper"],
         allowRemoteModels: false,
       },
     },
@@ -161,9 +151,7 @@ function mergeConfigLayers(...layers: unknown[]): TranscriptionConfigLayer {
     }
     if (layer.providerOptions) {
       hasProviderOptions = true;
-      for (const [providerId, options] of Object.entries(
-        layer.providerOptions
-      )) {
+      for (const [providerId, options] of Object.entries(layer.providerOptions)) {
         const current = providerOptions[providerId] || {};
         const next = { ...current, ...options };
         if (
@@ -193,7 +181,7 @@ export function mergeConfig(...layers: unknown[]): TranscriptionConfig {
 }
 
 export function getBundledLocalWhisperOptions(
-  runtime: RuntimeWithGetUrl | undefined = getChromeApi()
+  runtime: RuntimeWithGetUrl | undefined = getChromeApi(),
 ): TranscriptionConfigLayer {
   const getURL = runtime?.runtime?.getURL;
   if (typeof getURL !== "function") return {};
@@ -217,9 +205,7 @@ export async function resolveConfig(): Promise<TranscriptionConfig> {
     const chromeApi = getChromeApi();
     if (chromeApi?.storage?.local) {
       const got = await chromeApi.storage.local.get(TRANSCRIPTION_STORAGE_KEY);
-      stored = normalizeTranscriptionConfigLayer(
-        got?.[TRANSCRIPTION_STORAGE_KEY]
-      );
+      stored = normalizeTranscriptionConfigLayer(got?.[TRANSCRIPTION_STORAGE_KEY]);
     }
   } catch {
     // ignore — fall back to defaults+env
@@ -228,23 +214,17 @@ export async function resolveConfig(): Promise<TranscriptionConfig> {
 }
 
 export async function saveTranscriptionSettings(
-  patch: TranscriptionConfigLayer = {}
+  patch: TranscriptionConfigLayer = {},
 ): Promise<TranscriptionConfig> {
   const chromeApi = getChromeApi();
   if (!chromeApi?.storage?.local) {
     return mergeConfig(DEFAULT_CONFIG, patch);
   }
   const got = await chromeApi.storage.local.get(TRANSCRIPTION_STORAGE_KEY);
-  const stored = normalizeTranscriptionConfigLayer(
-    got?.[TRANSCRIPTION_STORAGE_KEY]
-  );
+  const stored = normalizeTranscriptionConfigLayer(got?.[TRANSCRIPTION_STORAGE_KEY]);
   const nextStored = mergeConfigLayers(stored, patch);
   await chromeApi.storage.local.set({
     [TRANSCRIPTION_STORAGE_KEY]: nextStored,
   });
-  return mergeConfig(
-    DEFAULT_CONFIG,
-    getBundledLocalWhisperOptions(),
-    nextStored
-  );
+  return mergeConfig(DEFAULT_CONFIG, getBundledLocalWhisperOptions(), nextStored);
 }

@@ -67,11 +67,7 @@ export const normalizeLocalPlaybackOffer = (
   const expiresAtRaw = finiteNumber(offer.expiresAt);
   const ttl =
     expiresAtRaw > now
-      ? clamp(
-          expiresAtRaw - now,
-          LOCAL_PLAYBACK_MIN_TTL_MS,
-          LOCAL_PLAYBACK_MAX_TTL_MS,
-        )
+      ? clamp(expiresAtRaw - now, LOCAL_PLAYBACK_MIN_TTL_MS, LOCAL_PLAYBACK_MAX_TTL_MS)
       : LOCAL_PLAYBACK_MIN_TTL_MS;
   const storageBackend = offer.storageBackend === "opfs" ? "opfs" : "idb";
 
@@ -83,21 +79,14 @@ export const normalizeLocalPlaybackOffer = (
     trackType: "screen",
     source: stringOr(offer.source, "indexeddb-screen-chunks"),
     status: stringOr(offer.status, "available"),
-    chunkCount: clamp(
-      Math.max(0, finiteNumber(offer.chunkCount)),
-      0,
-      LOCAL_PLAYBACK_MAX_CHUNKS,
-    ),
+    chunkCount: clamp(Math.max(0, finiteNumber(offer.chunkCount)), 0, LOCAL_PLAYBACK_MAX_CHUNKS),
     estimatedBytes: Math.max(0, finiteNumber(offer.estimatedBytes)),
     mediaId: nullableString(offer.mediaId),
     bunnyVideoId: nullableString(offer.bunnyVideoId),
     storageBackend,
-    opfsSessionId:
-      storageBackend === "opfs" ? nullableString(offer.opfsSessionId) : null,
-    container:
-      offer.container === "video/mp4" ? "video/mp4" : "video/webm",
-    encoderKind:
-      offer.encoderKind === "webcodecs" ? "webcodecs" : "mediarecorder",
+    opfsSessionId: storageBackend === "opfs" ? nullableString(offer.opfsSessionId) : null,
+    container: offer.container === "video/mp4" ? "video/mp4" : "video/webm",
+    encoderKind: offer.encoderKind === "webcodecs" ? "webcodecs" : "mediarecorder",
     createdAt: finiteNumber(offer.createdAt, now),
     expiresAt: now + ttl,
     updatedAt: now,
@@ -120,9 +109,7 @@ export const parseStoredLocalPlaybackOffer = (
   return offer.expiresAt > now ? offer : null;
 };
 
-export const parseLocalPlaybackChunk = (
-  value: unknown,
-): LocalPlaybackChunk | null => {
+export const parseLocalPlaybackChunk = (value: unknown): LocalPlaybackChunk | null => {
   if (!isRecord(value) || typeof value.base64 !== "string" || !value.base64) {
     return null;
   }

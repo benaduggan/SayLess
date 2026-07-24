@@ -15,7 +15,7 @@ export const discardOffscreenDocuments = async ({
     } else {
       const existingContexts = await chromeApi.runtime.getContexts({});
       const offscreenDocument = existingContexts.find(
-        (c) => c.contextType === "OFFSCREEN_DOCUMENT"
+        (c) => c.contextType === "OFFSCREEN_DOCUMENT",
       );
       if (offscreenDocument) {
         await chromeApi.offscreen?.closeDocument();
@@ -27,9 +27,7 @@ export const discardOffscreenDocuments = async ({
   // verify gone before clearing flag; otherwise sendMessageRecord routes to dead listener
   try {
     const remaining = await chromeApi.runtime.getContexts({});
-    const stillExists = remaining.some(
-      (c) => c.contextType === "OFFSCREEN_DOCUMENT",
-    );
+    const stillExists = remaining.some((c) => c.contextType === "OFFSCREEN_DOCUMENT");
     void chromeApi.storage.local.set({ offscreen: stillExists });
     endFlush({ stillExists });
   } catch {

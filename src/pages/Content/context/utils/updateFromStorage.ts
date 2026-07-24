@@ -6,8 +6,7 @@ const CURSOR_EFFECTS = ["target", "highlight", "spotlight"];
 const normalizeCursorEffects = (effects: unknown): string[] => {
   if (!Array.isArray(effects)) return [];
   return effects.filter(
-    (effect): effect is string =>
-      typeof effect === "string" && CURSOR_EFFECTS.includes(effect)
+    (effect): effect is string => typeof effect === "string" && CURSOR_EFFECTS.includes(effect),
   ) as string[];
 };
 
@@ -18,10 +17,7 @@ const deriveCursorMode = (effects: string[], fallbackMode: string): string => {
   return effects[0] || "none";
 };
 
-export const updateFromStorage = (
-  check = true,
-  id: string | number | null = null
-) => {
+export const updateFromStorage = (check = true, id: string | number | null = null) => {
   chrome.storage.local.get(
     [
       "audioInput",
@@ -86,15 +82,13 @@ export const updateFromStorage = (
       const storedEffects = normalizeCursorEffects(result.cursorEffects);
       const hasStoredEffects = Array.isArray(result.cursorEffects);
       const legacyMode = String(
-        result.cursorMode !== undefined && result.cursorMode !== null
-          ? result.cursorMode
-          : "none"
+        result.cursorMode !== undefined && result.cursorMode !== null ? result.cursorMode : "none",
       );
       const cursorEffects = hasStoredEffects
         ? storedEffects
         : legacyMode !== "none"
-        ? [legacyMode]
-        : [];
+          ? [legacyMode]
+          : [];
       const cursorMode = deriveCursorMode(cursorEffects, legacyMode);
 
       setContentState((prevContentState) => ({
@@ -108,28 +102,23 @@ export const updateFromStorage = (
             ? result.videoInput
             : prevContentState.videoInput,
         defaultAudioInput:
-          result.defaultAudioInput !== undefined &&
-          result.defaultAudioInput !== null
+          result.defaultAudioInput !== undefined && result.defaultAudioInput !== null
             ? result.defaultAudioInput
             : prevContentState.defaultAudioInput,
         defaultVideoInput:
-          result.defaultVideoInput !== undefined &&
-          result.defaultVideoInput !== null
+          result.defaultVideoInput !== undefined && result.defaultVideoInput !== null
             ? result.defaultVideoInput
             : prevContentState.defaultVideoInput,
         defaultAudioInputLabel:
-          result.defaultAudioInputLabel !== undefined &&
-          result.defaultAudioInputLabel !== null
+          result.defaultAudioInputLabel !== undefined && result.defaultAudioInputLabel !== null
             ? result.defaultAudioInputLabel
             : prevContentState.defaultAudioInputLabel,
         defaultVideoInputLabel:
-          result.defaultVideoInputLabel !== undefined &&
-          result.defaultVideoInputLabel !== null
+          result.defaultVideoInputLabel !== undefined && result.defaultVideoInputLabel !== null
             ? result.defaultVideoInputLabel
             : prevContentState.defaultVideoInputLabel,
         cameraDimensions:
-          result.cameraDimensions !== undefined &&
-          result.cameraDimensions !== null
+          result.cameraDimensions !== undefined && result.cameraDimensions !== null
             ? result.cameraDimensions
             : prevContentState.cameraDimensions,
         cameraFlipped:
@@ -145,18 +134,15 @@ export const updateFromStorage = (
             ? result.micActive
             : prevContentState.micActive,
         backgroundEffect:
-          result.backgroundEffect !== undefined &&
-          result.backgroundEffect !== null
+          result.backgroundEffect !== undefined && result.backgroundEffect !== null
             ? result.backgroundEffect
             : prevContentState.backgroundEffect,
         backgroundEffectsActive:
-          result.backgroundEffectsActive !== undefined &&
-          result.backgroundEffectsActive !== null
+          result.backgroundEffectsActive !== undefined && result.backgroundEffectsActive !== null
             ? result.backgroundEffectsActive
             : prevContentState.backgroundEffectsActive,
         toolbarPosition:
-          result.toolbarPosition !== undefined &&
-          result.toolbarPosition !== null
+          result.toolbarPosition !== undefined && result.toolbarPosition !== null
             ? result.toolbarPosition
             : prevContentState.toolbarPosition,
         countdown:
@@ -208,13 +194,11 @@ export const updateFromStorage = (
             ? result.alarmTime
             : prevContentState.alarmTime,
         pendingRecording:
-          result.pendingRecording !== undefined &&
-          result.pendingRecording !== null
+          result.pendingRecording !== undefined && result.pendingRecording !== null
             ? result.pendingRecording
             : prevContentState.pendingRecording,
         askForPermissions:
-          result.askForPermissions !== undefined &&
-          result.askForPermissions !== null
+          result.askForPermissions !== undefined && result.askForPermissions !== null
             ? result.askForPermissions
             : prevContentState.askForPermissions,
         cursorMode: cursorMode || prevContentState.cursorMode,
@@ -235,13 +219,11 @@ export const updateFromStorage = (
             ? result.askMicrophone
             : prevContentState.askMicrophone,
         offscreenRecording:
-          result.offscreenRecording !== undefined &&
-          result.offscreenRecording !== null
+          result.offscreenRecording !== undefined && result.offscreenRecording !== null
             ? result.offscreenRecording
             : prevContentState.offscreenRecording,
         useOffscreenRecorder:
-          result.useOffscreenRecorder !== undefined &&
-          result.useOffscreenRecorder !== null
+          result.useOffscreenRecorder !== undefined && result.useOffscreenRecorder !== null
             ? result.useOffscreenRecorder
             : prevContentState.useOffscreenRecorder,
         setDevices:
@@ -305,18 +287,15 @@ export const updateFromStorage = (
             ? result.fpsValue
             : prevContentState.fpsValue,
         fastRecorderBeta:
-          result.fastRecorderBeta !== undefined &&
-          result.fastRecorderBeta !== null
+          result.fastRecorderBeta !== undefined && result.fastRecorderBeta !== null
             ? result.fastRecorderBeta
             : prevContentState.fastRecorderBeta,
         fastRecorderStatus:
-          result.fastRecorderStatus !== undefined &&
-          result.fastRecorderStatus !== null
+          result.fastRecorderStatus !== undefined && result.fastRecorderStatus !== null
             ? result.fastRecorderStatus
             : prevContentState.fastRecorderStatus,
         useWebCodecsRecorder:
-          result.useWebCodecsRecorder !== undefined &&
-          result.useWebCodecsRecorder !== null
+          result.useWebCodecsRecorder !== undefined && result.useWebCodecsRecorder !== null
             ? result.useWebCodecsRecorder
             : prevContentState.useWebCodecsRecorder,
         multiMode: result.multiMode || false,
@@ -331,10 +310,7 @@ export const updateFromStorage = (
         chrome.storage.local.set({ systemAudio: true });
       }
 
-      if (
-        result.backgroundEffect === undefined ||
-        result.backgroundEffect === null
-      ) {
+      if (result.backgroundEffect === undefined || result.backgroundEffect === null) {
         chrome.storage.local.set({ backgroundEffect: "blur" });
       }
 
@@ -371,6 +347,6 @@ export const updateFromStorage = (
           timer: 0,
         }));
       }
-    }
+    },
   );
 };

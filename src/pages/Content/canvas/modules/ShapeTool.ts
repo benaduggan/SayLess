@@ -34,10 +34,9 @@ const ShapeTool = (
   canvas: ShapeCanvas,
   contentStateRef: { current?: ShapeToolState | null },
   setContentState: SetShapeState,
-  saveCanvas: (state: ShapeToolState, setter: SetShapeState) => void
+  saveCanvas: (state: ShapeToolState, setter: SetShapeState) => void,
 ): { removeEventListeners(): void } => {
-  const getState = (): ShapeToolState | null | undefined =>
-    contentStateRef.current;
+  const getState = (): ShapeToolState | null | undefined => contentStateRef.current;
 
   let shape: ShapeInstance | null = null;
   let isDown = false;

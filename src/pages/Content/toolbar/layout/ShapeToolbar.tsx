@@ -20,11 +20,7 @@ const ShapeToolbar = (props: { visible?: string }) => {
   const [contentState, setContentState] = useContext(contentStateContext);
 
   return (
-    <div
-      aria-label="Cursor options"
-      tabIndex={0}
-      className={"shapeToolbar " + props.visible}
-    >
+    <div aria-label="Cursor options" tabIndex={0} className={"shapeToolbar " + props.visible}>
       <Toolbar.ToggleGroup
         type="single"
         className="ToolbarToggleGroup"
@@ -40,11 +36,7 @@ const ShapeToolbar = (props: { visible?: string }) => {
       >
         <div className="ToolbarToggleWrap">
           <Toolbar.ToggleItem className="ToolbarToggleItem" value="rectangle">
-            {contentState.shapeFill ? (
-              <RectangleFilledIcon />
-            ) : (
-              <RectangleIcon />
-            )}
+            {contentState.shapeFill ? <RectangleFilledIcon /> : <RectangleIcon />}
           </Toolbar.ToggleItem>
         </div>
         <div className="ToolbarToggleWrap">

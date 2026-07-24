@@ -4,11 +4,7 @@ import test from "node:test";
 import { startAudioStream } from "../../src/pages/utils/startAudioStream.ts";
 
 const withBrowserAudioMocks = async (
-  {
-    sampleRate = 48000,
-    label = "USB Mic",
-    getUserMediaImpl = null,
-  } = {},
+  { sampleRate = 48000, label = "USB Mic", getUserMediaImpl = null } = {},
   fn,
 ) => {
   const originalChrome = globalThis.chrome;

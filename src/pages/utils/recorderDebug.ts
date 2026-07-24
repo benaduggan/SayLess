@@ -5,10 +5,7 @@ export interface DebugLogger {
   debugError: (...args: unknown[]) => void;
 }
 
-export const createDebugLogger = (
-  prefix: string,
-  enabled: boolean,
-): DebugLogger => ({
+export const createDebugLogger = (prefix: string, enabled: boolean): DebugLogger => ({
   debug: (...args: unknown[]): void => {
     if (!enabled) return;
     // eslint-disable-next-line no-console

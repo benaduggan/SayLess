@@ -45,10 +45,7 @@ interface MutableChromeShim {
     };
   };
   i18n?: {
-    getMessage?: (
-      key: string,
-      substitutions?: string | string[],
-    ) => string;
+    getMessage?: (key: string, substitutions?: string | string[]) => string;
     getUILanguage?: () => string;
   };
   tabs?: {
@@ -62,18 +59,14 @@ interface MutableChromeShim {
 const chromeShim = chrome as unknown as MutableChromeShim;
 
 const asProxyResponse = (value: unknown): ProxyResponse =>
-  typeof value === "object" && value !== null
-    ? (value as ProxyResponse)
-    : {};
+  typeof value === "object" && value !== null ? (value as ProxyResponse) : {};
 
 const sendProxy = async (
   type: string,
   payload: Record<string, unknown>,
 ): Promise<ProxyResponse> => {
   try {
-    const resp = asProxyResponse(
-      await chromeShim.runtime.sendMessage({ type, ...payload }),
-    );
+    const resp = asProxyResponse(await chromeShim.runtime.sendMessage({ type, ...payload }));
     if (DEBUG) console.log("[ChromeShim]", type, "->", resp);
     return resp;
   } catch (err) {
@@ -104,9 +97,7 @@ const makeStorageArea = (area: string): ShimStorageArea => ({
     return promise;
   },
   set(items: Record<string, unknown>, callback?: () => void) {
-    const promise = sendProxy("proxy-storage-set", { area, items }).then(
-      () => undefined
-    );
+    const promise = sendProxy("proxy-storage-set", { area, items }).then(() => undefined);
     if (typeof callback === "function") {
       promise.then(callback, callback);
       return undefined;
@@ -114,9 +105,7 @@ const makeStorageArea = (area: string): ShimStorageArea => ({
     return promise;
   },
   remove(keys: string | string[], callback?: () => void) {
-    const promise = sendProxy("proxy-storage-remove", { area, keys }).then(
-      () => undefined
-    );
+    const promise = sendProxy("proxy-storage-remove", { area, keys }).then(() => undefined);
     if (typeof callback === "function") {
       promise.then(callback, callback);
       return undefined;
@@ -124,9 +113,7 @@ const makeStorageArea = (area: string): ShimStorageArea => ({
     return promise;
   },
   clear(callback?: () => void) {
-    const promise = sendProxy("proxy-storage-clear", { area }).then(
-      () => undefined
-    );
+    const promise = sendProxy("proxy-storage-clear", { area }).then(() => undefined);
     if (typeof callback === "function") {
       promise.then(callback, callback);
       return undefined;
@@ -140,9 +127,7 @@ const storageChangeListeners = new Set<StorageChangeListener>();
 const bindOnChangedRelay = (): void => {
   chromeShim.runtime.onMessage.addListener((message: unknown) => {
     const msg =
-      typeof message === "object" && message !== null
-        ? (message as Record<string, unknown>)
-        : {};
+      typeof message === "object" && message !== null ? (message as Record<string, unknown>) : {};
     if (msg.type === "proxy-storage-onchanged") {
       storageChangeListeners.forEach((fn) => {
         try {
@@ -195,17 +180,12 @@ export function installChromeShims(): void {
         const xhr = new XMLHttpRequest();
         xhr.open(
           "GET",
-          assertLocalExtensionUrl(
-            chromeShim.runtime.getURL(`_locales/${locale}/messages.json`),
-          ),
+          assertLocalExtensionUrl(chromeShim.runtime.getURL(`_locales/${locale}/messages.json`)),
           false,
         );
         xhr.send();
         if (xhr.status === 200 || xhr.status === 0) {
-          return JSON.parse(xhr.responseText || "{}") as Record<
-            string,
-            { message?: string }
-          >;
+          return JSON.parse(xhr.responseText || "{}") as Record<string, { message?: string }>;
         }
       } catch {}
       return null;
@@ -223,12 +203,8 @@ export function installChromeShims(): void {
       let msg = entry && typeof entry.message === "string" ? entry.message : "";
       if (!msg) return "";
       if (substitutions != null) {
-        const subs = Array.isArray(substitutions)
-          ? substitutions
-          : [substitutions];
-        msg = msg.replace(/\$(\d+)/g, (_, n: string) =>
-          String(subs[Number(n) - 1] ?? ""),
-        );
+        const subs = Array.isArray(substitutions) ? substitutions : [substitutions];
+        msg = msg.replace(/\$(\d+)/g, (_, n: string) => String(subs[Number(n) - 1] ?? ""));
       }
       return msg;
     };

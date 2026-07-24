@@ -1,9 +1,7 @@
 import { renderEffectBackground } from "./backgroundUtils";
 import { getContextRefs } from "../context/CameraContext";
 
-export const loadEffect = (
-  effectUrl: string | null,
-): Promise<HTMLImageElement | null> => {
+export const loadEffect = (effectUrl: string | null): Promise<HTMLImageElement | null> => {
   return new Promise<HTMLImageElement | null>((resolve, reject) => {
     if (!effectUrl) {
       console.warn("No effect URL provided");
@@ -11,8 +9,7 @@ export const loadEffect = (
       return;
     }
 
-    const { effectRef, blurRef, bottomCanvasRef, bottomCanvasContextRef } =
-      getContextRefs();
+    const { effectRef, blurRef, bottomCanvasRef, bottomCanvasContextRef } = getContextRefs();
 
     const img = new Image();
     img.src = effectUrl;

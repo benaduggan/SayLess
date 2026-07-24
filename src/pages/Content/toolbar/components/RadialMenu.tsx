@@ -86,10 +86,7 @@ const RadialMenu = (props: { shortcut?: React.ReactNode }) => {
       <TooltipWrap content="Color and stroke" shortcut={props.shortcut}>
         <Popover.Trigger asChild ref={ref} data-color-trigger="true">
           <div className="ToolbarButton" ref={buttonRef}>
-            <div
-              className="ColorPicker"
-              style={{ backgroundColor: contentState.color }}
-            ></div>
+            <div className="ColorPicker" style={{ backgroundColor: contentState.color }}></div>
           </div>
         </Popover.Trigger>
       </TooltipWrap>
@@ -110,9 +107,7 @@ const RadialMenu = (props: { shortcut?: React.ReactNode }) => {
               <TooltipWrap content="Eyedropper">
                 <div
                   tabIndex={open ? 0 : -1}
-                  className={
-                    eyeDropperActive ? "eyedropper eye-active" : "eyedropper"
-                  }
+                  className={eyeDropperActive ? "eyedropper eye-active" : "eyedropper"}
                   onClick={() => {
                     selectColor();
                   }}
@@ -168,11 +163,7 @@ const RadialMenu = (props: { shortcut?: React.ReactNode }) => {
                   );
                 })}
                 {renderColorWheel && (
-                  <ColorWheel
-                    fullwheel={fullwheel}
-                    open={open}
-                    setFullWheel={setFullWheel}
-                  />
+                  <ColorWheel fullwheel={fullwheel} open={open} setFullWheel={setFullWheel} />
                 )}
               </ToggleGroup.Root>
             </div>

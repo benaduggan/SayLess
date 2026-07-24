@@ -41,10 +41,7 @@ test("local whisper manifest resolves through chrome.runtime.getURL", async () =
     });
   });
 
-  assert.equal(
-    requested[0],
-    `chrome-extension://test/${MODEL_STATUS_MANIFEST_PATH}`,
-  );
+  assert.equal(requested[0], `chrome-extension://test/${MODEL_STATUS_MANIFEST_PATH}`);
   assert.equal(manifest.defaultModel, "test-model");
   assert.deepEqual(manifest.requiredFiles, ["model/config.json"]);
 });

@@ -23,18 +23,14 @@ const BUILT_EXTENSION_SURFACE_TEST_PATH = join(
   ROOT,
   "tests",
   "e2e",
-  "run-built-extension-surface.cjs"
+  "run-built-extension-surface.cjs",
 );
 const WHISPER_ASSET_VERIFIER_PATH = join(
   DEFAULT_ROOT,
   "scripts",
-  "verify-local-whisper-assets.mjs"
+  "verify-local-whisper-assets.mjs",
 );
-const NO_SECRETS_VERIFIER_PATH = join(
-  DEFAULT_ROOT,
-  "scripts",
-  "verify-no-secrets.mjs"
-);
+const NO_SECRETS_VERIFIER_PATH = join(DEFAULT_ROOT, "scripts", "verify-no-secrets.mjs");
 const MAX_BUILD_BYTES = 180 * 1024 * 1024;
 const WARN_BUILD_BYTES = 150 * 1024 * 1024;
 const LARGE_DUPLICATE_BYTES = 1024 * 1024;
@@ -111,7 +107,6 @@ const SOURCE_TEXT_EXTENSIONS = new Set([
   ".js",
   ".json",
   ".jsx",
-  ".scss",
   ".svg",
   ".ts",
   ".tsx",
@@ -246,7 +241,7 @@ const FORBIDDEN_DESTRUCTIVE_EDITOR_PROTOCOLS = [
 ];
 const WEBPACK_CONFIG_PATH = join(ROOT, "webpack.config.cts");
 const RELEASE_DEV_MODE_DEFINE_PATTERN =
-  /"process\.env\.SAYLESS_DEV_MODE"\s*:\s*JSON\.stringify\(\s*isDev\s*&&\s*process\.env\.SAYLESS_DEV_MODE\s*===\s*["']true["']\s*\?\s*["']true["']\s*:\s*["']["']\s*\)/;
+  /"process\.env\.SAYLESS_DEV_MODE"\s*:\s*JSON\.stringify\(\s*isDev\s*&&\s*process\.env\.SAYLESS_DEV_MODE\s*===\s*["']true["']\s*\?\s*["']true["']\s*:\s*["']["']\s*,?\s*\)/;
 const FORBIDDEN_LOCALE_PATTERNS = [
   /\bfaster cloud\b/i,
   /\bcloud recording\b/i,
@@ -457,6 +452,7 @@ const ALLOWED_BUNDLE_URL_HOSTS = new Set([
   "radix-ui.com",
   "reactjs.org",
   "stuk.github.io",
+  "tailwindcss.com",
   "webmproject.org",
   "web.dev",
   "www.w3.org",
@@ -486,8 +482,7 @@ const FORBIDDEN_SOURCE_PATTERNS = [
   {
     file: "src/pages/localRecordings/localRecordingLibrary.ts",
     pattern: /localforage\.config\(\{[\s\S]*?name:\s*["']screenity["']/,
-    message:
-      "local recording library uses inherited screenity localforage namespace",
+    message: "local recording library uses inherited screenity localforage namespace",
   },
   {
     file: "src/pages/Recorder/Recorder.tsx",
@@ -507,8 +502,7 @@ const FORBIDDEN_SOURCE_PATTERNS = [
   {
     file: "src/pages/Background/recording/chunkHandler.ts",
     pattern: /localforage\.config\(\{[\s\S]*?name:\s*["']screenity["']/,
-    message:
-      "background chunk handler uses inherited screenity localforage namespace",
+    message: "background chunk handler uses inherited screenity localforage namespace",
   },
   {
     file: "src/pages/Region/Recorder.tsx",
@@ -518,20 +512,17 @@ const FORBIDDEN_SOURCE_PATTERNS = [
   {
     file: "src/pages/EditorApp/context/ContentState.tsx",
     pattern: /localforage\.config\(\{[\s\S]*?name:\s*["']screenity["']/,
-    message:
-      "editor content state uses inherited screenity localforage namespace",
+    message: "editor content state uses inherited screenity localforage namespace",
   },
   {
     file: "src/pages/Download/Download.tsx",
     pattern: /localforage\.config\(\{[\s\S]*?name:\s*["']screenity["']/,
-    message:
-      "download recovery page uses inherited screenity localforage namespace",
+    message: "download recovery page uses inherited screenity localforage namespace",
   },
   {
     file: "src/pages/Download/Download.tsx",
     pattern: /recover-cloud-indexed-db|CloudRestore|screenity-recording/,
-    message:
-      "download recovery page contains inherited cloud/Screenity recovery protocol strings",
+    message: "download recovery page contains inherited cloud/Screenity recovery protocol strings",
   },
   {
     file: "src/pages/utils/buildSupportContext.ts",
@@ -547,14 +538,12 @@ const FORBIDDEN_SOURCE_PATTERNS = [
   {
     file: "utils/server.cts",
     pattern: /require\(["']ssestream["']\)|from ["']ssestream["']/,
-    message:
-      "dev server must use native SSE instead of the removed ssestream dependency",
+    message: "dev server must use native SSE instead of the removed ssestream dependency",
   },
   {
     file: "utils/autoReloadClients/backgroundClient.ts",
     pattern: /require\(["']querystring["']\)|from ["']querystring["']/,
-    message:
-      "auto-reload client must parse resource queries without bundling querystring",
+    message: "auto-reload client must parse resource queries without bundling querystring",
   },
   {
     file: "src/pages/Background/offscreen/closeOffscreenDocumentWithFlush.ts",
@@ -579,8 +568,7 @@ const FORBIDDEN_SOURCE_PATTERNS = [
   {
     file: "src/pages/Background/messaging/handlers.ts",
     pattern: /CloudRecorder\/recorderStorage/,
-    message:
-      "background messaging imports recorder storage through CloudRecorder path",
+    message: "background messaging imports recorder storage through CloudRecorder path",
   },
   {
     file: "src/pages/utils/diagnosticLog.ts",
@@ -609,8 +597,7 @@ const REQUIRED_DYNAMIC_LOCAL_URL_GUARDS = [
       "url: assertLocalBlobUrl(downloadUrl)",
       "URL.revokeObjectURL(downloadUrl)",
     ],
-    message:
-      "shared local file export helper must validate blob URLs before Chrome downloads",
+    message: "shared local file export helper must validate blob URLs before Chrome downloads",
   },
   {
     file: "src/pages/EditorApp/context/ContentState.tsx",
@@ -620,8 +607,7 @@ const REQUIRED_DYNAMIC_LOCAL_URL_GUARDS = [
       "url: assertLocalExportObjectUrl(exportUrl)",
       "URL.revokeObjectURL(exportUrl)",
     ],
-    message:
-      "editor export download path must validate blob URLs before fetch/download/revoke",
+    message: "editor export download path must validate blob URLs before fetch/download/revoke",
   },
   {
     file: "src/pages/Content/popup/PopupContainer.tsx",
@@ -648,8 +634,7 @@ const REQUIRED_DYNAMIC_LOCAL_URL_GUARDS = [
       "const assertLocalExtensionUrl =",
       'window.open(assertLocalExtensionUrl(url), "_blank")',
     ],
-    message:
-      "popup recording link must validate local extension URL before opening",
+    message: "popup recording link must validate local extension URL before opening",
   },
   {
     file: "src/pages/Download/Download.tsx",
@@ -659,8 +644,7 @@ const REQUIRED_DYNAMIC_LOCAL_URL_GUARDS = [
       "url: assertLocalBlobUrl(url)",
       "URL.revokeObjectURL(assertLocalBlobUrl(url))",
     ],
-    message:
-      "download recovery page must validate blob URLs before Chrome downloads",
+    message: "download recovery page must validate blob URLs before Chrome downloads",
   },
   {
     file: "src/pages/OffscreenRecorder/chromeShim.ts",
@@ -669,8 +653,7 @@ const REQUIRED_DYNAMIC_LOCAL_URL_GUARDS = [
       "assertLocalExtensionUrl(",
       "_locales/${locale}/messages.json",
     ],
-    message:
-      "offscreen i18n shim must load catalogs from local extension URLs only",
+    message: "offscreen i18n shim must load catalogs from local extension URLs only",
   },
 ];
 const REQUIRED_EXPORT_DELIVERY_PROOF = [
@@ -682,8 +665,7 @@ const REQUIRED_EXPORT_DELIVERY_PROOF = [
       'status: "cancelled"',
       'status: "failed"',
     ],
-    message:
-      "editor export delivery must preserve saved, cancelled, and failed outcomes",
+    message: "editor export delivery must preserve saved, cancelled, and failed outcomes",
   },
   {
     file: "src/pages/EditorApp/layout/player/RightPanel.tsx",
@@ -693,8 +675,7 @@ const REQUIRED_EXPORT_DELIVERY_PROOF = [
       'data-testid="export-retry-action"',
       "revealExportDownload(",
     ],
-    message:
-      "editor export UI must expose stable save, reveal, and retry proof hooks",
+    message: "editor export UI must expose stable save, reveal, and retry proof hooks",
   },
   {
     file: "tests/e2e/run-editor-editing-proof.cjs",
@@ -716,16 +697,10 @@ const REQUIRED_EXPORT_DELIVERY_PROOF = [
       "revealExportDownload(42",
       "assert.deepEqual(ids, [42])",
     ],
-    message:
-      "export-panel unit proof must validate and dispatch the exact Chrome download id",
+    message: "export-panel unit proof must validate and dispatch the exact Chrome download id",
   },
 ];
-const TRANSCRIPTION_HARNESS_PATH = join(
-  ROOT,
-  "tests",
-  "e2e",
-  "run-transcription.cjs"
-);
+const TRANSCRIPTION_HARNESS_PATH = join(ROOT, "tests", "e2e", "run-transcription.cjs");
 const FORBIDDEN_TRANSCRIPTION_HARNESS_PATTERNS = [
   /SAYLESS_ALLOW_NETWORK_TRANSCRIPTION_E2E/,
   /JFK_URL/,
@@ -748,10 +723,6 @@ const FORBIDDEN_ACTIVE_SCREENITY_UI_NAMES = [
     pattern: /screenity-scrollbar/i,
   },
   {
-    file: "src/pages/Content/styles/app.scss",
-    pattern: /screenity-scrollbar/i,
-  },
-  {
     file: "src/pages/Content/styles/app.css",
     pattern: /screenity-scrollbar/i,
   },
@@ -764,7 +735,7 @@ const FORBIDDEN_ACTIVE_SCREENITY_UI_NAMES = [
     pattern: /screenity-(?:player-loading|spin)/i,
   },
   {
-    file: "src/pages/EditorApp/styles/global/_app.scss",
+    file: "src/pages/EditorApp/styles/global/_app.css",
     pattern: /screenitySandboxToast(?:In|Out)/,
   },
 ];
@@ -842,7 +813,7 @@ const collectForbiddenPatternHits = ({ file, text, patterns }) => {
 };
 const isXmlNamespaceUrl = (text, matchIndex) =>
   /xmlns(?::[A-Za-z_][\w.-]*)?\s*=\s*["']$/.test(
-    text.slice(Math.max(0, matchIndex - 80), matchIndex)
+    text.slice(Math.max(0, matchIndex - 80), matchIndex),
   );
 
 const walk = (dir) => {
@@ -862,7 +833,7 @@ const stableJson = (value) => {
     return Object.fromEntries(
       Object.keys(value)
         .sort()
-        .map((key) => [key, stableJson(value[key])])
+        .map((key) => [key, stableJson(value[key])]),
     );
   }
   return value;
@@ -870,17 +841,12 @@ const stableJson = (value) => {
 
 const assertManifestPolicy = (manifest, label) => {
   for (const key of FORBIDDEN_MANIFEST_KEYS) {
-    if (manifest[key] != null)
-      fail(`${label} manifest contains forbidden ${key}.`);
+    if (manifest[key] != null) fail(`${label} manifest contains forbidden ${key}.`);
   }
   const permissions = [
     ...(Array.isArray(manifest.permissions) ? manifest.permissions : []),
-    ...(Array.isArray(manifest.optional_permissions)
-      ? manifest.optional_permissions
-      : []),
-    ...(Array.isArray(manifest.host_permissions)
-      ? manifest.host_permissions
-      : []),
+    ...(Array.isArray(manifest.optional_permissions) ? manifest.optional_permissions : []),
+    ...(Array.isArray(manifest.host_permissions) ? manifest.host_permissions : []),
   ];
   for (const permission of permissions) {
     if (FORBIDDEN_PERMISSIONS.has(permission)) {
@@ -894,16 +860,14 @@ const assertManifestPolicy = (manifest, label) => {
     fail(
       `${label} manifest host_permissions must stay pinned to the single recorder UI injection permission <all_urls>; found ${
         hostPermissions.join(", ") || "none"
-      }.`
+      }.`,
     );
   }
   const manifestText = JSON.stringify(manifest);
   if (manifestText.includes("cloudrecorder")) {
     fail(`${label} manifest still references cloudrecorder.`);
   }
-  const webAccessibleResourceEntries = Array.isArray(
-    manifest.web_accessible_resources
-  )
+  const webAccessibleResourceEntries = Array.isArray(manifest.web_accessible_resources)
     ? manifest.web_accessible_resources
     : [];
   const broadWebAccessibleResources = [];
@@ -912,9 +876,7 @@ const assertManifestPolicy = (manifest, label) => {
     for (const resource of resources) {
       if (
         FORBIDDEN_WEB_ACCESSIBLE_RESOURCES.has(resource) ||
-        FORBIDDEN_WEB_ACCESSIBLE_RESOURCE_PREFIXES.some((prefix) =>
-          resource.startsWith(prefix)
-        )
+        FORBIDDEN_WEB_ACCESSIBLE_RESOURCE_PREFIXES.some((prefix) => resource.startsWith(prefix))
       ) {
         broadWebAccessibleResources.push(resource);
       }
@@ -923,15 +885,14 @@ const assertManifestPolicy = (manifest, label) => {
   if (broadWebAccessibleResources.length) {
     fail(
       `${label} manifest exposes broad or internal asset resource(s) as web-accessible: ${broadWebAccessibleResources.join(
-        ", "
-      )}.`
+        ", ",
+      )}.`,
     );
   }
-  const extensionPageCsp =
-    manifest.content_security_policy?.extension_pages || "";
+  const extensionPageCsp = manifest.content_security_policy?.extension_pages || "";
   if (!/\bconnect-src\b/.test(extensionPageCsp)) {
     fail(
-      `${label} manifest extension_pages CSP must declare connect-src for local-only release policy.`
+      `${label} manifest extension_pages CSP must declare connect-src for local-only release policy.`,
     );
   }
   const forbiddenCspSources = [
@@ -950,9 +911,7 @@ const assertManifestPolicy = (manifest, label) => {
   ];
   for (const { pattern, label: cspLabel } of forbiddenCspSources) {
     if (pattern.test(extensionPageCsp)) {
-      fail(
-        `${label} manifest extension_pages CSP ${cspLabel} allows remote network sources.`
-      );
+      fail(`${label} manifest extension_pages CSP ${cspLabel} allows remote network sources.`);
     }
   }
 };
@@ -969,13 +928,13 @@ const assertManifestReleaseFieldsMatch = (sourceManifest, buildManifest) => {
   const mismatches = releaseFields.filter(
     (field) =>
       JSON.stringify(stableJson(sourceManifest[field])) !==
-      JSON.stringify(stableJson(buildManifest[field]))
+      JSON.stringify(stableJson(buildManifest[field])),
   );
   if (mismatches.length) {
     fail(
       `source and build manifest release-critical field(s) differ: ${mismatches.join(
-        ", "
-      )}. Run npm run build:release before release verification.`
+        ", ",
+      )}. Run npm run build:release before release verification.`,
     );
   }
 };
@@ -993,119 +952,98 @@ if (!existsSync(GITIGNORE_PATH)) {
   fail(".gitignore is missing.");
 }
 if (!existsSync(STORE_LISTING_PATH)) {
-  fail(
-    "docs/STORE_LISTING.md is missing; release needs a machine-scanned store listing draft."
-  );
+  fail("docs/STORE_LISTING.md is missing; release needs a machine-scanned store listing draft.");
 }
 
 const packageJson = JSON.parse(readFileSync(PACKAGE_PATH, "utf8"));
 const packageLock = JSON.parse(readFileSync(PACKAGE_LOCK_PATH, "utf8"));
-const sourceManifestForVersion = JSON.parse(
-  readFileSync(SOURCE_MANIFEST_PATH, "utf8")
-);
+const sourceManifestForVersion = JSON.parse(readFileSync(SOURCE_MANIFEST_PATH, "utf8"));
 const gitignoreText = readFileSync(GITIGNORE_PATH, "utf8");
 const buildScriptText = readFileSync(BUILD_SCRIPT_PATH, "utf8");
 const webpackConfigText = readFileSync(WEBPACK_CONFIG_PATH, "utf8");
-const packageReleaseScriptText = readFileSync(
-  join(ROOT, "scripts", "package-release.mjs"),
-  "utf8"
-);
-const packageCwsScriptText = readFileSync(
-  join(ROOT, "scripts", "package-cws.mjs"),
-  "utf8"
-);
+const packageReleaseScriptText = readFileSync(join(ROOT, "scripts", "package-release.mjs"), "utf8");
+const packageCwsScriptText = readFileSync(join(ROOT, "scripts", "package-cws.mjs"), "utf8");
 const packageCiExtensionScriptText = readFileSync(
   join(ROOT, "scripts", "package-ci-extension.mjs"),
-  "utf8"
+  "utf8",
 );
 const ciWorkflowText = readFileSync(CI_WORKFLOW_PATH, "utf8");
-const releaseScriptText = readFileSync(
-  join(ROOT, "scripts", "release.mjs"),
-  "utf8"
-);
-const builtExtensionSurfaceTestText = readFileSync(
-  BUILT_EXTENSION_SURFACE_TEST_PATH,
-  "utf8"
-);
+const releaseScriptText = readFileSync(join(ROOT, "scripts", "release.mjs"), "utf8");
+const builtExtensionSurfaceTestText = readFileSync(BUILT_EXTENSION_SURFACE_TEST_PATH, "utf8");
 const releaseQaAutomatedScriptText = readFileSync(
   join(ROOT, "scripts", "release-qa-automated.mjs"),
-  "utf8"
+  "utf8",
 );
 const transcriptionConfigText = readFileSync(
   join(ROOT, "src", "transcription", "config.ts"),
-  "utf8"
+  "utf8",
 );
-const releaseStatusScriptText = readFileSync(
-  join(ROOT, "scripts", "release-status.mjs"),
-  "utf8"
-);
+const releaseStatusScriptText = readFileSync(join(ROOT, "scripts", "release-status.mjs"), "utf8");
 const manualQaProfileScriptText = readFileSync(
   join(ROOT, "scripts", "manual-qa-profile.mjs"),
-  "utf8"
+  "utf8",
 );
 const manualQaMediaProbeScriptText = readFileSync(
   join(ROOT, "scripts", "manual-qa-media-probe.mjs"),
-  "utf8"
+  "utf8",
 );
 const manualQaMediaCoverageScriptText = readFileSync(
   join(ROOT, "scripts", "manual-qa-media-coverage.mjs"),
-  "utf8"
+  "utf8",
 );
 const manualQaReportOutputScriptText = readFileSync(
   join(ROOT, "scripts", "manual-qa-report-output.mjs"),
-  "utf8"
+  "utf8",
 );
 const manualQaSidecarProbeScriptText = readFileSync(
   join(ROOT, "scripts", "manual-qa-sidecar-probe.mjs"),
-  "utf8"
+  "utf8",
 );
 const manualQaMeasurementImportScriptText = readFileSync(
   join(ROOT, "scripts", "manual-qa-measurement-import.mjs"),
-  "utf8"
+  "utf8",
 );
 const applyManualQaMeasurementsScriptText = readFileSync(
   join(ROOT, "scripts", "apply-manual-qa-measurements.mjs"),
-  "utf8"
+  "utf8",
 );
 const localRecordingsE2eScriptText = readFileSync(
   join(ROOT, "tests", "e2e", "run-local-recordings.cjs"),
-  "utf8"
+  "utf8",
 );
 const manualQaTemplateSyncScriptText = readFileSync(
   join(ROOT, "scripts", "manual-qa-template-sync.mjs"),
-  "utf8"
+  "utf8",
 );
 const verifyManualQaScriptText = readFileSync(
   join(ROOT, "scripts", "verify-manual-qa-evidence.mjs"),
-  "utf8"
+  "utf8",
 );
 const noSecretsVerifierScriptText = readFileSync(
   join(ROOT, "scripts", "verify-no-secrets.mjs"),
-  "utf8"
+  "utf8",
 );
 const verifyReleasePackageScriptText = readFileSync(
   join(ROOT, "scripts", "verify-release-package.mjs"),
-  "utf8"
+  "utf8",
 );
 const verifyCwsPackageScriptText = readFileSync(
   join(ROOT, "scripts", "verify-cws-package.mjs"),
-  "utf8"
+  "utf8",
 );
 const storeListingText = readFileSync(STORE_LISTING_PATH, "utf8");
 const assertMetadataDescription = ({ file, label, text, requiredPatterns }) => {
   if (typeof text !== "string" || !text.trim()) {
     fail(
-      `${file} ${label} is missing; release metadata must state free/offline/local-first/no-signup positioning.`
+      `${file} ${label} is missing; release metadata must state free/offline/local-first/no-signup positioning.`,
     );
   }
-  const missingRequiredPatterns = requiredPatterns.filter(
-    (pattern) => !pattern.test(text)
-  );
+  const missingRequiredPatterns = requiredPatterns.filter((pattern) => !pattern.test(text));
   if (missingRequiredPatterns.length) {
     fail(
       `${file} ${label} is missing required free/offline/local-first/no-signup metadata phrase(s): ${missingRequiredPatterns
         .map((pattern) => pattern.source)
-        .join(", ")}.`
+        .join(", ")}.`,
     );
   }
   const hits = collectForbiddenPatternHits({
@@ -1117,9 +1055,7 @@ const assertMetadataDescription = ({ file, label, text, requiredPatterns }) => {
     for (const hit of hits.slice(0, 20)) {
       console.error(`${hit.file}: ${hit.match} (${hit.pattern})`);
     }
-    fail(
-      `${hits.length} forbidden publication-surface string(s) found in release metadata.`
-    );
+    fail(`${hits.length} forbidden publication-surface string(s) found in release metadata.`);
   }
 };
 assertMetadataDescription({
@@ -1129,13 +1065,13 @@ assertMetadataDescription({
   requiredPatterns: REQUIRED_PACKAGE_DESCRIPTION_PATTERNS,
 });
 const missingStoreListingSections = REQUIRED_STORE_LISTING_PATTERNS.filter(
-  (pattern) => !pattern.test(storeListingText)
+  (pattern) => !pattern.test(storeListingText),
 );
 if (missingStoreListingSections.length) {
   fail(
     `docs/STORE_LISTING.md is missing required local/offline/free-included store listing section(s): ${missingStoreListingSections
       .map((pattern) => pattern.source)
-      .join(", ")}.`
+      .join(", ")}.`,
   );
 }
 const storeListingSurfaceHits = [];
@@ -1154,12 +1090,12 @@ if (storeListingSurfaceHits.length) {
     console.error(`${hit.file}: ${hit.match} (${hit.pattern})`);
   }
   fail(
-    `${storeListingSurfaceHits.length} forbidden publication-surface string(s) found in the store listing draft.`
+    `${storeListingSurfaceHits.length} forbidden publication-surface string(s) found in the store listing draft.`,
   );
 }
 if (!RELEASE_DEV_MODE_DEFINE_PATTERN.test(webpackConfigText)) {
   fail(
-    "webpack.config.cts must force process.env.SAYLESS_DEV_MODE off outside development builds."
+    "webpack.config.cts must force process.env.SAYLESS_DEV_MODE off outside development builds.",
   );
 }
 if (
@@ -1167,34 +1103,22 @@ if (
   !/chrome-extension:/.test(transcriptionConfigText) ||
   !/assets\\\/whisper\\\/models/.test(transcriptionConfigText) ||
   !/isRemoteModelPath/.test(transcriptionConfigText) ||
-  !/next\.localModelPath = current\.localModelPath/.test(
-    transcriptionConfigText
-  )
+  !/next\.localModelPath = current\.localModelPath/.test(transcriptionConfigText)
 ) {
   fail(
-    "src/transcription/config.ts must keep release transcription on the bundled extension model path when stored settings try to override it with HTTP."
+    "src/transcription/config.ts must keep release transcription on the bundled extension model path when stored settings try to override it with HTTP.",
   );
 }
-if (
-  !/const ASSET_PATH = process\.env\.ASSET_PATH \|\| ""/.test(webpackConfigText)
-) {
+if (!/const ASSET_PATH = process\.env\.ASSET_PATH \|\| ""/.test(webpackConfigText)) {
   fail(
-    "webpack.config.cts must default ASSET_PATH to a relative path for packaged extension pages."
+    "webpack.config.cts must default ASSET_PATH to a relative path for packaged extension pages.",
   );
 }
-if (
-  !/loader:\s*"css-loader"[\s\S]*?options:\s*{\s*url:\s*false\s*}/.test(
-    webpackConfigText
-  )
-) {
-  fail(
-    "webpack.config.cts must preserve CSS asset URLs for packaged extension pages."
-  );
+if (!/loader:\s*"css-loader"[\s\S]*?options:\s*{[\s\S]*?url:\s*false/.test(webpackConfigText)) {
+  fail("webpack.config.cts must preserve CSS asset URLs for packaged extension pages.");
 }
 if (!/process\.env\.ASSET_PATH = ""/.test(buildScriptText)) {
-  fail(
-    "utils/build.cts must build packaged extension pages with a relative ASSET_PATH."
-  );
+  fail("utils/build.cts must build packaged extension pages with a relative ASSET_PATH.");
 }
 if (
   !/ALLOWED_WEBPACK_WARNINGS/.test(buildScriptText) ||
@@ -1207,7 +1131,7 @@ if (
   !/process\.exit\(1\)/.test(buildScriptText)
 ) {
   fail(
-    "utils/build.cts must fail release builds on unexpected webpack warnings and only allow the known transformers import.meta warning."
+    "utils/build.cts must fail release builds on unexpected webpack warnings and only allow the known transformers import.meta warning.",
   );
 }
 for (const [label, version] of [
@@ -1217,34 +1141,24 @@ for (const [label, version] of [
 ]) {
   if (version !== sourceManifestForVersion.version) {
     fail(
-      `${label} version (${
-        version || "missing"
-      }) must match src/manifest.json version (${
+      `${label} version (${version || "missing"}) must match src/manifest.json version (${
         sourceManifestForVersion.version
-      }). Run npm run release -- <patch|minor|major> or update release versions together.`
+      }). Run npm run release -- <patch|minor|major> or update release versions together.`,
     );
   }
 }
-for (const ignoredPattern of [
-  "build/",
-  "release-artifacts/",
-  "dist/",
-  "*.zip",
-]) {
+for (const ignoredPattern of ["build/", "release-artifacts/", "dist/", "*.zip"]) {
   if (
-    !new RegExp(
-      `^${ignoredPattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
-      "m"
-    ).test(gitignoreText)
+    !new RegExp(`^${ignoredPattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m").test(
+      gitignoreText,
+    )
   ) {
-    fail(
-      `.gitignore must keep generated release artifact path ignored: ${ignoredPattern}`
-    );
+    fail(`.gitignore must keep generated release artifact path ignored: ${ignoredPattern}`);
   }
 }
 if (!/^!docs\/STORE_LISTING\.md$/m.test(gitignoreText)) {
   fail(
-    ".gitignore must allow docs/STORE_LISTING.md so the machine-scanned store listing draft can be tracked."
+    ".gitignore must allow docs/STORE_LISTING.md so the machine-scanned store listing draft can be tracked.",
   );
 }
 for (const scriptName of [
@@ -1259,9 +1173,7 @@ for (const scriptName of [
 ]) {
   const command = packageJson.scripts?.[scriptName] || "";
   const runsManualGate =
-    /(?:qa:release:manual|package:release|preflight:cws|release:cws)/.test(
-      command
-    ) ||
+    /(?:qa:release:manual|package:release|preflight:cws|release:cws)/.test(command) ||
     (/scripts\/package-release\.mjs/.test(command) &&
       /verify-manual-qa-evidence\.mjs/.test(packageReleaseScriptText)) ||
     (/scripts\/package-cws\.mjs/.test(command) &&
@@ -1269,62 +1181,51 @@ for (const scriptName of [
       /verify-manual-qa-evidence\.mjs/.test(packageReleaseScriptText));
   if (!runsManualGate) {
     fail(
-      `${scriptName} must run the manual release evidence gate before artifact or store actions.`
+      `${scriptName} must run the manual release evidence gate before artifact or store actions.`,
     );
   }
 }
 if ((packageJson.scripts?.package || "") !== "npm run package:release") {
   fail(
-    "package must delegate to package:release so generic packaging keeps the release evidence gate."
+    "package must delegate to package:release so generic packaging keeps the release evidence gate.",
   );
 }
 if (
-  (packageJson.scripts?.["package:ci-extension"] || "") !==
-  "node scripts/package-ci-extension.mjs"
+  (packageJson.scripts?.["package:ci-extension"] || "") !== "node scripts/package-ci-extension.mjs"
 ) {
   fail(
-    "package:ci-extension must run scripts/package-ci-extension.mjs for the GitHub Actions downloadable extension artifact."
+    "package:ci-extension must run scripts/package-ci-extension.mjs for the GitHub Actions downloadable extension artifact.",
   );
 }
 if (
   !/JSZip/.test(packageCiExtensionScriptText) ||
   !/build\/manifest\.json/.test(packageCiExtensionScriptText) ||
   !/package\.json version/.test(packageCiExtensionScriptText) ||
-  !/sayless-extension-v\$\{manifest\.version\}/.test(
-    packageCiExtensionScriptText
-  ) ||
+  !/sayless-extension-v\$\{manifest\.version\}/.test(packageCiExtensionScriptText) ||
   !/sayless\.ciExtensionPackage/.test(packageCiExtensionScriptText) ||
-  !/createHash\("sha256"\)\.update\(zipBuffer\)/.test(
-    packageCiExtensionScriptText
-  ) ||
+  !/createHash\("sha256"\)\.update\(zipBuffer\)/.test(packageCiExtensionScriptText) ||
   !/platform:\s*"UNIX"/.test(packageCiExtensionScriptText) ||
   !/dist/.test(packageCiExtensionScriptText)
 ) {
   fail(
-    "scripts/package-ci-extension.mjs must create a deterministic versioned zip, SHA-256 file, and CI package metadata from build/."
+    "scripts/package-ci-extension.mjs must create a deterministic versioned zip, SHA-256 file, and CI package metadata from build/.",
   );
 }
 if (!/verify-no-secrets\.mjs/.test(packageReleaseScriptText)) {
-  fail(
-    "scripts/package-release.mjs must run the no-secrets scan before writing extension.zip."
-  );
+  fail("scripts/package-release.mjs must run the no-secrets scan before writing extension.zip.");
 }
 if (!/NO_SECRETS_VERIFIER_PATH/.test(packageReleaseScriptText)) {
   fail(
-    "scripts/package-release.mjs must run the checked-in no-secrets verifier before writing extension.zip."
+    "scripts/package-release.mjs must run the checked-in no-secrets verifier before writing extension.zip.",
   );
 }
 const noSecretsSkipExtensionsMatch = noSecretsVerifierScriptText.match(
-  /const\s+SKIP_EXTENSIONS\s*=\s*new Set\(\[([\s\S]*?)\]\);/
+  /const\s+SKIP_EXTENSIONS\s*=\s*new Set\(\[([\s\S]*?)\]\);/,
 );
 if (!noSecretsSkipExtensionsMatch) {
-  fail(
-    "scripts/verify-no-secrets.mjs must declare explicit skipped binary extensions."
-  );
+  fail("scripts/verify-no-secrets.mjs must declare explicit skipped binary extensions.");
 } else if (/(["'])\.svg\1/.test(noSecretsSkipExtensionsMatch[1])) {
-  fail(
-    "scripts/verify-no-secrets.mjs must scan text SVG assets for secret leaks."
-  );
+  fail("scripts/verify-no-secrets.mjs must scan text SVG assets for secret leaks.");
 }
 if (
   !/verify-manual-qa-evidence\.mjs/.test(packageReleaseScriptText) ||
@@ -1332,7 +1233,7 @@ if (
   !/MANUAL_QA_VERIFIER_PATH/.test(packageReleaseScriptText)
 ) {
   fail(
-    "scripts/package-release.mjs must run the checked-in manual QA verifier with SAYLESS_MANUAL_QA_ROOT before writing extension.zip."
+    "scripts/package-release.mjs must run the checked-in manual QA verifier with SAYLESS_MANUAL_QA_ROOT before writing extension.zip.",
   );
 }
 if (
@@ -1341,7 +1242,7 @@ if (
   !/SAYLESS_RELEASE_PACKAGE_VERIFY_ROOT/.test(packageReleaseScriptText)
 ) {
   fail(
-    "scripts/package-release.mjs must self-verify release package artifacts before reporting success."
+    "scripts/package-release.mjs must self-verify release package artifacts before reporting success.",
   );
 }
 if (
@@ -1352,7 +1253,7 @@ if (
   !/failedStep/.test(packageReleaseScriptText)
 ) {
   fail(
-    "scripts/package-release.mjs must overwrite stale package evidence with non-passing evidence before and after failed packaging runs."
+    "scripts/package-release.mjs must overwrite stale package evidence with non-passing evidence before and after failed packaging runs.",
   );
 }
 if (
@@ -1364,36 +1265,30 @@ if (
 if (
   !/recordPageErrors/.test(builtExtensionSurfaceTestText) ||
   !/pattern:\s*"pageerror"/.test(builtExtensionSurfaceTestText) ||
-  !/recordPageErrors\(hits, pageName, surface\.pageErrors\)/.test(
-    builtExtensionSurfaceTestText
-  ) ||
+  !/recordPageErrors\(hits, pageName, surface\.pageErrors\)/.test(builtExtensionSurfaceTestText) ||
   !/recordPageErrors\(hits, "content-script-popup", contentErrors\)/.test(
-    builtExtensionSurfaceTestText
+    builtExtensionSurfaceTestText,
   ) ||
   !/recordConsoleErrors/.test(builtExtensionSurfaceTestText) ||
   !/pattern:\s*"console-error"/.test(builtExtensionSurfaceTestText) ||
   !/message\.type\(\) === "error"/.test(builtExtensionSurfaceTestText) ||
   !/recordConsoleErrors\(hits, pageName, surface\.consoleErrors\)/.test(
-    builtExtensionSurfaceTestText
+    builtExtensionSurfaceTestText,
   ) ||
   !/recordConsoleErrors\(hits, "content-script-popup", contentConsoleErrors\)/.test(
-    builtExtensionSurfaceTestText
+    builtExtensionSurfaceTestText,
   ) ||
   !/isTargetClosedError/.test(builtExtensionSurfaceTestText) ||
   !/scanExtensionPage/.test(builtExtensionSurfaceTestText) ||
   !/SAYLESS_BUILT_EXTENSION_EVIDENCE/.test(builtExtensionSurfaceTestText) ||
-  !/sayless\.builtExtensionSurfaceEvidence/.test(
-    builtExtensionSurfaceTestText
-  ) ||
+  !/sayless\.builtExtensionSurfaceEvidence/.test(builtExtensionSurfaceTestText) ||
   !/extensionId/.test(builtExtensionSurfaceTestText) ||
-  !/writeEvidence\(\{ status: "running" \}\)/.test(
-    builtExtensionSurfaceTestText
-  ) ||
+  !/writeEvidence\(\{ status: "running" \}\)/.test(builtExtensionSurfaceTestText) ||
   !/status: "passed"/.test(builtExtensionSurfaceTestText) ||
   !/status: "failed"/.test(builtExtensionSurfaceTestText)
 ) {
   fail(
-    "tests/e2e/run-built-extension-surface.cjs must fail packaged surface smoke on page JavaScript and console errors."
+    "tests/e2e/run-built-extension-surface.cjs must fail packaged surface smoke on page JavaScript and console errors.",
   );
 }
 if (
@@ -1407,17 +1302,14 @@ if (
   !/builtExtension:/.test(releaseQaAutomatedScriptText) ||
   !/Automated release QA has not passed/.test(releaseQaAutomatedScriptText) ||
   !/test:e2e:editor-editing-proof/.test(releaseQaAutomatedScriptText) ||
-  !/qa:release:manual:profile -- --sync-template/.test(
-    releaseQaAutomatedScriptText
-  )
+  !/qa:release:manual:profile -- --sync-template/.test(releaseQaAutomatedScriptText)
 ) {
   fail(
-    "scripts/release-qa-automated.mjs must overwrite stale automated release QA evidence with non-passing evidence before and after failed runs."
+    "scripts/release-qa-automated.mjs must overwrite stale automated release QA evidence with non-passing evidence before and after failed runs.",
   );
 }
 if (
-  packageJson.scripts?.["qa:release:status"] !==
-    "node scripts/release-status.mjs" ||
+  packageJson.scripts?.["qa:release:status"] !== "node scripts/release-status.mjs" ||
   !/SAYLESS_RELEASE_STATUS_ROOT/.test(releaseStatusScriptText) ||
   !/verify-manual-qa-evidence\.mjs/.test(releaseStatusScriptText) ||
   !/verify-release-package\.mjs/.test(releaseStatusScriptText) ||
@@ -1428,18 +1320,10 @@ if (
   !/dirFingerprint/.test(releaseStatusScriptText) ||
   !/releaseSurface/.test(releaseStatusScriptText) ||
   !/EXPECTED_AUTOMATED_COMMANDS/.test(releaseStatusScriptText) ||
-  !/command durations must not exceed total durationMs/.test(
-    releaseStatusScriptText
-  ) ||
-  !/git\.commit must be a 40-character SHA-1 commit/.test(
-    releaseStatusScriptText
-  ) ||
-  !/git\.workingTree\.sha256 must match the current git worktree/.test(
-    releaseStatusScriptText
-  ) ||
-  !/builtExtension\.id must be a browser-observed/.test(
-    releaseStatusScriptText
-  ) ||
+  !/command durations must not exceed total durationMs/.test(releaseStatusScriptText) ||
+  !/git\.commit must be a 40-character SHA-1 commit/.test(releaseStatusScriptText) ||
+  !/git\.workingTree\.sha256 must match the current git worktree/.test(releaseStatusScriptText) ||
+  !/builtExtension\.id must be a browser-observed/.test(releaseStatusScriptText) ||
   !/verifierErrorCount/.test(releaseStatusScriptText) ||
   !/verifierSummary/.test(releaseStatusScriptText) ||
   !/manualQaTodo/.test(releaseStatusScriptText) ||
@@ -1452,67 +1336,51 @@ if (
   !/analyzeManualTemplateSync/.test(releaseStatusScriptText) ||
   !/templateSyncRequired/.test(releaseStatusScriptText) ||
   !/automated QA must pass before template freshness can be established/.test(
-    releaseStatusScriptText
+    releaseStatusScriptText,
   ) ||
   !/Manual QA todo/.test(releaseStatusScriptText) ||
   !/for \(const todo of item\.todo\)/.test(releaseStatusScriptText) ||
   !/Record at least two real recordings/.test(releaseStatusScriptText) ||
   !/npm run qa:release:manual:media -- --json --require-complete --output=release-artifacts\/manual-qa-media-probe\.json/.test(
-    releaseStatusScriptText
+    releaseStatusScriptText,
   ) ||
   !/npm run qa:release:manual:sidecars -- --json --require-complete --output=release-artifacts\/manual-qa-sidecar-probe\.json/.test(
-    releaseStatusScriptText
+    releaseStatusScriptText,
   ) ||
-  !/npm run qa:release:manual:measurements -- --json --write/.test(
-    releaseStatusScriptText
-  ) ||
+  !/npm run qa:release:manual:measurements -- --json --write/.test(releaseStatusScriptText) ||
   !/filename-matched three-format set/.test(releaseStatusScriptText) ||
   !/at least 25 MiB/.test(releaseStatusScriptText) ||
   !/per-recording crop evidence/.test(releaseStatusScriptText) ||
   !/real WAV, M4A, and MP3 inputs/.test(releaseStatusScriptText) ||
   !/publication-surface evidence for release notes, screenshots, and docs\/STORE_LISTING\.md store text/.test(
-    releaseStatusScriptText
+    releaseStatusScriptText,
   ) ||
   !/npm run qa:release:auto/.test(releaseStatusScriptText) ||
   !/npm run qa:release:manual:template/.test(releaseStatusScriptText) ||
-  !/npm run qa:release:manual:profile -- --launch/.test(
-    releaseStatusScriptText
-  ) ||
-  !/npm run qa:release:manual:profile -- --sync-template --launch/.test(
-    releaseStatusScriptText
-  ) ||
+  !/npm run qa:release:manual:profile -- --launch/.test(releaseStatusScriptText) ||
+  !/npm run qa:release:manual:profile -- --sync-template --launch/.test(releaseStatusScriptText) ||
   !/npm run qa:release:manual:progress/.test(releaseStatusScriptText) ||
   !/complete docs\/RELEASE_QA\.md/.test(releaseStatusScriptText) ||
-  !/fix release-artifacts\/manual-qa-evidence\.json/.test(
-    releaseStatusScriptText
-  ) ||
+  !/fix release-artifacts\/manual-qa-evidence\.json/.test(releaseStatusScriptText) ||
   !/npm run package:release/.test(releaseStatusScriptText) ||
   !/npm run build:cws/.test(releaseStatusScriptText) ||
   !/npm run verify:release-package/.test(releaseStatusScriptText) ||
   !/npm run verify:cws-package/.test(releaseStatusScriptText) ||
   !/npm run release:cws/.test(releaseStatusScriptText) ||
   !/npm run release:cws:publish/.test(releaseStatusScriptText) ||
-  !/release-artifacts\/manual-qa-evidence\.json/.test(
-    releaseStatusScriptText
-  ) ||
-  !/attach release-artifacts\/manual-qa-media-probe\.json/.test(
-    releaseStatusScriptText
-  ) ||
-  !/attach release-artifacts\/manual-qa-sidecar-probe\.json/.test(
-    releaseStatusScriptText
-  ) ||
+  !/release-artifacts\/manual-qa-evidence\.json/.test(releaseStatusScriptText) ||
+  !/attach release-artifacts\/manual-qa-media-probe\.json/.test(releaseStatusScriptText) ||
+  !/attach release-artifacts\/manual-qa-sidecar-probe\.json/.test(releaseStatusScriptText) ||
   !/attach docs\/STORE_LISTING\.md/.test(releaseStatusScriptText) ||
   !/attach extension\.zip/.test(releaseStatusScriptText) ||
   !/attach build-cws\.zip/.test(releaseStatusScriptText) ||
   !/--require-ready/.test(releaseStatusScriptText) ||
-  !/Release status must be ready before this action can continue/.test(
-    releaseStatusScriptText
-  ) ||
+  !/Release status must be ready before this action can continue/.test(releaseStatusScriptText) ||
   !/Next steps/.test(releaseStatusScriptText) ||
   !/Release handoff/.test(releaseStatusScriptText)
 ) {
   fail(
-    "qa:release:status must inspect release evidence and report the next manual/package/CWS release or publication action without creating artifacts."
+    "qa:release:status must inspect release evidence and report the next manual/package/CWS release or publication action without creating artifacts.",
   );
 }
 const releasePrepSteps = [
@@ -1538,7 +1406,7 @@ for (const step of releasePrepSteps) {
   const index = step.exec(releaseScriptText)?.index ?? -1;
   if (index <= previousReleasePrepIndex) {
     fail(
-      "scripts/release.mjs must print the full release QA, manual evidence, package, and CWS verification sequence in order."
+      "scripts/release.mjs must print the full release QA, manual evidence, package, and CWS verification sequence in order.",
     );
   }
   previousReleasePrepIndex = index;
@@ -1556,78 +1424,62 @@ if (
   !/isCanonicalRelativePath/.test(verifyManualQaScriptText) ||
   !/gitWorktreeFingerprint/.test(verifyManualQaScriptText) ||
   !/automatedEvidencePath must point to/.test(verifyManualQaScriptText) ||
-  !/manual QA evidence status must be "passed"/.test(
-    verifyManualQaScriptText
-  ) ||
+  !/manual QA evidence status must be "passed"/.test(verifyManualQaScriptText) ||
   !/automated QA evidence startedAt must be/.test(verifyManualQaScriptText) ||
-  !/automated QA evidence status must be "passed"/.test(
-    verifyManualQaScriptText
-  ) ||
-  !/automated QA evidence durationMs must be a positive number/.test(
-    verifyManualQaScriptText
-  ) ||
+  !/automated QA evidence status must be "passed"/.test(verifyManualQaScriptText) ||
+  !/automated QA evidence durationMs must be a positive number/.test(verifyManualQaScriptText) ||
   !/automated QA evidence durationMs must match the startedAt\/generatedAt run window/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/automated QA evidence build\.formattedBytes must match build\.bytes/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/automated QA evidence build\.path must be the canonical relative build path/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/automated QA evidence bundledWhisper\.formattedBytes must match bundledWhisper\.bytes/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/automated QA evidence bundledWhisper\.path must be the canonical relative build\/assets\/whisper path/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
-  !/builtExtension\.id must be a browser-observed/.test(
-    verifyManualQaScriptText
-  ) ||
+  !/builtExtension\.id must be a browser-observed/.test(verifyManualQaScriptText) ||
   !/unpackedExtensionId must match the browser-observed automated extension id/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/current build byte size .+ does not match/.test(verifyManualQaScriptText) ||
-  !/automated QA evidence contains duplicate command/.test(
-    verifyManualQaScriptText
-  ) ||
-  !/automated QA evidence contains unexpected command/.test(
-    verifyManualQaScriptText
-  ) ||
+  !/automated QA evidence contains duplicate command/.test(verifyManualQaScriptText) ||
+  !/automated QA evidence contains unexpected command/.test(verifyManualQaScriptText) ||
   !/automated QA evidence command durations must not exceed total durationMs/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/automated QA evidence git\.commit/.test(verifyManualQaScriptText) ||
   !/automated QA evidence git\.workingTree\.sha256 must match the current git worktree/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/automated QA evidence command .+ must be/.test(verifyManualQaScriptText) ||
   !/MEDIA_PROBE_REPORT_RELATIVE_PATH/.test(verifyManualQaScriptText) ||
   !/SIDECAR_PROBE_REPORT_RELATIVE_PATH/.test(verifyManualQaScriptText) ||
   !/probeReports\.\$\{field\} must point to/.test(verifyManualQaScriptText) ||
   !/manual QA media probe report releaseCoverage\.status must be "measurable-set-complete"/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/manual QA sidecar probe report coverage\.status must be "structurally-complete"/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/must match probeReports\.media/.test(verifyManualQaScriptText) ||
-  !/must match probeReports\.\$\{reportField\}/.test(
-    verifyManualQaScriptText
-  ) ||
+  !/must match probeReports\.\$\{reportField\}/.test(verifyManualQaScriptText) ||
   !/64-character source-file SHA-256/.test(verifyManualQaScriptText) ||
   !/64-character export-file SHA-256/.test(verifyManualQaScriptText) ||
   !/64-character project-audio file SHA-256/.test(verifyManualQaScriptText) ||
-  !/recordings\[\$\{index\}\]\.id must be unique/.test(
-    verifyManualQaScriptText
-  ) ||
+  !/recordings\[\$\{index\}\]\.id must be unique/.test(verifyManualQaScriptText) ||
   !/must be a unique recording id within/.test(verifyManualQaScriptText) ||
   !/must reference at least \$\{minimum\} unique listed recording id/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/must be unique within this operation/.test(verifyManualQaScriptText) ||
   !/must reference at least \$\{requiredRecordingRefs\} unique listed recording id/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/externalNetworkProbe/.test(verifyManualQaScriptText) ||
   !/--progress/.test(verifyManualQaScriptText) ||
@@ -1635,25 +1487,21 @@ if (
   !/MANUAL_QA_PROGRESS_SECTIONS/.test(verifyManualQaScriptText) ||
   !/"mediaProbe",\s*"Media probe report"/.test(verifyManualQaScriptText) ||
   !/"sidecarProbe",\s*"Sidecar probe report"/.test(verifyManualQaScriptText) ||
-  !/"measurementImport",\s*"Probe measurements"/.test(
-    verifyManualQaScriptText
-  ) ||
+  !/"measurementImport",\s*"Probe measurements"/.test(verifyManualQaScriptText) ||
   !/MEASUREMENT_IMPORT_ERROR_PATTERN/.test(verifyManualQaScriptText) ||
   !/\["finalization", "Final verification", \["status", "testedAt"\]\]/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/environment\.networkDisabledForOfflineTranscription[\s\S]*return "offlineTranscription"/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/npm run qa:release:manual:media -- --json --require-complete --output=release-artifacts\/manual-qa-media-probe\.json/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
   !/npm run qa:release:manual:sidecars -- --json --require-complete --output=release-artifacts\/manual-qa-sidecar-probe\.json/.test(
-    verifyManualQaScriptText
+    verifyManualQaScriptText,
   ) ||
-  !/npm run qa:release:manual:measurements -- --json --write/.test(
-    verifyManualQaScriptText
-  ) ||
+  !/npm run qa:release:manual:measurements -- --json --write/.test(verifyManualQaScriptText) ||
   !/errorSamples/.test(verifyManualQaScriptText) ||
   !/workTargets/.test(verifyManualQaScriptText) ||
   !/Work targets:/.test(verifyManualQaScriptText) ||
@@ -1664,37 +1512,27 @@ if (
   !/manualSessionMatches/.test(verifyManualQaScriptText) ||
   !/"buildSha256"/.test(verifyManualQaScriptText) ||
   !/"operatingSystem"/.test(verifyManualQaScriptText) ||
-  !/environment\.networkDisabledForOfflineTranscription/.test(
-    verifyManualQaScriptText
-  ) ||
+  !/environment\.networkDisabledForOfflineTranscription/.test(verifyManualQaScriptText) ||
   !/--section=/.test(verifyManualQaScriptText) ||
   !/selectedSection/.test(verifyManualQaScriptText) ||
   !/nextSection/.test(verifyManualQaScriptText) ||
   !/Next command:/.test(verifyManualQaScriptText) ||
   !/sameChromeProfile/.test(verifyManualQaScriptText) ||
   !/external http\(s\) URL/.test(verifyManualQaScriptText) ||
-  !/observedError must describe the browser network failure/.test(
-    verifyManualQaScriptText
-  ) ||
-  !/premium\/trial\/entitlement\/license\/upgrade/.test(
-    verifyManualQaScriptText
-  ) ||
-  !/locked-behind\/pay-to-unlock\/upgrade-required gates/.test(
-    verifyManualQaScriptText
-  ) ||
+  !/observedError must describe the browser network failure/.test(verifyManualQaScriptText) ||
+  !/premium\/trial\/entitlement\/license\/upgrade/.test(verifyManualQaScriptText) ||
+  !/locked-behind\/pay-to-unlock\/upgrade-required gates/.test(verifyManualQaScriptText) ||
   /email:\s*"tester@example\.com"/.test(verifyManualQaScriptText)
 ) {
   fail(
-    "scripts/verify-manual-qa-evidence.mjs must enforce canonical automated and manual-probe provenance, measurable file identities, stale-template protection, timing, command inventory, structured offline network probe evidence, and named tester attribution without requiring contact data."
+    "scripts/verify-manual-qa-evidence.mjs must enforce canonical automated and manual-probe provenance, measurable file identities, stale-template protection, timing, command inventory, structured offline network probe evidence, and named tester attribution without requiring contact data.",
   );
 }
 if (
-  packageJson.scripts?.["qa:release:manual:profile"] !==
-    "node scripts/manual-qa-profile.mjs" ||
+  packageJson.scripts?.["qa:release:manual:profile"] !== "node scripts/manual-qa-profile.mjs" ||
   packageJson.scripts?.["qa:release:manual:progress"] !==
     "node scripts/verify-manual-qa-evidence.mjs --progress" ||
-  packageJson.scripts?.["qa:release:manual:media"] !==
-    "node scripts/manual-qa-media-probe.mjs" ||
+  packageJson.scripts?.["qa:release:manual:media"] !== "node scripts/manual-qa-media-probe.mjs" ||
   packageJson.scripts?.["qa:release:manual:sidecars"] !==
     "node scripts/manual-qa-sidecar-probe.mjs" ||
   packageJson.scripts?.["qa:release:manual:measurements"] !==
@@ -1705,22 +1543,16 @@ if (
     "node scripts/verify-manual-qa-evidence.mjs --write-template --force"
 ) {
   fail(
-    "manual QA npm scripts must provide the clean-profile helper, read-only progress and media reports, safe template writer, and explicit force overwrite command."
+    "manual QA npm scripts must provide the clean-profile helper, read-only progress and media reports, safe template writer, and explicit force overwrite command.",
   );
 }
 if (
   !/buildManualQaMeasurementImport/.test(applyManualQaMeasurementsScriptText) ||
-  !/SAYLESS_MANUAL_QA_MEASUREMENTS_ROOT/.test(
-    applyManualQaMeasurementsScriptText
-  ) ||
+  !/SAYLESS_MANUAL_QA_MEASUREMENTS_ROOT/.test(applyManualQaMeasurementsScriptText) ||
   !/--write/.test(applyManualQaMeasurementsScriptText) ||
-  !/sayless\.manualQaMeasurementImport/.test(
-    applyManualQaMeasurementsScriptText
-  ) ||
+  !/sayless\.manualQaMeasurementImport/.test(applyManualQaMeasurementsScriptText) ||
   !/renameSync/.test(applyManualQaMeasurementsScriptText) ||
-  !/manual QA evidence status must be "template"/.test(
-    manualQaMeasurementImportScriptText
-  ) ||
+  !/manual QA evidence status must be "template"/.test(manualQaMeasurementImportScriptText) ||
   !/measurable-set-complete/.test(manualQaMeasurementImportScriptText) ||
   !/structurally-complete/.test(manualQaMeasurementImportScriptText) ||
   !/fileName must exactly match/.test(manualQaMeasurementImportScriptText) ||
@@ -1731,7 +1563,7 @@ if (
   /status\s*=\s*"passed"/.test(manualQaMeasurementImportScriptText)
 ) {
   fail(
-    "manual QA measurement import must remain preview-first, atomic, exact-filename matched, strict-report bound, and limited to machine-measured fields without approving tester observations."
+    "manual QA measurement import must remain preview-first, atomic, exact-filename matched, strict-report bound, and limited to machine-measured fields without approving tester observations.",
   );
 }
 if (
@@ -1745,7 +1577,7 @@ if (
   !/transcript-json/.test(manualQaSidecarProbeScriptText) ||
   !/exportFields/.test(manualQaSidecarProbeScriptText) ||
   !/exportFields:\s*\{[^}]*fileName[^}]*byteSize[^}]*sha256/s.test(
-    manualQaSidecarProbeScriptText
+    manualQaSidecarProbeScriptText,
   ) ||
   !/requireComplete/.test(manualQaSidecarProbeScriptText) ||
   !/--require-complete/.test(manualQaSidecarProbeScriptText) ||
@@ -1757,17 +1589,13 @@ if (
   !/sidecarSetName/.test(manualQaSidecarProbeScriptText) ||
   !/completeSetCount/.test(manualQaSidecarProbeScriptText) ||
   !/recording-id-mismatch/.test(manualQaSidecarProbeScriptText) ||
-  !/project timeline\/source durations must match/.test(
-    manualQaSidecarProbeScriptText
-  ) ||
+  !/project timeline\/source durations must match/.test(manualQaSidecarProbeScriptText) ||
   !/Structural checks are read-only/.test(manualQaSidecarProbeScriptText) ||
   !/import the project sidecar/.test(manualQaSidecarProbeScriptText) ||
-  /\b(?:writeFile|rename|mkdir|unlink)Sync?\b/.test(
-    manualQaSidecarProbeScriptText
-  )
+  /\b(?:writeFile|rename|mkdir|unlink)Sync?\b/.test(manualQaSidecarProbeScriptText)
 ) {
   fail(
-    "scripts/manual-qa-sidecar-probe.mjs must validate current VTT, transcript, and project exports read-only while retaining open/import observations as manual evidence."
+    "scripts/manual-qa-sidecar-probe.mjs must validate current VTT, transcript, and project exports read-only while retaining open/import observations as manual evidence.",
   );
 }
 if (
@@ -1778,7 +1606,7 @@ if (
   !/coverage\.completeSetCount/.test(localRecordingsE2eScriptText)
 ) {
   fail(
-    "tests/e2e/run-local-recordings.cjs must validate product-generated VTT, transcript, and project exports through the manual QA sidecar probe."
+    "tests/e2e/run-local-recordings.cjs must validate product-generated VTT, transcript, and project exports through the manual QA sidecar probe.",
   );
 }
 if (
@@ -1791,13 +1619,9 @@ if (
   !/getSampleRate/.test(manualQaMediaProbeScriptText) ||
   !/sha256File/.test(manualQaMediaProbeScriptText) ||
   !/recordingFields/.test(manualQaMediaProbeScriptText) ||
-  !/recordingFields\s*=\s*\{[^}]*fileName[^}]*sha256/s.test(
-    manualQaMediaProbeScriptText
-  ) ||
+  !/recordingFields\s*=\s*\{[^}]*fileName[^}]*sha256/s.test(manualQaMediaProbeScriptText) ||
   !/projectAudioInputFields/.test(manualQaMediaProbeScriptText) ||
-  !/projectAudioInputFields\s*=\s*\{[^}]*fileName[^}]*sha256/s.test(
-    manualQaMediaProbeScriptText
-  ) ||
+  !/projectAudioInputFields\s*=\s*\{[^}]*fileName[^}]*sha256/s.test(manualQaMediaProbeScriptText) ||
   !/releaseThresholds/.test(manualQaMediaProbeScriptText) ||
   !/releaseCoverage/.test(manualQaMediaProbeScriptText) ||
   !/requireComplete/.test(manualQaMediaProbeScriptText) ||
@@ -1809,30 +1633,20 @@ if (
   !/measurable-set-complete/.test(manualQaMediaProbeScriptText) ||
   !/process\.exitCode\s*=\s*1/.test(manualQaMediaProbeScriptText) ||
   !/manual-qa-media-coverage\.mjs/.test(manualQaMediaProbeScriptText) ||
-  !/MIN_LONG_RECORDING_DURATION_SECONDS\s*=\s*180/.test(
-    manualQaMediaCoverageScriptText
-  ) ||
-  !/MIN_LARGE_RECORDING_BYTE_SIZE\s*=\s*25 \* 1024 \* 1024/.test(
-    manualQaMediaCoverageScriptText
-  ) ||
-  !/original source recordings rather than exports/.test(
-    manualQaMediaCoverageScriptText
-  ) ||
+  !/MIN_LONG_RECORDING_DURATION_SECONDS\s*=\s*180/.test(manualQaMediaCoverageScriptText) ||
+  !/MIN_LARGE_RECORDING_BYTE_SIZE\s*=\s*25 \* 1024 \* 1024/.test(manualQaMediaCoverageScriptText) ||
+  !/original source recordings rather than exports/.test(manualQaMediaCoverageScriptText) ||
   !/observations manually/.test(manualQaMediaCoverageScriptText) ||
-  /\b(?:writeFile|rename|mkdir|unlink)Sync?\b/.test(
-    manualQaMediaProbeScriptText
-  )
+  /\b(?:writeFile|rename|mkdir|unlink)Sync?\b/.test(manualQaMediaProbeScriptText)
 ) {
   fail(
-    "scripts/manual-qa-media-probe.mjs must stream read-only media metadata and clearly keep perceptual observations manual."
+    "scripts/manual-qa-media-probe.mjs must stream read-only media metadata and clearly keep perceptual observations manual.",
   );
 }
 if (
   !/--output may be provided only once/.test(manualQaReportOutputScriptText) ||
   !/--output requires a file path/.test(manualQaReportOutputScriptText) ||
-  !/must not overwrite an inspected input file/.test(
-    manualQaReportOutputScriptText
-  ) ||
+  !/must not overwrite an inspected input file/.test(manualQaReportOutputScriptText) ||
   !/writeFileSync/.test(manualQaReportOutputScriptText) ||
   !/flag:\s*"wx"/.test(manualQaReportOutputScriptText) ||
   !/renameSync/.test(manualQaReportOutputScriptText) ||
@@ -1840,43 +1654,35 @@ if (
   !/randomUUID/.test(manualQaReportOutputScriptText)
 ) {
   fail(
-    "scripts/manual-qa-report-output.mjs must write probe diagnostics atomically without overwriting an inspected input."
+    "scripts/manual-qa-report-output.mjs must write probe diagnostics atomically without overwriting an inspected input.",
   );
 }
 if (
   !/SAYLESS_MANUAL_QA_PROFILE_ROOT/.test(manualQaProfileScriptText) ||
   !/SAYLESS_CHROME/.test(manualQaProfileScriptText) ||
   !/build\/manifest\.json is missing/.test(manualQaProfileScriptText) ||
-  !/release-artifacts\/release-qa-automated\.json is missing/.test(
-    manualQaProfileScriptText
-  ) ||
-  !/automated QA evidence status must be "passed"/.test(
-    manualQaProfileScriptText
-  ) ||
+  !/release-artifacts\/release-qa-automated\.json is missing/.test(manualQaProfileScriptText) ||
+  !/automated QA evidence status must be "passed"/.test(manualQaProfileScriptText) ||
   !/automated QA evidence generatedAt must be an ISO UTC timestamp/.test(
-    manualQaProfileScriptText
+    manualQaProfileScriptText,
   ) ||
   !/current build fingerprint does not match automated QA evidence/.test(
-    manualQaProfileScriptText
+    manualQaProfileScriptText,
   ) ||
-  !/current build byte size does not match automated QA evidence/.test(
-    manualQaProfileScriptText
-  ) ||
+  !/current build byte size does not match automated QA evidence/.test(manualQaProfileScriptText) ||
   !/automated QA evidence build\.formattedBytes must match current build byte size/.test(
-    manualQaProfileScriptText
+    manualQaProfileScriptText,
   ) ||
   !/gitWorktreeFingerprint/.test(manualQaProfileScriptText) ||
-  !/automated QA evidence git\.workingTree is required/.test(
-    manualQaProfileScriptText
-  ) ||
+  !/automated QA evidence git\.workingTree is required/.test(manualQaProfileScriptText) ||
   !/automated QA evidence git\.workingTree\.sha256 must match the current git worktree/.test(
-    manualQaProfileScriptText
+    manualQaProfileScriptText,
   ) ||
   !/automated QA evidence git\.workingTree\.fileCount must match the current git worktree/.test(
-    manualQaProfileScriptText
+    manualQaProfileScriptText,
   ) ||
   !/automated QA evidence git\.workingTree\.statusSha256 must match the current git status/.test(
-    manualQaProfileScriptText
+    manualQaProfileScriptText,
   ) ||
   !/--user-data-dir=/.test(manualQaProfileScriptText) ||
   !/--disable-extensions-except=/.test(manualQaProfileScriptText) ||
@@ -1891,32 +1697,24 @@ if (
   !/evidencePrefill/.test(manualQaProfileScriptText) ||
   !/detectedEnvironment/.test(manualQaProfileScriptText) ||
   !/browserObservedExtensionId/.test(manualQaProfileScriptText) ||
-  !/passing clean-profile built-extension identity evidence/.test(
-    manualQaProfileScriptText
-  ) ||
+  !/passing clean-profile built-extension identity evidence/.test(manualQaProfileScriptText) ||
   !/detectOperatingSystem/.test(manualQaProfileScriptText) ||
   !/detectChromeVersion/.test(manualQaProfileScriptText) ||
   !/automated evidence timestamp/.test(manualQaProfileScriptText) ||
-  !/manual QA profile directory must be a new or empty directory/.test(
-    manualQaProfileScriptText
-  ) ||
+  !/manual QA profile directory must be a new or empty directory/.test(manualQaProfileScriptText) ||
   !/manual QA profile directory must be empty so manual QA uses a clean Chrome profile/.test(
-    manualQaProfileScriptText
+    manualQaProfileScriptText,
   ) ||
   !/unknown manual QA profile option/.test(manualQaProfileScriptText) ||
   !/manual QA profile helper accepts at most one --profile-dir option/.test(
-    manualQaProfileScriptText
+    manualQaProfileScriptText,
   ) ||
-  !/manual QA profile --profile-dir value must not be empty/.test(
-    manualQaProfileScriptText
-  ) ||
+  !/manual QA profile --profile-dir value must not be empty/.test(manualQaProfileScriptText) ||
   !/--resume-profile/.test(manualQaProfileScriptText) ||
   !/PROFILE_MARKER_FILE/.test(manualQaProfileScriptText) ||
   !/sayless\.manualQaProfile/.test(manualQaProfileScriptText) ||
   !/sayless\.manualQaSession/.test(manualQaProfileScriptText) ||
-  !/release-artifacts\/manual-qa-session\.json/.test(
-    manualQaProfileScriptText
-  ) ||
+  !/release-artifacts\/manual-qa-session\.json/.test(manualQaProfileScriptText) ||
   !/writeActiveSession/.test(manualQaProfileScriptText) ||
   !/activeSessionRecorded/.test(manualQaProfileScriptText) ||
   !/manualSessionProvenanceRecord/.test(manualQaProfileScriptText) ||
@@ -1924,19 +1722,15 @@ if (
   !/sayless\.manualQaSessionProvenance/.test(manualQaProfileScriptText) ||
   !/manualSessionProvenanceRecorded/.test(manualQaProfileScriptText) ||
   !/launchChrome/.test(manualQaProfileScriptText) ||
-  !/could not launch the selected Chrome executable/.test(
-    manualQaProfileScriptText
-  ) ||
+  !/could not launch the selected Chrome executable/.test(manualQaProfileScriptText) ||
   !/profileMarkerRecord/.test(manualQaProfileScriptText) ||
   !/validateProfileMarker/.test(manualQaProfileScriptText) ||
   !/operatingSystem/.test(manualQaProfileScriptText) ||
   !/browserCommand/.test(manualQaProfileScriptText) ||
   !/browserVersion/.test(manualQaProfileScriptText) ||
-  !/arbitrary existing Chrome profiles cannot be used/.test(
-    manualQaProfileScriptText
-  ) ||
+  !/arbitrary existing Chrome profiles cannot be used/.test(manualQaProfileScriptText) ||
   !/does not match the current release evidence or test environment/.test(
-    manualQaProfileScriptText
+    manualQaProfileScriptText,
   ) ||
   !/resumeCommand/.test(manualQaProfileScriptText) ||
   !/--launch/.test(manualQaProfileScriptText) ||
@@ -1947,11 +1741,11 @@ if (
   !/buildSynchronizedManualTemplate/.test(manualQaProfileScriptText) ||
   !/--print-template/.test(manualQaProfileScriptText) ||
   !/manual QA evidence status must be "template" for --sync-template/.test(
-    manualQaProfileScriptText
+    manualQaProfileScriptText,
   )
 ) {
   fail(
-    "scripts/manual-qa-profile.mjs must require current passing automated evidence, preserve non-template manual evidence, safely synchronize template provenance, and permit only provenance-marked session resumption before printing or launching a clean Chrome profile command for the canonical release build."
+    "scripts/manual-qa-profile.mjs must require current passing automated evidence, preserve non-template manual evidence, safely synchronize template provenance, and permit only provenance-marked session resumption before printing or launching a clean Chrome profile command for the canonical release build.",
   );
 }
 if (
@@ -1961,18 +1755,12 @@ if (
   !/environmentPrefill/.test(manualQaTemplateSyncScriptText) ||
   !/RETIRED_EXTENSION_ID_PLACEHOLDERS/.test(manualQaTemplateSyncScriptText) ||
   !/RETIRED_TESTER_EMAIL_PLACEHOLDER/.test(manualQaTemplateSyncScriptText) ||
-  !/\["os", "chromeVersion", "unpackedExtensionId"\]/.test(
-    manualQaTemplateSyncScriptText
-  ) ||
+  !/\["os", "chromeVersion", "unpackedExtensionId"\]/.test(manualQaTemplateSyncScriptText) ||
   !/analyzeManualTemplateSync/.test(manualQaTemplateSyncScriptText) ||
-  !/canonical template fields are missing/.test(
-    manualQaTemplateSyncScriptText
-  ) ||
-  !/retired template placeholders are still present/.test(
-    manualQaTemplateSyncScriptText
-  ) ||
-  !/\.\.\.\(mergedTemplate\.environment \|\| \{\}\)/.test(
-    manualQaTemplateSyncScriptText
+  !/canonical template fields are missing/.test(manualQaTemplateSyncScriptText) ||
+  !/retired template placeholders are still present/.test(manualQaTemplateSyncScriptText) ||
+  !/\.\.\.(?:mergedTemplate\.environment|\(mergedTemplate\.environment \|\| \{\}\))/.test(
+    manualQaTemplateSyncScriptText,
   ) ||
   /const mergeTemplateDefaults/.test(manualQaProfileScriptText) ||
   /const mergeTemplateDefaults/.test(releaseStatusScriptText) ||
@@ -1980,7 +1768,7 @@ if (
   /const migrateRetiredTemplatePlaceholders/.test(releaseStatusScriptText)
 ) {
   fail(
-    "manual QA template merge, migration, synchronization, and status analysis must stay centralized in scripts/manual-qa-template-sync.mjs."
+    "manual QA template merge, migration, synchronization, and status analysis must stay centralized in scripts/manual-qa-template-sync.mjs.",
   );
 }
 if (
@@ -1994,75 +1782,61 @@ if (
   !/appendNonPassingEvidenceDetails/.test(verifyReleasePackageScriptText) ||
   !/remainingReleaseWork/.test(verifyReleasePackageScriptText) ||
   !/failedStep/.test(verifyReleasePackageScriptText) ||
-  !/package release evidence status must be "passed"/.test(
-    verifyReleasePackageScriptText
-  ) ||
-  !/automated QA evidence status must be "passed"/.test(
-    verifyReleasePackageScriptText
-  ) ||
+  !/package release evidence status must be "passed"/.test(verifyReleasePackageScriptText) ||
+  !/automated QA evidence status must be "passed"/.test(verifyReleasePackageScriptText) ||
   !/package release evidence automated QA status must be "passed"/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
   !/automated QA evidence status must match package release evidence/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
-  !/manual QA evidence status must be "passed"/.test(
-    verifyReleasePackageScriptText
-  ) ||
+  !/manual QA evidence status must be "passed"/.test(verifyReleasePackageScriptText) ||
   !/package release evidence manual QA status must be "passed"/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
   !/manual QA evidence status must match package release evidence/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
   !/validateGitProvenance/.test(verifyReleasePackageScriptText) ||
   !/package release evidence releaseVersion must match automated QA evidence/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
   !/package release evidence automated QA releaseVersion must match automated QA evidence/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
   !/package release evidence releaseVersion must match manual QA evidence/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
   !/package release evidence manual QA releaseVersion must match manual QA evidence/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
   !/package release evidence generatedAt must be at or after automated QA evidence generatedAt/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
   !/package release evidence generatedAt must be at or after manual QA evidence testedAt/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
   !/package release evidence git provenance must match automated QA evidence/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
-  !/package release evidence build byte size/.test(
-    verifyReleasePackageScriptText
-  ) ||
+  !/package release evidence build byte size/.test(verifyReleasePackageScriptText) ||
   !/package release evidence formatted build size must match current build size/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
   !/package release evidence formatted zip size must match current extension\.zip size/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   ) ||
-  !/package release evidence zip\.path is required/.test(
-    verifyReleasePackageScriptText
-  ) ||
+  !/package release evidence zip\.path is required/.test(verifyReleasePackageScriptText) ||
   !/package release evidence zip\.path must point to extension\.zip/.test(
-    verifyReleasePackageScriptText
+    verifyReleasePackageScriptText,
   )
 ) {
   fail(
-    "scripts/verify-release-package.mjs must verify release package evidence, zip, formatted size, manual QA schema, QA evidence hashes, git provenance, and evidence timestamp ordering."
+    "scripts/verify-release-package.mjs must verify release package evidence, zip, formatted size, manual QA schema, QA evidence hashes, git provenance, and evidence timestamp ordering.",
   );
 }
-if (
-  !/scripts\/package-cws\.mjs/.test(packageJson.scripts?.["build:cws"] || "")
-) {
-  fail(
-    "build:cws must run scripts/package-cws.mjs so the CWS artifact is traceable."
-  );
+if (!/scripts\/package-cws\.mjs/.test(packageJson.scripts?.["build:cws"] || "")) {
+  fail("build:cws must run scripts/package-cws.mjs so the CWS artifact is traceable.");
 }
 if (
   !/package-release\.mjs/.test(packageCwsScriptText) ||
@@ -2074,7 +1848,7 @@ if (
   !/git:\s*packageEvidence\.git/.test(packageCwsScriptText)
 ) {
   fail(
-    "scripts/package-cws.mjs must package through the checked-in package-release gate and write CWS evidence with package git provenance."
+    "scripts/package-cws.mjs must package through the checked-in package-release gate and write CWS evidence with package git provenance.",
   );
 }
 if (
@@ -2082,9 +1856,7 @@ if (
   !/verifyWrittenCwsPackage\(\)/.test(packageCwsScriptText) ||
   !/SAYLESS_CWS_VERIFY_ROOT/.test(packageCwsScriptText)
 ) {
-  fail(
-    "scripts/package-cws.mjs must self-verify CWS package artifacts before reporting success."
-  );
+  fail("scripts/package-cws.mjs must self-verify CWS package artifacts before reporting success.");
 }
 if (
   !/writeNonPassingCwsEvidence/.test(packageCwsScriptText) ||
@@ -2094,36 +1866,46 @@ if (
   !/failedStep/.test(packageCwsScriptText)
 ) {
   fail(
-    "scripts/package-cws.mjs must overwrite stale CWS evidence with non-passing evidence before and after failed packaging runs."
+    "scripts/package-cws.mjs must overwrite stale CWS evidence with non-passing evidence before and after failed packaging runs.",
   );
 }
-if (
-  (packageJson.scripts?.["verify:cws-package"] || "") !==
-  "node scripts/verify-cws-package.mjs"
-) {
+if ((packageJson.scripts?.["verify:cws-package"] || "") !== "node scripts/verify-cws-package.mjs") {
   fail("verify:cws-package must run scripts/verify-cws-package.mjs.");
 }
 if (
   packageJson.scripts?.typecheck !== "node scripts/typecheck.mjs" ||
-  packageJson.scripts?.lint !== "npm run typecheck" ||
-  packageJson.devDependencies?.["@typescript/native"] !==
-    "npm:typescript@7.0.2" ||
-  packageLock.packages?.[""]?.devDependencies?.["@typescript/native"] !==
-    "npm:typescript@7.0.2" ||
+  packageJson.scripts?.lint !== "oxlint --deny-warnings ." ||
+  packageJson.scripts?.["lint:fix"] !== "oxlint --fix ." ||
+  packageJson.scripts?.format !== "oxfmt ." ||
+  packageJson.scripts?.["format:check"] !== "oxfmt --check ." ||
+  packageJson.scripts?.check !== "npm run lint && npm run format:check && npm run typecheck" ||
+  packageJson.devDependencies?.["@typescript/native"] !== "npm:typescript@7.0.2" ||
+  packageLock.packages?.[""]?.devDependencies?.["@typescript/native"] !== "npm:typescript@7.0.2" ||
+  packageJson.devDependencies?.oxlint !== "^1.75.0" ||
+  packageJson.devDependencies?.oxfmt !== "^0.60.0" ||
+  packageJson.devDependencies?.tailwindcss !== "^4.3.3" ||
+  packageJson.devDependencies?.["@tailwindcss/postcss"] !== "^4.3.3" ||
+  packageLock.packages?.[""]?.devDependencies?.oxlint !== "^1.75.0" ||
+  packageLock.packages?.[""]?.devDependencies?.oxfmt !== "^0.60.0" ||
+  packageLock.packages?.[""]?.devDependencies?.tailwindcss !== "^4.3.3" ||
+  packageLock.packages?.[""]?.devDependencies?.["@tailwindcss/postcss"] !== "^4.3.3" ||
+  ["prettier", "sass", "sass-loader", "stylelint"].some(
+    (name) =>
+      packageJson.devDependencies?.[name] || packageLock.packages?.[""]?.devDependencies?.[name],
+  ) ||
+  !existsSync(join(ROOT, ".oxlintrc.json")) ||
+  !existsSync(join(ROOT, ".oxfmtrc.json")) ||
+  !existsSync(join(ROOT, "postcss.config.mjs")) ||
+  !existsSync(join(ROOT, "src", "styles", "tailwind.css")) ||
   !existsSync(join(ROOT, "scripts", "typecheck.mjs"))
 ) {
   fail(
-    "typecheck and lint must use the canonical, lockfile-pinned TypeScript 7.0.2 gate."
+    "The release toolchain must use lockfile-pinned TypeScript 7, Oxlint, Oxfmt, and Tailwind v4 without legacy Prettier, Sass, or Stylelint packages.",
   );
 }
-const ciNode24Count = (ciWorkflowText.match(/node-version:\s*24/g) || [])
-  .length;
-const ciCheckoutCount = (
-  ciWorkflowText.match(/actions\/checkout@v7\.0\.1/g) || []
-).length;
-const ciSetupNodeCount = (
-  ciWorkflowText.match(/actions\/setup-node@v7\.0\.0/g) || []
-).length;
+const ciNode24Count = (ciWorkflowText.match(/node-version:\s*24/g) || []).length;
+const ciCheckoutCount = (ciWorkflowText.match(/actions\/checkout@v7\.0\.1/g) || []).length;
+const ciSetupNodeCount = (ciWorkflowText.match(/actions\/setup-node@v7\.0\.0/g) || []).length;
 if (
   !/pull_request:/.test(ciWorkflowText) ||
   !/push:/.test(ciWorkflowText) ||
@@ -2132,6 +1914,10 @@ if (
   ciCheckoutCount < 2 ||
   ciSetupNodeCount < 2 ||
   !/npm ci/.test(ciWorkflowText) ||
+  !/Lint with Oxlint/.test(ciWorkflowText) ||
+  !/npm run lint/.test(ciWorkflowText) ||
+  !/Check formatting with Oxfmt/.test(ciWorkflowText) ||
+  !/npm run format:check/.test(ciWorkflowText) ||
   !/Typecheck with TypeScript 7/.test(ciWorkflowText) ||
   !/npm run typecheck/.test(ciWorkflowText) ||
   !/actions\/cache@v5\.0\.5/.test(ciWorkflowText) ||
@@ -2158,48 +1944,47 @@ if (
   !/draft:\s*false/.test(ciWorkflowText)
 ) {
   fail(
-    "GitHub Actions CI must run release checks with Node 24 and the lockfile-pinned TypeScript 7 gate, upload evidence, build a verified downloadable extension bundle, and publish direct-download release assets only from tags or explicit manual tags."
+    "GitHub Actions CI must run release checks with Node 24 and the lockfile-pinned TypeScript 7 gate, upload evidence, build a verified downloadable extension bundle, and publish direct-download release assets only from tags or explicit manual tags.",
   );
 }
 if (
+  !/label:\s*["']lint["']/.test(releaseQaAutomatedScriptText) ||
+  !/args:\s*\[["']run["'],\s*["']lint["']\]/.test(releaseQaAutomatedScriptText) ||
+  !/label:\s*["']format:check["']/.test(releaseQaAutomatedScriptText) ||
+  !/args:\s*\[["']run["'],\s*["']format:check["']\]/.test(releaseQaAutomatedScriptText) ||
   !/label:\s*["']typecheck["']/.test(releaseQaAutomatedScriptText) ||
-  !/args:\s*\[["']run["'],\s*["']typecheck["']\]/.test(
-    releaseQaAutomatedScriptText
+  !/args:\s*\[["']run["'],\s*["']typecheck["']\]/.test(releaseQaAutomatedScriptText) ||
+  !/REQUIRED_AUTOMATED_COMMANDS\s*=\s*\[\s*["']lint["'],\s*["']format:check["'],\s*["']typecheck["']/.test(
+    releaseStatusScriptText,
   ) ||
-  !/REQUIRED_AUTOMATED_COMMANDS\s*=\s*\[\s*["']typecheck["']/.test(
-    releaseStatusScriptText
-  ) ||
-  !/REQUIRED_AUTOMATED_COMMANDS\s*=\s*\[\s*["']typecheck["']/.test(
-    verifyManualQaScriptText
+  !/REQUIRED_AUTOMATED_COMMANDS\s*=\s*\[\s*["']lint["'],\s*["']format:check["'],\s*["']typecheck["']/.test(
+    verifyManualQaScriptText,
   )
 ) {
   fail(
-    "Automated release QA and its evidence verifiers must require npm run typecheck."
+    "Automated release QA and its evidence verifiers must require Oxlint, Oxfmt, and TypeScript checks.",
   );
 }
 if (
-  (packageJson.scripts?.["preflight:cws"] || "") !==
-  "npm run qa:release:status -- --require-ready"
+  (packageJson.scripts?.["preflight:cws"] || "") !== "npm run qa:release:status -- --require-ready"
 ) {
   fail(
-    "preflight:cws must require ready qa:release:status so CWS store actions keep every release evidence gate."
+    "preflight:cws must require ready qa:release:status so CWS store actions keep every release evidence gate.",
   );
 }
 const cwsBlessAliases = Object.keys(packageJson.scripts || {}).filter((name) =>
-  /^preflight:cws:.*bless/i.test(name)
+  /^preflight:cws:.*bless/i.test(name),
 );
 if (cwsBlessAliases.length) {
   fail(
     `CWS preflight scripts must not use bless aliases that imply bypassing release evidence gates: ${cwsBlessAliases.join(
-      ", "
-    )}.`
+      ", ",
+    )}.`,
   );
 }
-if (
-  (packageJson.scripts?.["release:cws:force"] || "") !== "npm run release:cws"
-) {
+if ((packageJson.scripts?.["release:cws:force"] || "") !== "npm run release:cws") {
   fail(
-    "release:cws:force must delegate to release:cws so force uploads keep the same evidence gates."
+    "release:cws:force must delegate to release:cws so force uploads keep the same evidence gates.",
   );
 }
 for (const scriptName of [
@@ -2209,26 +1994,17 @@ for (const scriptName of [
   "release:cws:publish:10",
   "release:cws:publish:50",
 ]) {
-  if (
-    !/(?:verify:cws-package|release:cws)/.test(
-      packageJson.scripts?.[scriptName] || ""
-    )
-  ) {
-    fail(
-      `${scriptName} must verify the CWS package evidence before upload or publish.`
-    );
+  if (!/(?:verify:cws-package|release:cws)/.test(packageJson.scripts?.[scriptName] || "")) {
+    fail(`${scriptName} must verify the CWS package evidence before upload or publish.`);
   }
 }
-const directCwsStoreScripts = Object.entries(packageJson.scripts || {}).filter(
-  ([, command]) => /\bchrome-webstore-upload\b/.test(command || "")
+const directCwsStoreScripts = Object.entries(packageJson.scripts || {}).filter(([, command]) =>
+  /\bchrome-webstore-upload\b/.test(command || ""),
 );
 for (const [scriptName, command] of directCwsStoreScripts) {
-  if (
-    !/npm run preflight:cws/.test(command) ||
-    !/npm run verify:cws-package/.test(command)
-  ) {
+  if (!/npm run preflight:cws/.test(command) || !/npm run verify:cws-package/.test(command)) {
     fail(
-      `${scriptName} invokes chrome-webstore-upload and must run preflight:cws plus verify:cws-package before the store action.`
+      `${scriptName} invokes chrome-webstore-upload and must run preflight:cws plus verify:cws-package before the store action.`,
     );
   }
 }
@@ -2239,106 +2015,88 @@ if (
   !/build-cws\.zip/.test(verifyCwsPackageScriptText) ||
   !/extension\.zip/.test(verifyCwsPackageScriptText) ||
   !/isCanonicalRelativePath/.test(verifyCwsPackageScriptText) ||
-  !/CWS package evidence status must be "passed"/.test(
-    verifyCwsPackageScriptText
-  ) ||
+  !/CWS package evidence status must be "passed"/.test(verifyCwsPackageScriptText) ||
   !/appendNonPassingEvidenceDetails/.test(verifyCwsPackageScriptText) ||
   !/remainingReleaseWork/.test(verifyCwsPackageScriptText) ||
   !/failedStep/.test(verifyCwsPackageScriptText) ||
-  !/automated QA evidence status must be "passed"/.test(
-    verifyCwsPackageScriptText
-  ) ||
+  !/automated QA evidence status must be "passed"/.test(verifyCwsPackageScriptText) ||
   !/package release evidence automated QA status must be "passed"/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/automated QA evidence status must match package release evidence/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
-  !/manual QA evidence status must be "passed"/.test(
-    verifyCwsPackageScriptText
-  ) ||
-  !/package release evidence manual QA status must be "passed"/.test(
-    verifyCwsPackageScriptText
-  ) ||
+  !/manual QA evidence status must be "passed"/.test(verifyCwsPackageScriptText) ||
+  !/package release evidence manual QA status must be "passed"/.test(verifyCwsPackageScriptText) ||
   !/manual QA evidence status must match package release evidence/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/package release evidence automated QA releaseVersion must match automated QA evidence/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/package release evidence manual QA releaseVersion must match manual QA evidence/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/validateGitProvenance/.test(verifyCwsPackageScriptText) ||
   !/CWS package evidence releaseVersion must match package release evidence/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/CWS package evidence packageEvidence\.releaseVersion must match package release evidence/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/CWS package evidence packageEvidence\.generatedAt must match package release evidence/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
-  !/CWS package evidence packageEvidence\.path is required/.test(
-    verifyCwsPackageScriptText
-  ) ||
+  !/CWS package evidence packageEvidence\.path is required/.test(verifyCwsPackageScriptText) ||
   !/CWS package evidence packageEvidence\.path must point to release-artifacts\/package-release\.json/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/CWS package evidence git provenance must match package release evidence/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/CWS package sourceZip\.path is required/.test(verifyCwsPackageScriptText) ||
-  !/CWS package sourceZip\.path must point to extension\.zip/.test(
-    verifyCwsPackageScriptText
-  ) ||
+  !/CWS package sourceZip\.path must point to extension\.zip/.test(verifyCwsPackageScriptText) ||
   !/CWS package sourceZip size must match current extension\.zip size/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/CWS package sourceZip formatted size must match current extension\.zip size/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/CWS package sourceZip SHA-256 must match package release zip evidence/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/CWS package sourceZip size must match package release zip evidence/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/CWS package sourceZip formatted size must match package release zip evidence/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
-  !/package release evidence build byte size/.test(
-    verifyCwsPackageScriptText
-  ) ||
+  !/package release evidence build byte size/.test(verifyCwsPackageScriptText) ||
   !/package release evidence formatted build size must match current build size/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
-  !/CWS package evidence cwsZip\.path is required/.test(
-    verifyCwsPackageScriptText
-  ) ||
+  !/CWS package evidence cwsZip\.path is required/.test(verifyCwsPackageScriptText) ||
   !/CWS package evidence cwsZip\.path must point to build-cws\.zip/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/CWS package evidence formatted zip size must match current build-cws\.zip size/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   ) ||
   !/CWS package evidence generatedAt must be at or after package release evidence generatedAt/.test(
-    verifyCwsPackageScriptText
+    verifyCwsPackageScriptText,
   )
 ) {
   fail(
-    "scripts/verify-cws-package.mjs must verify CWS evidence, package evidence, both zip artifacts, formatted size, git provenance, and evidence timestamp ordering."
+    "scripts/verify-cws-package.mjs must verify CWS evidence, package evidence, both zip artifacts, formatted size, git provenance, and evidence timestamp ordering.",
   );
 }
 const forbiddenReleaseScriptHits = [];
 for (const [name, command] of Object.entries(packageJson.scripts || {})) {
   if (
     /^(?:qa:release|verify:release|package|package:release|build:cws|preflight:cws|release:cws)/.test(
-      name
+      name,
     ) &&
-    /(?:run-transcription\.cjs|SAYLESS_ALLOW_NETWORK_TRANSCRIPTION_E2E)/.test(
-      command
-    )
+    /(?:run-transcription\.cjs|SAYLESS_ALLOW_NETWORK_TRANSCRIPTION_E2E)/.test(command)
   ) {
     forbiddenReleaseScriptHits.push(name);
   }
@@ -2346,15 +2104,12 @@ for (const [name, command] of Object.entries(packageJson.scripts || {})) {
 if (forbiddenReleaseScriptHits.length) {
   fail(
     `release/package script(s) reference the non-release transcription harness: ${forbiddenReleaseScriptHits.join(
-      ", "
-    )}.`
+      ", ",
+    )}.`,
   );
 }
 if (existsSync(TRANSCRIPTION_HARNESS_PATH)) {
-  const transcriptionHarnessText = readFileSync(
-    TRANSCRIPTION_HARNESS_PATH,
-    "utf8"
-  );
+  const transcriptionHarnessText = readFileSync(TRANSCRIPTION_HARNESS_PATH, "utf8");
   const forbiddenTranscriptionHarnessHits = [];
   for (const pattern of FORBIDDEN_TRANSCRIPTION_HARNESS_PATTERNS) {
     const match = transcriptionHarnessText.match(pattern);
@@ -2367,34 +2122,32 @@ if (existsSync(TRANSCRIPTION_HARNESS_PATH)) {
       console.error(`tests/e2e/run-transcription.cjs: ${hit}`);
     }
     fail(
-      `${forbiddenTranscriptionHarnessHits.length} remote transcription harness reference(s) found.`
+      `${forbiddenTranscriptionHarnessHits.length} remote transcription harness reference(s) found.`,
     );
   }
 }
 const dependencyNames = Object.keys({
-  ...(packageJson.dependencies || {}),
-  ...(packageJson.devDependencies || {}),
-  ...(packageJson.optionalDependencies || {}),
+  ...packageJson.dependencies,
+  ...packageJson.devDependencies,
+  ...packageJson.optionalDependencies,
 });
 const forbiddenDependencyHits = dependencyNames.filter((name) =>
-  FORBIDDEN_PACKAGE_DEPENDENCIES.has(name)
+  FORBIDDEN_PACKAGE_DEPENDENCIES.has(name),
 );
 if (forbiddenDependencyHits.length) {
   fail(
     `package.json contains removed hosted/cloud/unused dependency/dependencies: ${forbiddenDependencyHits.join(
-      ", "
-    )}.`
+      ", ",
+    )}.`,
   );
 }
 
 const forbiddenSourcePathHits = FORBIDDEN_SOURCE_PATHS.filter((path) =>
-  existsSync(join(ROOT, path))
+  existsSync(join(ROOT, path)),
 );
 if (forbiddenSourcePathHits.length) {
   fail(
-    `source contains removed hosted/cloud surface path(s): ${forbiddenSourcePathHits.join(
-      ", "
-    )}.`
+    `source contains removed hosted/cloud surface path(s): ${forbiddenSourcePathHits.join(", ")}.`,
   );
 }
 
@@ -2409,9 +2162,7 @@ if (legacyEnvHits.length) {
   for (const hit of legacyEnvHits) {
     console.error(`${hit.file}: ${hit.match}`);
   }
-  fail(
-    `${legacyEnvHits.length} legacy Screenity build/test env reference(s) found.`
-  );
+  fail(`${legacyEnvHits.length} legacy Screenity build/test env reference(s) found.`);
 }
 
 const destructiveEditorCompatibilityHits = [];
@@ -2433,7 +2184,7 @@ if (destructiveEditorCompatibilityHits.length) {
     console.error(`${hit.file}: ${hit.match}`);
   }
   fail(
-    `${destructiveEditorCompatibilityHits.length} obsolete destructive editor compatibility path(s) found.`
+    `${destructiveEditorCompatibilityHits.length} obsolete destructive editor compatibility path(s) found.`,
   );
 }
 
@@ -2448,9 +2199,7 @@ if (activeScreenityUiNameHits.length) {
   for (const hit of activeScreenityUiNameHits) {
     console.error(`${hit.file}: ${hit.match}`);
   }
-  fail(
-    `${activeScreenityUiNameHits.length} stale active Screenity UI/debug name(s) found.`
-  );
+  fail(`${activeScreenityUiNameHits.length} stale active Screenity UI/debug name(s) found.`);
 }
 
 const sourceHits = [];
@@ -2479,13 +2228,9 @@ for (const { file, snippets, message } of REQUIRED_DYNAMIC_LOCAL_URL_GUARDS) {
 }
 if (dynamicLocalUrlGuardHits.length) {
   for (const hit of dynamicLocalUrlGuardHits) {
-    console.error(
-      `${hit.file}: ${hit.message}; missing ${hit.missing.join(", ")}`
-    );
+    console.error(`${hit.file}: ${hit.message}; missing ${hit.missing.join(", ")}`);
   }
-  fail(
-    `${dynamicLocalUrlGuardHits.length} dynamic local URL guard(s) missing.`
-  );
+  fail(`${dynamicLocalUrlGuardHits.length} dynamic local URL guard(s) missing.`);
 }
 
 const exportDeliveryProofHits = [];
@@ -2500,13 +2245,9 @@ for (const { file, snippets, message } of REQUIRED_EXPORT_DELIVERY_PROOF) {
 }
 if (exportDeliveryProofHits.length) {
   for (const hit of exportDeliveryProofHits) {
-    console.error(
-      `${hit.file}: ${hit.message}; missing ${hit.missing.join(", ")}`
-    );
+    console.error(`${hit.file}: ${hit.message}; missing ${hit.missing.join(", ")}`);
   }
-  fail(
-    `${exportDeliveryProofHits.length} export delivery contract/proof invariant(s) missing.`
-  );
+  fail(`${exportDeliveryProofHits.length} export delivery contract/proof invariant(s) missing.`);
 }
 
 const sourceMonetizationHits = [];
@@ -2531,7 +2272,7 @@ if (sourceMonetizationHits.length) {
     console.error(`${hit.file}: ${hit.match} (${hit.pattern})`);
   }
   fail(
-    `${sourceMonetizationHits.length} paid/account-gating source reference(s) found in active extension source.`
+    `${sourceMonetizationHits.length} paid/account-gating source reference(s) found in active extension source.`,
   );
 }
 
@@ -2557,7 +2298,7 @@ if (sourceScreenityProductHits.length) {
     console.error(`${hit.file}: ${hit.match} (${hit.pattern})`);
   }
   fail(
-    `${sourceScreenityProductHits.length} inherited Screenity product reference(s) found in active extension source.`
+    `${sourceScreenityProductHits.length} inherited Screenity product reference(s) found in active extension source.`,
   );
 }
 
@@ -2586,7 +2327,7 @@ if (sourceNetworkEndpointHits.length) {
     console.error(`${hit.file}: ${hit.url} (${hit.host})`);
   }
   fail(
-    `${sourceNetworkEndpointHits.length} network endpoint literal(s) found in active extension source.`
+    `${sourceNetworkEndpointHits.length} network endpoint literal(s) found in active extension source.`,
   );
 }
 
@@ -2612,7 +2353,7 @@ if (sourceRemoteTelemetryHits.length) {
     console.error(`${hit.file}: ${hit.match} (${hit.pattern})`);
   }
   fail(
-    `${sourceRemoteTelemetryHits.length} remote telemetry/analytics source reference(s) found in active extension source.`
+    `${sourceRemoteTelemetryHits.length} remote telemetry/analytics source reference(s) found in active extension source.`,
   );
 }
 
@@ -2660,11 +2401,7 @@ const forbiddenBuildFiles = files
   .map((file) => relative(BUILD_DIR, file))
   .filter((rel) => FORBIDDEN_BUILD_FILES.has(rel));
 if (forbiddenBuildFiles.length) {
-  fail(
-    `build contains stale forbidden asset(s): ${forbiddenBuildFiles.join(
-      ", "
-    )}.`
-  );
+  fail(`build contains stale forbidden asset(s): ${forbiddenBuildFiles.join(", ")}.`);
 }
 
 const largeFileHashes = new Map();
@@ -2676,20 +2413,16 @@ for (const file of files) {
   matches.push({ file: relative(BUILD_DIR, file), size });
   largeFileHashes.set(hash, matches);
 }
-const duplicateLargeFiles = [...largeFileHashes.values()].filter(
-  (matches) => matches.length > 1
-);
+const duplicateLargeFiles = [...largeFileHashes.values()].filter((matches) => matches.length > 1);
 if (duplicateLargeFiles.length) {
   for (const matches of duplicateLargeFiles) {
     console.error(
       `Duplicate large build asset (${formatBytes(matches[0].size)}): ${matches
         .map((match) => match.file)
-        .join(", ")}`
+        .join(", ")}`,
     );
   }
-  fail(
-    `${duplicateLargeFiles.length} duplicate large build asset group(s) found.`
-  );
+  fail(`${duplicateLargeFiles.length} duplicate large build asset group(s) found.`);
 }
 
 const rootRelativeHtmlHits = [];
@@ -2720,9 +2453,7 @@ if (rootRelativeHtmlHits.length) {
   for (const hit of rootRelativeHtmlHits.slice(0, 20)) {
     console.error(`${hit.file}: ${hit.match}`);
   }
-  fail(
-    `${rootRelativeHtmlHits.length} root-relative extension HTML asset reference(s) found.`
-  );
+  fail(`${rootRelativeHtmlHits.length} root-relative extension HTML asset reference(s) found.`);
 }
 
 const staleTemplateHtmlHits = [];
@@ -2751,9 +2482,7 @@ if (staleTemplateHtmlHits.length) {
   for (const hit of staleTemplateHtmlHits.slice(0, 20)) {
     console.error(`${hit.file}: ${hit.match} (${hit.pattern})`);
   }
-  fail(
-    `${staleTemplateHtmlHits.length} stale template/analytics HTML reference(s) found.`
-  );
+  fail(`${staleTemplateHtmlHits.length} stale template/analytics HTML reference(s) found.`);
 }
 
 const surfaceHits = [];
@@ -2831,7 +2560,7 @@ if (networkEndpointHits.length) {
     console.error(`${hit.file}: ${hit.url} (${hit.host})`);
   }
   fail(
-    `${networkEndpointHits.length} forbidden network endpoint literal(s) found in built JS bundles.`
+    `${networkEndpointHits.length} forbidden network endpoint literal(s) found in built JS bundles.`,
   );
 }
 
@@ -2855,11 +2584,7 @@ const whisperBytes = existsSync(whisperDir)
   : 0;
 
 if (buildBytes > MAX_BUILD_BYTES) {
-  fail(
-    `build size ${formatBytes(buildBytes)} exceeds ${formatBytes(
-      MAX_BUILD_BYTES
-    )}.`
-  );
+  fail(`build size ${formatBytes(buildBytes)} exceeds ${formatBytes(MAX_BUILD_BYTES)}.`);
 }
 
 console.log("Release audit passed.");
@@ -2868,7 +2593,7 @@ console.log(`Bundled Whisper assets: ${formatBytes(whisperBytes)}`);
 if (buildBytes > WARN_BUILD_BYTES) {
   console.warn(
     `Warning: build size exceeds ${formatBytes(
-      WARN_BUILD_BYTES
-    )}; confirm the target distribution channel accepts it.`
+      WARN_BUILD_BYTES,
+    )}; confirm the target distribution channel accepts it.`,
   );
 }

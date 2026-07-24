@@ -27,11 +27,7 @@ test("clampZoomRatio bounds invalid and out-of-range focus ratios", () => {
 });
 
 test("computeZoomViewportTransform centers middle focus points", () => {
-  const transform = computeZoomViewportTransform(
-    { scale: 2, xRatio: 0.5, yRatio: 0.5 },
-    320,
-    180,
-  );
+  const transform = computeZoomViewportTransform({ scale: 2, xRatio: 0.5, yRatio: 0.5 }, 320, 180);
   assert.equal(transform.scale, 2);
   assert.equal(transform.dx, -160);
   assert.equal(transform.dy, -90);
@@ -40,30 +36,18 @@ test("computeZoomViewportTransform centers middle focus points", () => {
 });
 
 test("computeZoomViewportTransform clamps edge focus points inside viewport", () => {
-  const topLeft = computeZoomViewportTransform(
-    { scale: 2, xRatio: 0, yRatio: 0 },
-    320,
-    180,
-  );
+  const topLeft = computeZoomViewportTransform({ scale: 2, xRatio: 0, yRatio: 0 }, 320, 180);
   assert.equal(topLeft.dx, 0);
   assert.equal(topLeft.dy, 0);
 
-  const bottomRight = computeZoomViewportTransform(
-    { scale: 2, xRatio: 1, yRatio: 1 },
-    320,
-    180,
-  );
+  const bottomRight = computeZoomViewportTransform({ scale: 2, xRatio: 1, yRatio: 1 }, 320, 180);
   assert.equal(bottomRight.dx, -320);
   assert.equal(bottomRight.dy, -180);
 });
 
 test("zoomTransformToCss expresses renderer transform as percent CSS", () => {
   const css = zoomTransformToCss(
-    computeZoomViewportTransform(
-      { scale: 1.5, xRatio: 0.75, yRatio: 0.25 },
-      320,
-      180,
-    ),
+    computeZoomViewportTransform({ scale: 1.5, xRatio: 0.75, yRatio: 0.25 }, 320, 180),
     320,
     180,
   );
@@ -118,11 +102,7 @@ test("computeZoomViewportTransform keeps focused edges framed on tall and wide v
   assert.equal(tallBottomRight.dx + tallBottomRight.drawWidth, 720);
   assert.equal(tallBottomRight.dy + tallBottomRight.drawHeight, 1280);
 
-  const wideTopLeft = computeZoomViewportTransform(
-    { scale: 2.5, xRatio: 0, yRatio: 0 },
-    1920,
-    720,
-  );
+  const wideTopLeft = computeZoomViewportTransform({ scale: 2.5, xRatio: 0, yRatio: 0 }, 1920, 720);
   assert.equal(wideTopLeft.dx, 0);
   assert.equal(wideTopLeft.dy, 0);
   assert.equal(wideTopLeft.dx + wideTopLeft.drawWidth, 4800);

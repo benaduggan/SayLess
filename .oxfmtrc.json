@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": [
+    "build/**",
+    "build-cws/**",
+    "dist/**",
+    "node_modules/**",
+    "release-artifacts/**",
+    "test-artifacts/**",
+    "src/assets/mediapipeVision/vision_wasm_internal.ts",
+    "src/assets/vendor/gif.js/gif.worker.ts",
+    "src/assets/whisper/**"
+  ]
+}

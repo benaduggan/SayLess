@@ -20,7 +20,7 @@ const FORBIDDEN_PATTERNS = [
   /\bAKIA[0-9A-Z]{16}\b/,
   /\bghp_[A-Za-z0-9]{36}\b/,
   /\bsk_live_[A-Za-z0-9]{16,}\b/,
-  /['"]Bearer\s+[A-Za-z0-9_.\-]{20,}['"]/,
+  /['"]Bearer\s+[A-Za-z0-9_.-]{20,}['"]/,
   /\bAIza[A-Za-z0-9_-]{35}\b/,
 ];
 

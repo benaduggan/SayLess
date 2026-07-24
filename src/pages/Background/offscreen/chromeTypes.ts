@@ -38,9 +38,7 @@ export interface OffscreenChromeApi {
     local: ExtensionStorageArea;
     [area: string]: ExtensionStorageArea | unknown;
     onChanged: {
-      addListener(
-        listener: (changes: Record<string, unknown>, area: string) => void,
-      ): void;
+      addListener(listener: (changes: Record<string, unknown>, area: string) => void): void;
     };
   };
   tabs: {
@@ -50,17 +48,11 @@ export interface OffscreenChromeApi {
     chooseDesktopMedia(
       sources: string[],
       targetTab: ExtensionTab | undefined,
-      callback: (
-        streamId: string,
-        options?: { canRequestAudioTrack?: boolean },
-      ) => void,
+      callback: (streamId: string, options?: { canRequestAudioTrack?: boolean }) => void,
     ): void;
   };
   tabCapture: {
-    getMediaStreamId(
-      options: { targetTabId: number },
-      callback: (streamId: string) => void,
-    ): void;
+    getMediaStreamId(options: { targetTabId: number }, callback: (streamId: string) => void): void;
   };
 }
 

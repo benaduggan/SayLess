@@ -23,7 +23,7 @@ test("streaming data normalizes storage and message fields", () => {
       defaultVideoInput: "camera-1",
       systemAudio: false,
       recordingType: "camera",
-    }
+    },
   );
 });
 

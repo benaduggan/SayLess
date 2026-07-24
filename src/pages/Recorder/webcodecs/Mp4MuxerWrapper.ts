@@ -108,10 +108,7 @@ export class Mp4MuxerWrapper {
     if (this._writeBufferBytes >= FLUSH_BYTES) {
       this.flushWriteBuffer();
     } else if (!this._writeBufferTimer) {
-      this._writeBufferTimer = setTimeout(
-        () => this.flushWriteBuffer(),
-        FLUSH_INTERVAL_MS,
-      );
+      this._writeBufferTimer = setTimeout(() => this.flushWriteBuffer(), FLUSH_INTERVAL_MS);
     }
   }
 
@@ -223,7 +220,7 @@ export class Mp4MuxerWrapper {
   private buildPacket(
     chunk: EncodedVideoChunk | EncodedAudioChunk,
     meta: any,
-    type: "video" | "audio"
+    type: "video" | "audio",
   ) {
     const data = new Uint8Array(chunk.byteLength);
     chunk.copyTo(data);
@@ -234,11 +231,7 @@ export class Mp4MuxerWrapper {
     return new EncodedPacket(data, chunk.type, tsUs / 1e6, durSec);
   }
 
-  private normalizeTimestamp(
-    type: "video" | "audio",
-    timestampUs?: number,
-    durationUs = 0
-  ) {
+  private normalizeTimestamp(type: "video" | "audio", timestampUs?: number, durationUs = 0) {
     const key = type === "video" ? "lastVideoTimestampUs" : "lastAudioTimestampUs";
     const last = (this as any)[key] ?? 0;
 
@@ -260,12 +253,11 @@ export class Mp4MuxerWrapper {
       if (firstTs && typeof timestampUs === "number") {
         const expectedAccum = timestampUs - firstTs;
         const drift = Math.abs(next - expectedAccum);
-        if (
-          drift > 100_000 &&
-          next - ((this as any)._audioDriftLogAt || 0) > 30_000_000
-        ) {
+        if (drift > 100_000 && next - ((this as any)._audioDriftLogAt || 0) > 30_000_000) {
           (this as any)._audioDriftLogAt = next;
-          this.warn(`[MUX] audio ts drift accum=${next} vs chunk.ts=${expectedAccum} (delta=${drift}us)`);
+          this.warn(
+            `[MUX] audio ts drift accum=${next} vs chunk.ts=${expectedAccum} (delta=${drift}us)`,
+          );
         }
       }
       return next;
@@ -284,10 +276,7 @@ export class Mp4MuxerWrapper {
       this.videoTimestampOffsetUs = timestampUs;
     }
 
-    const relative = Math.max(
-      0,
-      timestampUs - this.videoTimestampOffsetUs
-    );
+    const relative = Math.max(0, timestampUs - this.videoTimestampOffsetUs);
 
     (this as any)[key] = relative;
     this.log(`[MUX] video ts => ${relative}`);

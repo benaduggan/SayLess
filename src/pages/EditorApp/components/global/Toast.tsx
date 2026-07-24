@@ -1,10 +1,4 @@
-import {
-  useState,
-  useEffect,
-  useContext,
-  useCallback,
-  useRef,
-} from "react";
+import { useState, useEffect, useContext, useCallback, useRef } from "react";
 
 import * as ToastEl from "@radix-ui/react-toast";
 
@@ -17,17 +11,16 @@ const Toast = () => {
   const [duration, setDuration] = useState(2200);
   const actionRef = useRef<(() => void) | null>(null);
 
-  const openToast = useCallback((
-    nextTitle: string,
-    action: (() => void) | null = null,
-    durationMs = 2200,
-  ) => {
-    setTitle(nextTitle);
-    setDuration(durationMs);
-    actionRef.current = typeof action === "function" ? action : null;
-    setOpen(false);
-    requestAnimationFrame(() => setOpen(true));
-  }, []);
+  const openToast = useCallback(
+    (nextTitle: string, action: (() => void) | null = null, durationMs = 2200) => {
+      setTitle(nextTitle);
+      setDuration(durationMs);
+      actionRef.current = typeof action === "function" ? action : null;
+      setOpen(false);
+      requestAnimationFrame(() => setOpen(true));
+    },
+    [],
+  );
 
   useEffect(() => {
     setContentState((prev) => ({ ...prev, openToast }));

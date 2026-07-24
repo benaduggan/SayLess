@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import styles from "../../styles/edit/_EditorNav.module.scss";
+import styles from "../../styles/edit/_EditorNav.module.css";
 import { useEditorContent } from "../../context/ContentState";
 import { EdlContext } from "../../context/EdlContext";
 
@@ -128,17 +128,14 @@ const AudioNav = () => {
             {contentState.isFfmpegRunning ? (
               Number(contentState.processingProgress) > 0 ? (
                 <>
-                  {chrome.i18n.getMessage("sandboxEditorSaveProgressButton") ||
-                    "Saving"}{" "}
+                  {chrome.i18n.getMessage("sandboxEditorSaveProgressButton") || "Saving"}{" "}
                   {Math.round(Number(contentState.processingProgress) || 0)}%
                 </>
               ) : (
-                chrome.i18n.getMessage("sandboxEditorSaveProgressButton") ||
-                "Saving..."
+                chrome.i18n.getMessage("sandboxEditorSaveProgressButton") || "Saving..."
               )
             ) : (
-              chrome.i18n.getMessage("sandboxEditorSaveButton") ||
-              "Save changes"
+              chrome.i18n.getMessage("sandboxEditorSaveButton") || "Save changes"
             )}
           </button>
         </div>

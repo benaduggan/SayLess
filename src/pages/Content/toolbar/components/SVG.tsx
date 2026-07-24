@@ -13,14 +13,7 @@ type IconComponent = React.FC<IconProps>;
 
 const createIcon = (path: string): IconComponent =>
   function Icon({ width, height, className }) {
-    return (
-      <ReactSVG
-        src={ASSET_URL + path}
-        width={width}
-        height={height}
-        className={className}
-      />
-    );
+    return <ReactSVG src={ASSET_URL + path} width={width} height={height} className={className} />;
   };
 
 const strokeIconStyle: React.CSSProperties = {

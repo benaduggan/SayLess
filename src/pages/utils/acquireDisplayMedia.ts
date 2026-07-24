@@ -16,7 +16,10 @@ export async function acquireDisplayMediaWithFocusRetry({
   try {
     return await getDisplayMedia(constraints);
   } catch (err) {
-    if (!(err instanceof DOMException || err instanceof Error) || err.name !== "InvalidStateError") {
+    if (
+      !(err instanceof DOMException || err instanceof Error) ||
+      err.name !== "InvalidStateError"
+    ) {
       throw err;
     }
     // Refocus the recorder tab, then retry once; a second failure propagates.

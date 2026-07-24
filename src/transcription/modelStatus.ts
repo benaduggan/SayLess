@@ -1,7 +1,4 @@
-import {
-  LOCAL_WHISPER_ASSET_ROOT,
-  LOCAL_WHISPER_MODEL_ID,
-} from "./config.ts";
+import { LOCAL_WHISPER_ASSET_ROOT, LOCAL_WHISPER_MODEL_ID } from "./config.ts";
 
 export const MODEL_STATUS_MANIFEST_PATH = "assets/whisper/model-manifest.json";
 
@@ -58,7 +55,8 @@ export const loadLocalWhisperManifest = async (
 
 const probeAsset = async (assetUrl: string, fetchImpl: typeof fetch) => {
   let response = await fetchImpl(assetUrl, { method: "HEAD", cache: "no-store" });
-  if (response?.ok) return { ok: true, bytes: Number(response.headers?.get?.("content-length")) || 0 };
+  if (response?.ok)
+    return { ok: true, bytes: Number(response.headers?.get?.("content-length")) || 0 };
   if (response?.status === 405 || response?.status === 501) {
     response = await fetchImpl(assetUrl, { method: "GET", cache: "no-store" });
     if (response?.ok) {
@@ -120,13 +118,8 @@ export const checkLocalWhisperModelStatus = async ({
       results.push({ file, assetPath, assetUrl, ...probe });
     }
 
-    const missingFiles = results
-      .filter((result) => !result.ok)
-      .map((result) => result.file);
-    const totalBytes = results.reduce(
-      (sum, result) => sum + (Number(result.bytes) || 0),
-      0,
-    );
+    const missingFiles = results.filter((result) => !result.ok).map((result) => result.file);
+    const totalBytes = results.reduce((sum, result) => sum + (Number(result.bytes) || 0), 0);
     const ready = missingFiles.length === 0;
     return {
       state: ready ? "ready" : "missing",
@@ -144,8 +137,7 @@ export const checkLocalWhisperModelStatus = async ({
     return {
       state: "failed",
       ready: false,
-      message:
-        error instanceof Error ? error.message : String(error),
+      message: error instanceof Error ? error.message : String(error),
       requiredCount: 0,
       presentCount: 0,
       missingFiles: [],

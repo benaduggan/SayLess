@@ -51,12 +51,7 @@ const normalizeLabel = (value: unknown, fallback: string): string => {
   return label || fallback;
 };
 
-const keyframeId = (
-  source: string,
-  time: number,
-  xRatio: number,
-  yRatio: number,
-): string =>
+const keyframeId = (source: string, time: number, xRatio: number, yRatio: number): string =>
   `zoom-${source}-${Math.round((Number(time) || 0) * 1000)}-${Math.round(
     (Number(xRatio) || 0) * 1000,
   )}-${Math.round((Number(yRatio) || 0) * 1000)}`;
@@ -77,15 +72,10 @@ export const normalizeZoomKeyframes = (
       const xRatio = finiteNumber(keyframe.xRatio, 0.5);
       const yRatio = finiteNumber(keyframe.yRatio, 0.5);
       const scale = finiteNumber(keyframe.scale, DEFAULT_ZOOM_SCALE);
-      const durationSeconds = finiteNumber(
-        keyframe.durationSeconds,
-        DEFAULT_ZOOM_DURATION_SECONDS,
-      );
+      const durationSeconds = finiteNumber(keyframe.durationSeconds, DEFAULT_ZOOM_DURATION_SECONDS);
       const normalizedTime = clamp(time, 0, sourceDuration);
       return {
-        id:
-          keyframe.id ||
-          keyframeId(keyframe.source || "manual", normalizedTime, xRatio, yRatio),
+        id: keyframe.id || keyframeId(keyframe.source || "manual", normalizedTime, xRatio, yRatio),
         time: normalizedTime,
         durationSeconds: clamp(durationSeconds, 0.5, 12),
         scale: clamp(scale, 1.1, 3),

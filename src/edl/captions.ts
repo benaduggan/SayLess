@@ -52,9 +52,7 @@ export const sanitizeCaptionText = (text: unknown): string =>
     .trim();
 
 export function normalizeCaptionWords(project: CaptionProject | null): CaptionWord[] {
-  const words = Array.isArray(project?.transcript?.words)
-    ? project.transcript.words
-    : [];
+  const words = Array.isArray(project?.transcript?.words) ? project.transcript.words : [];
   if (!words.length) return [];
   if (project?.timeline?.version === 2) {
     try {
@@ -83,11 +81,7 @@ export function normalizeCaptionWords(project: CaptionProject | null): CaptionWo
 
 export function buildCaptionCues(
   words: readonly CaptionWord[],
-  {
-    maxGapSeconds = 0.8,
-    maxWords = 7,
-    maxDurationSeconds = 4,
-  }: CaptionCueOptions = {},
+  { maxGapSeconds = 0.8, maxWords = 7, maxDurationSeconds = 4 }: CaptionCueOptions = {},
 ): CaptionCue[] {
   const cues: CaptionCue[] = [];
   let current: { start: number; end: number; words: string[] } | null = null;

@@ -15,9 +15,8 @@ export interface RecordingDebugSession {
 
 type SessionRef = { current?: RecordingDebugSession | null };
 
-const isSessionRef = (
-  value: RecordingDebugSession | SessionRef,
-): value is SessionRef => "current" in value;
+const isSessionRef = (value: RecordingDebugSession | SessionRef): value is SessionRef =>
+  "current" in value;
 
 interface DebugChromeApi {
   storage?: {
@@ -38,15 +37,11 @@ const hasWindowDebugFlag = (): boolean => {
   return !!window.SAYLESS_DEBUG_RECORDER;
 };
 
-const ensureSession = (
-  sessionOverride?: RecordingDebugSession | null,
-): RecordingDebugSession => {
+const ensureSession = (sessionOverride?: RecordingDebugSession | null): RecordingDebugSession => {
   if (sessionOverride?.sessionId) return sessionOverride;
   if (recordingDebugSession?.sessionId) return recordingDebugSession;
 
-  const sessionId = `recdbg-${Date.now()}-${Math.random()
-    .toString(16)
-    .slice(2, 7)}`;
+  const sessionId = `recdbg-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`;
   const startTimeMs = Date.now();
   recordingDebugSession = {
     sessionId,
@@ -72,9 +67,7 @@ export const hydrateRecordingDebugFlag = async (): Promise<void> => {
       "recordingDebugSessionId",
       "recordingDebugStartMs",
     ]);
-    recordingDebugEnabled = Boolean(
-      res?.recordingDebugEnabled || res?.recordingDebugSessionId,
-    );
+    recordingDebugEnabled = Boolean(res?.recordingDebugEnabled || res?.recordingDebugSessionId);
     if (res?.recordingDebugSessionId) {
       recordingDebugSession = {
         sessionId: String(res.recordingDebugSessionId),
@@ -97,8 +90,7 @@ export const resetRecordingDebugSession = async (): Promise<void> => {
   } catch {}
 };
 
-export const isRecordingDebugEnabled = (): boolean =>
-  recordingDebugEnabled || hasWindowDebugFlag();
+export const isRecordingDebugEnabled = (): boolean => recordingDebugEnabled || hasWindowDebugFlag();
 
 export const debugRecordingEventWithSession = (
   session: RecordingDebugSession | null | undefined,
@@ -108,8 +100,7 @@ export const debugRecordingEventWithSession = (
   if (!isRecordingDebugEnabled()) return;
   const activeSession = ensureSession(session);
   const now = Date.now();
-  const tSinceStartMs =
-    activeSession?.startTimeMs != null ? now - activeSession.startTimeMs : null;
+  const tSinceStartMs = activeSession?.startTimeMs != null ? now - activeSession.startTimeMs : null;
 
   try {
     chromeApi()?.runtime?.sendMessage?.({
@@ -129,8 +120,6 @@ export const debugRecordingEvent = (
   payload: unknown,
 ): void => {
   const session =
-    sessionRef && isSessionRef(sessionRef)
-      ? sessionRef.current || null
-      : sessionRef || null;
+    sessionRef && isSessionRef(sessionRef) ? sessionRef.current || null : sessionRef || null;
   debugRecordingEventWithSession(session, eventType, payload);
 };

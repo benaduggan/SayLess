@@ -13,9 +13,7 @@ export const sanitizeFilenameBase = (value: unknown): string => {
   return sanitized.length > 0 ? sanitized : fallback;
 };
 
-export const formatLocalTimestamp = (
-  value?: string | number | Date | null,
-): string => {
+export const formatLocalTimestamp = (value?: string | number | Date | null): string => {
   const date = value ? new Date(value) : new Date();
   const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
   // Use Intl.DateTimeFormat to respect user locale and time format.
@@ -41,10 +39,7 @@ export const getHostnameFromUrl = (url?: string | null): string => {
   }
 };
 
-export const getTabRecordingBaseTitle = (
-  title?: string | null,
-  url?: string | null,
-): string => {
+export const getTabRecordingBaseTitle = (title?: string | null, url?: string | null): string => {
   const candidate = title && title.trim().length > 0 ? title : getHostnameFromUrl(url);
   return sanitizeFilenameBase(candidate);
 };

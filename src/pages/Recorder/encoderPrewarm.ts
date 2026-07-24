@@ -92,7 +92,11 @@ export const startEncoderPrewarm = async (
   cfg: EncoderPrewarmConfig | null | undefined,
 ): Promise<EncoderPrewarmHandle | null> => {
   if (_activeWarmer) return _activeWarmer.handle || null;
-  if (typeof VideoEncoder === "undefined" || typeof VideoFrame === "undefined" || typeof OffscreenCanvas === "undefined") {
+  if (
+    typeof VideoEncoder === "undefined" ||
+    typeof VideoFrame === "undefined" ||
+    typeof OffscreenCanvas === "undefined"
+  ) {
     perfMark("Recorder.encoderPrewarm.skipped", { reason: "no-webcodecs" });
     return null;
   }

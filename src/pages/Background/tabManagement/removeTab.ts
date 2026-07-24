@@ -2,14 +2,16 @@ export const removeTab = async (tabId: number | null): Promise<void> => {
   if (tabId === null) return;
 
   try {
-    const chromeApi = (globalThis as typeof globalThis & {
-      chrome: {
-        tabs: {
-          get: (id: number, callback: (tab?: { id?: number }) => void) => void;
-          remove: (id: number) => unknown;
+    const chromeApi = (
+      globalThis as typeof globalThis & {
+        chrome: {
+          tabs: {
+            get: (id: number, callback: (tab?: { id?: number }) => void) => void;
+            remove: (id: number) => unknown;
+          };
         };
-      };
-    }).chrome;
+      }
+    ).chrome;
     const tab = await new Promise<{ id?: number } | undefined>((resolve) => {
       chromeApi.tabs.get(tabId, (tab) => {
         resolve(tab);

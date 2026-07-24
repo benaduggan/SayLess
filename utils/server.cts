@@ -21,15 +21,9 @@ for (const entryName in config.entry) {
   }
 }
 
-if (
-  customOptions.enableBackgroundAutoReload ||
-  customOptions.enableContentScriptsAutoReload
-) {
+if (customOptions.enableBackgroundAutoReload || customOptions.enableContentScriptsAutoReload) {
   config.entry["background"] = [
-    path.resolve(
-      __dirname,
-      `autoReloadClients/backgroundClient.ts?port=${env.PORT}`
-    ),
+    path.resolve(__dirname, `autoReloadClients/backgroundClient.ts?port=${env.PORT}`),
   ].concat(config.entry["background"]);
 }
 
@@ -39,9 +33,7 @@ if (customOptions.enableContentScriptsAutoReload) {
   ].concat(config.entry["contentScript"]);
 }
 
-config.plugins = [new webpack.HotModuleReplacementPlugin()].concat(
-  config.plugins || []
-);
+config.plugins = [new webpack.HotModuleReplacementPlugin()].concat(config.plugins || []);
 
 delete config.custom;
 
@@ -103,23 +95,18 @@ const server = new WebpackDevServer(
 
             const { modules } = stats.toJson({ all: false, modules: true });
             const updatedJsModules = modules.filter(
-              (module: any) =>
-                module.type === "module" &&
-                module.moduleType === "javascript/auto"
+              (module: any) => module.type === "module" && module.moduleType === "javascript/auto",
             );
 
             // Check which parts of the extension have been updated
             const isBackgroundUpdated = updatedJsModules.some((module: any) =>
               module.nameForCondition.startsWith(
-                path.resolve(__dirname, "../src/pages/Background")
-              )
+                path.resolve(__dirname, "../src/pages/Background"),
+              ),
             );
 
-            const isContentScriptsUpdated = updatedJsModules.some(
-              (module: any) =>
-                module.nameForCondition.startsWith(
-                  path.resolve(__dirname, "../src/pages/Content")
-                )
+            const isContentScriptsUpdated = updatedJsModules.some((module: any) =>
+              module.nameForCondition.startsWith(path.resolve(__dirname, "../src/pages/Content")),
             );
 
             // Determine what needs to be reloaded based on changes and config
@@ -127,8 +114,7 @@ const server = new WebpackDevServer(
               isBackgroundUpdated && customOptions.enableBackgroundAutoReload;
 
             const shouldContentScriptsReload =
-              isContentScriptsUpdated &&
-              customOptions.enableContentScriptsAutoReload;
+              isContentScriptsUpdated && customOptions.enableContentScriptsAutoReload;
 
             // Send appropriate events through SSE
             if (shouldBackgroundReload) {
@@ -147,14 +133,11 @@ const server = new WebpackDevServer(
           }, 1000);
 
           // Register plugin with webpack compiler
-          compiler.hooks.done.tap(
-            "extension-auto-reload-plugin",
-            (stats: any) => {
-              if (!closed) {
-                compileDoneHandler(stats);
-              }
+          compiler.hooks.done.tap("extension-auto-reload-plugin", (stats: any) => {
+            if (!closed) {
+              compileDoneHandler(stats);
             }
-          );
+          });
 
           // Clean up when connection closes
           res.on("close", () => {
@@ -167,7 +150,7 @@ const server = new WebpackDevServer(
       return middlewares;
     },
   },
-  compiler
+  compiler,
 );
 
 const startServer = async () => {

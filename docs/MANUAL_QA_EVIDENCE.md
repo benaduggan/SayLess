@@ -24,10 +24,10 @@ Run `npm run qa:release:status` after synchronization or when returning to the c
 Both commands delegate merge, retired-placeholder migration, provenance synchronization, and freshness analysis to `scripts/manual-qa-template-sync.mjs`. The release audit prevents those rules from being copied back into either caller, keeping the read-only recommendation aligned with the write operation.
 
 2. Fill in real test results from `docs/RELEASE_QA.md`, using
-`npm run qa:release:manual:progress` throughout the clean-profile session.
-Keep every downloaded source, export, project-audio input, and sidecar. Run the
-strict probes below only after those inputs exist; their dedicated progress
-sections deliberately follow the human recording/export/checklist sections.
+   `npm run qa:release:manual:progress` throughout the clean-profile session.
+   Keep every downloaded source, export, project-audio input, and sidecar. Run the
+   strict probes below only after those inputs exist; their dedicated progress
+   sections deliberately follow the human recording/export/checklist sections.
 
 Measure downloaded source recordings, media exports, and WAV/M4A/MP3 project-audio inputs instead of transcribing file properties by hand:
 

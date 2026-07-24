@@ -28,18 +28,13 @@ const RecorderShell: React.FC<RecorderShellProps> = ({
         alt="SayLess logo"
       />
       <div className="middle-area">
-        <img
-          src={chrome.runtime.getURL("assets/record-tab-active.svg")}
-          alt="Recording icon"
-        />
+        <img src={chrome.runtime.getURL("assets/record-tab-active.svg")} alt="Recording icon" />
         <div className="title">{title}</div>
         <div className="subtitle">{subtitle}</div>
         {children}
       </div>
 
-      {!isTab && !started && (
-        <Warning alwaysInteractive={warningAlwaysInteractive} />
-      )}
+      {!isTab && !started && <Warning alwaysInteractive={warningAlwaysInteractive} />}
 
       <GradientBackground subtle />
 

@@ -17,13 +17,10 @@ const isTransientReadError = (err: unknown): boolean => {
   return name === "NotReadableError" || name === "AbortError";
 };
 
-const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Constraints can contain nested objects (deviceId.exact) so a deep clone is required.
-const cloneConstraints = (
-  constraints: MediaStreamConstraints,
-): MediaStreamConstraints => {
+const cloneConstraints = (constraints: MediaStreamConstraints): MediaStreamConstraints => {
   const src = constraints || {};
   if (typeof structuredClone === "function") {
     try {
@@ -73,9 +70,7 @@ export const resolveDeviceIdByLabel = async (
 ): Promise<string | null> => {
   if (!desiredLabel) return null;
   const devices = await enumerateCurrentDevices();
-  const matches = devices.filter(
-    (device) => device.kind === kind && device.label === desiredLabel
-  );
+  const matches = devices.filter((device) => device.kind === kind && device.label === desiredLabel);
   if (matches.length !== 1) return null;
   return matches[0].deviceId;
 };
@@ -129,13 +124,9 @@ export const getUserMediaWithFallback = async ({
       throw err;
     }
 
-    console.warn(
-      "[SayLess] Retrying getUserMedia with label-matched device IDs"
-    );
+    console.warn("[SayLess] Retrying getUserMedia with label-matched device IDs");
 
-    const stream = await attemptGetUserMediaWithTransientRetry(
-      nextConstraints,
-    );
+    const stream = await attemptGetUserMediaWithTransientRetry(nextConstraints);
     resolved.forEach(({ resolvedId, onResolved }) => {
       if (typeof onResolved === "function") {
         onResolved(resolvedId);

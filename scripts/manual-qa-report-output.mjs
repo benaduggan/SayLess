@@ -17,17 +17,13 @@ export const displayReportPath = (root, outputPath) => {
   if (!outputPath) return null;
   const absolutePath = resolve(outputPath);
   const rootRelative = relative(root, absolutePath);
-  return rootRelative && !rootRelative.startsWith("..")
-    ? rootRelative
-    : basename(absolutePath);
+  return rootRelative && !rootRelative.startsWith("..") ? rootRelative : basename(absolutePath);
 };
 
 export const writeReportAtomically = ({ outputPath, inputPaths, report }) => {
   if (!outputPath) return;
   const absoluteOutputPath = resolve(outputPath);
-  if (
-    inputPaths.some((inputPath) => resolve(inputPath) === absoluteOutputPath)
-  ) {
+  if (inputPaths.some((inputPath) => resolve(inputPath) === absoluteOutputPath)) {
     throw new Error("--output must not overwrite an inspected input file.");
   }
 
@@ -35,7 +31,7 @@ export const writeReportAtomically = ({ outputPath, inputPaths, report }) => {
   mkdirSync(outputDirectory, { recursive: true });
   const temporaryPath = resolve(
     outputDirectory,
-    `.${basename(absoluteOutputPath)}.${process.pid}.${randomUUID()}.tmp`
+    `.${basename(absoluteOutputPath)}.${process.pid}.${randomUUID()}.tmp`,
   );
   try {
     writeFileSync(temporaryPath, `${JSON.stringify(report, null, 2)}\n`, {

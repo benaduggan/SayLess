@@ -38,8 +38,16 @@ export type UnknownRecord = Record<string, unknown>;
 const isPlainObject = (value: unknown): value is UnknownRecord =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
 
-function finiteNumber(value: unknown, fallback: null, bounds?: { min?: number; max?: number }): number | null;
-function finiteNumber(value: unknown, fallback: number, bounds?: { min?: number; max?: number }): number;
+function finiteNumber(
+  value: unknown,
+  fallback: null,
+  bounds?: { min?: number; max?: number },
+): number | null;
+function finiteNumber(
+  value: unknown,
+  fallback: number,
+  bounds?: { min?: number; max?: number },
+): number;
 function finiteNumber(
   value: unknown,
   fallback: number | null,
@@ -58,7 +66,9 @@ const normalizeEnum = <T extends string>(
   allowed: ReadonlySet<T>,
   fallback: T,
 ): T => {
-  const normalized = String(value || "").trim().toLowerCase();
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
   return allowed.has(normalized as T) ? (normalized as T) : fallback;
 };
 
@@ -97,10 +107,14 @@ export function normalizeExportSettings(
     min: 0,
     max: sourceDuration == null ? Infinity : Math.max(0, sourceDuration),
   });
-  const gifDuration = finiteNumber(rawGif.durationSeconds, DEFAULT_EXPORT_SETTINGS.gif.durationSeconds, {
-    min: 0.1,
-    max: Math.max(0.1, Math.min(60, maxGifDuration - Math.min(gifStart, maxGifDuration))),
-  });
+  const gifDuration = finiteNumber(
+    rawGif.durationSeconds,
+    DEFAULT_EXPORT_SETTINGS.gif.durationSeconds,
+    {
+      min: 0.1,
+      max: Math.max(0.1, Math.min(60, maxGifDuration - Math.min(gifStart, maxGifDuration))),
+    },
+  );
   const rawCaptionStyle = isPlainObject(input.captionStyle) ? input.captionStyle : {};
 
   return {
@@ -133,14 +147,18 @@ export function normalizeExportSettings(
     gif: {
       startSeconds: gifStart,
       durationSeconds: gifDuration,
-      fps: Math.round(finiteNumber(rawGif.fps, DEFAULT_EXPORT_SETTINGS.gif.fps, {
-        min: 4,
-        max: 30,
-      })),
-      width: Math.round(finiteNumber(rawGif.width, DEFAULT_EXPORT_SETTINGS.gif.width, {
-        min: 320,
-        max: 1920,
-      })),
+      fps: Math.round(
+        finiteNumber(rawGif.fps, DEFAULT_EXPORT_SETTINGS.gif.fps, {
+          min: 4,
+          max: 30,
+        }),
+      ),
+      width: Math.round(
+        finiteNumber(rawGif.width, DEFAULT_EXPORT_SETTINGS.gif.width, {
+          min: 320,
+          max: 1920,
+        }),
+      ),
     },
   };
 }
@@ -155,9 +173,7 @@ export interface NormalizedProject extends UnknownRecord {
   exportSettings: ExportSettings;
 }
 
-export function normalizeProjectSchema(
-  projectInput: unknown = {},
-): NormalizedProject | null {
+export function normalizeProjectSchema(projectInput: unknown = {}): NormalizedProject | null {
   const project = projectInput;
   if (!isPlainObject(project)) return null;
   const source = isPlainObject(project.source) ? project.source : {};
@@ -168,13 +184,15 @@ export function normalizeProjectSchema(
     chapterMarkers: normalizeChapterMarkers(
       Array.isArray(project.chapterMarkers) ? project.chapterMarkers : [],
       {
-      duration: Number(source.duration),
-    }),
+        duration: Number(source.duration),
+      },
+    ),
     zoomKeyframes: normalizeZoomKeyframes(
       Array.isArray(project.zoomKeyframes) ? project.zoomKeyframes : [],
       {
-      duration: Number(source.duration),
-    }),
+        duration: Number(source.duration),
+      },
+    ),
     crop: normalizeCropRegion(project.crop),
     audioTrack: normalizeProjectAudioTrack(project.audioTrack),
     exportSettings: normalizeExportSettings(project.exportSettings, source),

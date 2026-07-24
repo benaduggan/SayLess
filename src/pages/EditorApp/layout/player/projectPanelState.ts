@@ -20,9 +20,7 @@ export const buildProjectSummary = ({
   exportSettings?: Partial<ExportSettings> | null;
 } = {}) => {
   const clips = Array.isArray(timeline?.clips) ? timeline.clips : [];
-  const transcriptWords = Array.isArray(transcript?.words)
-    ? transcript.words
-    : [];
+  const transcriptWords = Array.isArray(transcript?.words) ? transcript.words : [];
   const chapters = Array.isArray(chapterMarkers) ? chapterMarkers : [];
   const zooms = Array.isArray(zoomKeyframes) ? zoomKeyframes : [];
   const settings = exportSettings || {};
@@ -32,9 +30,10 @@ export const buildProjectSummary = ({
   if (settings.includeTranscriptSidecar) sidecars.push("transcript");
   if (settings.includeCaptionSidecar) sidecars.push("captions");
 
-  const format = settings.audioOnly || settings.format === "audio"
-    ? settings.audioFormat || "wav"
-    : settings.format || "mp4";
+  const format =
+    settings.audioOnly || settings.format === "audio"
+      ? settings.audioFormat || "wav"
+      : settings.format || "mp4";
 
   return {
     title: recordingId ? "Local project" : "Local project not saved yet",
@@ -54,10 +53,7 @@ export const buildProjectSummary = ({
   };
 };
 
-export const buildProjectSaveStatus = (
-  saveStatus: unknown,
-  hasRecordingId = true,
-): string => {
+export const buildProjectSaveStatus = (saveStatus: unknown, hasRecordingId = true): string => {
   if (!hasRecordingId) {
     return "Open this recording from the Videos tab to autosave project data.";
   }

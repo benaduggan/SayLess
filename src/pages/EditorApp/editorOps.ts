@@ -32,24 +32,18 @@ const lazyUtil =
   <Args extends unknown[], Result>(
     importFn: () => Promise<{
       default: (...args: Args) => Promise<Result>;
-    }>
+    }>,
   ) =>
   (...args: Args): Promise<Result> =>
     importFn().then((m) => m.default(...args));
-const convertWebmToMp4 = lazyUtil(
-  () => import("../Editor/utils/convertWebmToMp4")
-);
+const convertWebmToMp4 = lazyUtil(() => import("../Editor/utils/convertWebmToMp4"));
 const reencodeVideo = lazyUtil(() => import("../Editor/utils/reencodeVideo"));
 const toGIF = lazyUtil(() => import("../Editor/utils/toGIF"));
 const getFrame = lazyUtil(() => import("../Editor/utils/getFrame"));
-const convertMp4ToWebm = lazyUtil(
-  () => import("../Editor/utils/convertMp4ToWebm")
-);
+const convertMp4ToWebm = lazyUtil(() => import("../Editor/utils/convertMp4ToWebm"));
 const activeExportControllers = new Set<AbortController>();
 
-const runCancellableExport = async <T>(
-  run: (signal: AbortSignal) => Promise<T>
-): Promise<T> => {
+const runCancellableExport = async <T>(run: (signal: AbortSignal) => Promise<T>): Promise<T> => {
   const controller = new AbortController();
   activeExportControllers.add(controller);
   try {
@@ -101,20 +95,14 @@ const VIEWER_REJECTED_OPS = new Set<EditorOpMessage["type"]>([
   "to-gif",
 ]);
 
-const runViewerOp = async (
-  message: EditorOpMessage,
-  reply: Reply
-): Promise<void> => {
+const runViewerOp = async (message: EditorOpMessage, reply: Reply): Promise<void> => {
   if (message.type === "load-ffmpeg") {
     reply({ type: "ffmpeg-load-error", fallback: true });
     return;
   }
   if (message.type === "fix-webm-duration") {
     try {
-      const fixed = await fixWebmDurationOffThread(
-        message.blob,
-        message.durationMs
-      );
+      const fixed = await fixWebmDurationOffThread(message.blob, message.durationMs);
       reply({ type: "fix-webm-duration-result", id: message.id, blob: fixed });
     } catch (error) {
       reply({
@@ -154,7 +142,7 @@ const runViewerOp = async (
 export async function runEditorOp(
   message: EditorOpMessage,
   reply: Reply,
-  { viewer = false }: { viewer?: boolean } = {}
+  { viewer = false }: { viewer?: boolean } = {},
 ): Promise<void> {
   if (viewer) return runViewerOp(message, reply);
   try {
@@ -165,10 +153,7 @@ export async function runEditorOp(
 
       case "fix-webm-duration": {
         try {
-          const fixed = await fixWebmDurationOffThread(
-            message.blob,
-            message.durationMs
-          );
+          const fixed = await fixWebmDurationOffThread(message.blob, message.durationMs);
           reply({
             type: "fix-webm-duration-result",
             id: message.id,
@@ -185,10 +170,7 @@ export async function runEditorOp(
       }
 
       case "base64-to-blob": {
-        if (
-          typeof message.base64 !== "string" ||
-          !message.base64.startsWith("data:")
-        ) {
+        if (typeof message.base64 !== "string" || !message.base64.startsWith("data:")) {
           throw new Error("base64-to-blob: expected data: URL");
         }
         const rawBlob = await fetch(message.base64).then((r) => r.blob());
@@ -211,7 +193,7 @@ export async function runEditorOp(
           reply({
             type: "ffmpeg-progress",
             progress: Math.round(progress * 100),
-          })
+          }),
         );
 
         const base64 = await toBase64(mp4Blob);
@@ -226,15 +208,11 @@ export async function runEditorOp(
       }
 
       case "reencode-video": {
-        const blob = await reencodeVideo(
-          null,
-          message.blob,
-          message.duration,
-          (progress) =>
-            reply({
-              type: "ffmpeg-progress",
-              progress: Math.round(progress * 100),
-            })
+        const blob = await reencodeVideo(null, message.blob, message.duration, (progress) =>
+          reply({
+            type: "ffmpeg-progress",
+            progress: Math.round(progress * 100),
+          }),
         );
         const base64 = await toBase64(blob);
         reply({
@@ -258,7 +236,7 @@ export async function runEditorOp(
                 _opId: message._opId,
               }),
             message.options,
-            signal
+            signal,
           );
           const base64 = await toBase64(blob, signal);
           if (signal.aborted) return;
@@ -280,7 +258,7 @@ export async function runEditorOp(
                       progress: Math.round(progress * 100),
                       _opId: message._opId,
                     }),
-                  signal
+                  signal,
                 );
 
           const base64 = await toBase64(result, signal);
@@ -294,10 +272,7 @@ export async function runEditorOp(
         break;
     }
   } catch (error) {
-    if (
-      (message.type === "to-gif" || message.type === "to-webm") &&
-      isAbortError(error)
-    ) {
+    if ((message.type === "to-gif" || message.type === "to-webm") && isAbortError(error)) {
       return;
     }
     const errMsg = error instanceof Error ? error.message : String(error);

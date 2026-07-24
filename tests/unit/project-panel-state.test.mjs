@@ -53,19 +53,13 @@ test("project summary reports missing recording id and no sidecars", () => {
   });
 
   assert.equal(summary.title, "Local project not saved yet");
-  assert.equal(
-    summary.status,
-    "Open this recording from the Videos tab to autosave project data.",
-  );
+  assert.equal(summary.status, "Open this recording from the Videos tab to autosave project data.");
   assert.equal(summary.exportLabel, "M4A export");
   assert.equal(summary.sidecarLabel, "no sidecars selected");
 });
 
 test("project save status covers queued and failed autosave states", () => {
-  assert.equal(
-    buildProjectSaveStatus("pending"),
-    "Project changes queued for autosave.",
-  );
+  assert.equal(buildProjectSaveStatus("pending"), "Project changes queued for autosave.");
   assert.equal(buildProjectSaveStatus("saving"), "Saving local project...");
   assert.equal(
     buildProjectSaveStatus("error"),

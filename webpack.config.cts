@@ -25,28 +25,10 @@ if (process.env.SAYLESS_SKIP_ENV) {
 // Entry points for the different pages
 const entryPoints = {
   background: path.join(__dirname, "src", "pages", "Background", "index.ts"),
-  contentScript: path.join(
-    __dirname,
-    "src",
-    "pages",
-    "Content",
-    "index.content.tsx"
-  ),
+  contentScript: path.join(__dirname, "src", "pages", "Content", "index.content.tsx"),
   recorder: path.join(__dirname, "src", "pages", "Recorder", "index.tsx"),
-  recorderkeepalive: path.join(
-    __dirname,
-    "src",
-    "pages",
-    "Recorder",
-    "recorderKeepalive.ts"
-  ),
-  offscreenrecorder: path.join(
-    __dirname,
-    "src",
-    "pages",
-    "OffscreenRecorder",
-    "index.tsx"
-  ),
+  recorderkeepalive: path.join(__dirname, "src", "pages", "Recorder", "recorderKeepalive.ts"),
+  offscreenrecorder: path.join(__dirname, "src", "pages", "OffscreenRecorder", "index.tsx"),
   camera: path.join(__dirname, "src", "pages", "Camera", "index.tsx"),
   waveform: path.join(__dirname, "src", "pages", "Waveform", "index.tsx"),
   permissions: path.join(__dirname, "src", "pages", "Permissions", "index.tsx"),
@@ -55,20 +37,8 @@ const entryPoints = {
   region: path.join(__dirname, "src", "pages", "Region", "index.tsx"),
   download: path.join(__dirname, "src", "pages", "Download", "index.tsx"),
   editor: path.join(__dirname, "src", "pages", "Editor", "index.tsx"),
-  remuxoffscreen: path.join(
-    __dirname,
-    "src",
-    "pages",
-    "RemuxOffscreen",
-    "index.ts"
-  ),
-  remuxworker: path.join(
-    __dirname,
-    "src",
-    "pages",
-    "RemuxOffscreen",
-    "worker.ts"
-  ),
+  remuxoffscreen: path.join(__dirname, "src", "pages", "RemuxOffscreen", "index.ts"),
+  remuxworker: path.join(__dirname, "src", "pages", "RemuxOffscreen", "worker.ts"),
   recorderopfsworker: path.join(
     __dirname,
     "src",
@@ -76,7 +46,7 @@ const entryPoints = {
     "Recorder",
     "recorderStorage",
     "opfs",
-    "writerWorker.ts"
+    "writerWorker.ts",
   ),
 };
 
@@ -100,25 +70,16 @@ const htmlPlugins = Object.keys(entryPoints)
     };
 
     const folderName =
-      folderNameMap[entryName] ||
-      entryName.charAt(0).toUpperCase() + entryName.slice(1);
+      folderNameMap[entryName] || entryName.charAt(0).toUpperCase() + entryName.slice(1);
 
-    const templatePath = path.join(
-      __dirname,
-      "src",
-      "pages",
-      folderName,
-      "index.html"
-    );
+    const templatePath = path.join(__dirname, "src", "pages", folderName, "index.html");
 
     // Inject keepalive before the main bundle so audio/locks/mediaSession
     // signals are live before heavy parse; otherwise hidden-tab throttling
     // drops encoders to ~5fps for the first 15s. Manual sort because auto
     // sort flips order based on the chunk graph.
     const needsKeepalive = entryName === "recorder";
-    const chunks = needsKeepalive
-      ? ["recorderkeepalive", entryName]
-      : [entryName];
+    const chunks = needsKeepalive ? ["recorderkeepalive", entryName] : [entryName];
 
     const options: any = {
       template: templatePath,
@@ -134,18 +95,7 @@ const htmlPlugins = Object.keys(entryPoints)
   })
   .filter(Boolean); // Filter out null values
 
-const fileExtensions = [
-  "jpg",
-  "jpeg",
-  "png",
-  "gif",
-  "eot",
-  "otf",
-  "svg",
-  "ttf",
-  "woff",
-  "woff2",
-];
+const fileExtensions = ["jpg", "jpeg", "png", "gif", "eot", "otf", "svg", "ttf", "woff", "woff2"];
 
 const secretsPath = path.join(__dirname, `secrets.${env.NODE_ENV}.js`);
 const alias: Record<string, string> = { "react-dom": "@hot-loader/react-dom" };
@@ -179,15 +129,18 @@ const config: any = {
   module: {
     rules: [
       {
-        test: /\.(css|scss)$/,
+        test: /\.css$/,
         use: [
           { loader: "style-loader" },
           {
             loader: "css-loader",
-            options: { url: false },
+            options: {
+              url: false,
+              modules: { auto: /\.module\.css$/ },
+            },
           },
           {
-            loader: "sass-loader",
+            loader: "postcss-loader",
             options: { sourceMap: true },
           },
         ],
@@ -248,13 +201,13 @@ const config: any = {
     new webpack.ProgressPlugin(),
     new webpack.DefinePlugin({
       "process.env.MAX_RECORDING_DURATION": JSON.stringify(
-        process.env.MAX_RECORDING_DURATION || 3600 // Default to 1 hour
+        process.env.MAX_RECORDING_DURATION || 3600, // Default to 1 hour
       ),
       "process.env.RECORDING_WARNING_THRESHOLD": JSON.stringify(
-        process.env.RECORDING_WARNING_THRESHOLD || 60 // Default to 1 minute
+        process.env.RECORDING_WARNING_THRESHOLD || 60, // Default to 1 minute
       ),
       "process.env.SAYLESS_DEV_MODE": JSON.stringify(
-        isDev && process.env.SAYLESS_DEV_MODE === "true" ? "true" : ""
+        isDev && process.env.SAYLESS_DEV_MODE === "true" ? "true" : "",
       ),
     }),
 
@@ -290,10 +243,7 @@ const config: any = {
         },
         {
           from: "src/assets/mediapipeVision/vision_wasm_internal.ts",
-          to: path.join(
-            __dirname,
-            "build/assets/mediapipeVision/vision_wasm_internal.js"
-          ),
+          to: path.join(__dirname, "build/assets/mediapipeVision/vision_wasm_internal.js"),
           force: true,
         },
         {

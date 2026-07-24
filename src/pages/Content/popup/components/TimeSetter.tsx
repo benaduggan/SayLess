@@ -5,14 +5,12 @@ import { contentStateContext } from "../../context/ContentState";
 
 const TimeSetter = () => {
   const [contentState, setContentState] = useContext(contentStateContext);
-  const [hours, setHours] = useState<number | string>(
-    Math.floor(contentState.alarmTime / 3600)
-  );
+  const [hours, setHours] = useState<number | string>(Math.floor(contentState.alarmTime / 3600));
   const [minutes, setMinutes] = useState<number | string>(
-    Math.floor((contentState.alarmTime % 3600) / 60)
+    Math.floor((contentState.alarmTime % 3600) / 60),
   );
   const [seconds, setSeconds] = useState<number | string>(
-    Math.floor((contentState.alarmTime % 3600) % 60)
+    Math.floor((contentState.alarmTime % 3600) % 60),
   );
 
   useEffect(() => {

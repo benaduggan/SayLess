@@ -70,18 +70,18 @@ export const getBrowserCapabilities = (): BrowserCapabilities => {
 };
 
 export const supportsWebCodecs = async (): Promise<boolean> => {
-  const chromeApi = (globalThis as typeof globalThis & {
-    chrome: {
-      storage: {
-        local: {
-          get: (key: string) => Promise<Record<string, unknown>>;
+  const chromeApi = (
+    globalThis as typeof globalThis & {
+      chrome: {
+        storage: {
+          local: {
+            get: (key: string) => Promise<Record<string, unknown>>;
+          };
         };
       };
-    };
-  }).chrome;
-  const { realWebCodecsSupport } = await chromeApi.storage.local.get(
-    "realWebCodecsSupport"
-  );
+    }
+  ).chrome;
+  const { realWebCodecsSupport } = await chromeApi.storage.local.get("realWebCodecsSupport");
 
   if (realWebCodecsSupport === true) return true;
 

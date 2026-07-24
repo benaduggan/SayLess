@@ -67,7 +67,7 @@ declare global {
             { mode: "exclusive", signal: ac.signal },
             function () {
               return new Promise<void>(function () {});
-            }
+            },
           )
           .catch(function () {});
       }
@@ -86,9 +86,7 @@ declare global {
         // the track stays "live" without burning CPU on capture.
         const bstream = bcanvas.captureStream ? bcanvas.captureStream(0) : null;
         const btrack = bstream
-          ? (bstream.getVideoTracks()[0] as
-              | CanvasCaptureMediaStreamTrack
-              | undefined)
+          ? (bstream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined)
           : null;
         if (btrack && bstream) {
           const pc1 = new RTCPeerConnection();
@@ -98,12 +96,10 @@ declare global {
           KA.priorityCanvas = bcanvas;
           KA.priorityTrack = btrack;
           pc1.onicecandidate = function (e) {
-            if (e.candidate)
-              pc2.addIceCandidate(e.candidate).catch(function () {});
+            if (e.candidate) pc2.addIceCandidate(e.candidate).catch(function () {});
           };
           pc2.onicecandidate = function (e) {
-            if (e.candidate)
-              pc1.addIceCandidate(e.candidate).catch(function () {});
+            if (e.candidate) pc1.addIceCandidate(e.candidate).catch(function () {});
           };
           pc1.addTrack(btrack, bstream);
           pc1
@@ -131,9 +127,7 @@ declare global {
                 bctx.fillRect(0, 0, 2, 2);
               }
               if (bstream && typeof bstream.getVideoTracks === "function") {
-                const t = bstream.getVideoTracks()[0] as
-                  | CanvasCaptureMediaStreamTrack
-                  | undefined;
+                const t = bstream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined;
                 t?.requestFrame();
               }
             } catch (e) {}

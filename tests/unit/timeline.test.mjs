@@ -18,20 +18,20 @@ import {
 test("createTimeline = one full-span clip", () => {
   const tl = createTimeline(10);
   assert.equal(tl.clips.length, 1);
-  assert.deepEqual(
-    [tl.clips[0].sourceStart, tl.clips[0].sourceEnd],
-    [0, 10]
-  );
+  assert.deepEqual([tl.clips[0].sourceStart, tl.clips[0].sourceEnd], [0, 10]);
 });
 
 test("splitAtSource splits the containing clip", () => {
   let tl = createTimeline(10);
   tl = splitAtSource(tl, 4);
   assert.equal(tl.clips.length, 2);
-  assert.deepEqual(tl.clips.map((c) => [c.sourceStart, c.sourceEnd]), [
-    [0, 4],
-    [4, 10],
-  ]);
+  assert.deepEqual(
+    tl.clips.map((c) => [c.sourceStart, c.sourceEnd]),
+    [
+      [0, 4],
+      [4, 10],
+    ],
+  );
   // splitting at a boundary is a no-op
   assert.equal(splitAtSource(tl, 4).clips.length, 2);
 });
@@ -79,7 +79,7 @@ test("deleteSourceRange splits and removes (transcript delete)", () => {
     [
       [0, 3],
       [5, 10],
-    ]
+    ],
   );
 });
 

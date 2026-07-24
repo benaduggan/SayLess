@@ -120,11 +120,7 @@ const TAB_PATTERNS = [
   "this tab's video",
 ];
 
-const TIMEOUT_PATTERNS = [
-  "taking too long",
-  "timed out",
-  "timeout",
-];
+const TIMEOUT_PATTERNS = ["taking too long", "timed out", "timeout"];
 
 const REGION_PATTERNS = [
   "crop target",
@@ -231,7 +227,10 @@ export const makeRecordingAttemptId = (): string => {
 /** Derive a short support code from an attempt ID. */
 export const makeSupportCode = (attemptId?: string | null): string => {
   if (!attemptId) return "SLS-0000";
-  const hash = attemptId.replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase();
+  const hash = attemptId
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(-4)
+    .toUpperCase();
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   return `SLS-${hash}-${date}`;
 };

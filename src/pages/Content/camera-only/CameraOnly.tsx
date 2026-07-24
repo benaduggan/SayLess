@@ -4,18 +4,14 @@ import CameraWrap from "./layout/CameraWrap";
 
 import { contentStateContext } from "../context/ContentState";
 
-const CameraOnly = (props: {
-  shadowRef?: React.RefObject<HTMLElement | null>;
-}) => {
+const CameraOnly = (props: { shadowRef?: React.RefObject<HTMLElement | null> }) => {
   const [contentState, setContentState] = useContext(contentStateContext);
 
   return (
     <div className="camera-page">
       {contentState.defaultVideoInput != "none" &&
         contentState.cameraActive &&
-        contentState.recordingType === "camera" && (
-          <CameraWrap shadowRef={props.shadowRef} />
-        )}
+        contentState.recordingType === "camera" && <CameraWrap shadowRef={props.shadowRef} />}
     </div>
   );
 };

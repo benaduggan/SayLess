@@ -38,9 +38,7 @@ const workerScope = self as unknown as {
 };
 
 const errorName = (error: unknown): string =>
-  error instanceof DOMException || error instanceof Error
-    ? error.name
-    : "Error";
+  error instanceof DOMException || error instanceof Error ? error.name : "Error";
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -70,9 +68,7 @@ const post = (payload: WorkerResponse): void => {
 
 // crbug/453704691: createSyncAccessHandle can throw NoModificationAllowedError
 // briefly while GC reclaims a prior handle. Retry with backoff before failing.
-const openSyncAccessHandleWithRetry = async (
-  handle: SyncFileHandle,
-): Promise<SyncAccessHandle> => {
+const openSyncAccessHandleWithRetry = async (handle: SyncFileHandle): Promise<SyncAccessHandle> => {
   const delaysMs = [0, 200, 400, 600, 800];
   let lastErr: unknown = new Error("opfs-sync-handle-open-failed");
   for (let i = 0; i < delaysMs.length; i += 1) {
@@ -89,10 +85,7 @@ const openSyncAccessHandleWithRetry = async (
   throw lastErr;
 };
 
-const openFile = async (
-  recordingId: string,
-  extension?: string,
-): Promise<{ fileName: string }> => {
+const openFile = async (recordingId: string, extension?: string): Promise<{ fileName: string }> => {
   // Create NEW before deleting old: if creation fails, the previous
   // recording remains intact for recovery, and a recovery editor
   // already loading the old file doesn't lose it mid-load.
@@ -136,15 +129,15 @@ const closeFile = (): {
   // Granular timing; diag showed close taking ~10s on one user's
   // macOS recording. Without splitting flush vs close we can't tell
   // whether the cost is fsync or the handle release itself.
-  const tFlushStart = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const tFlushStart = typeof performance !== "undefined" ? performance.now() : Date.now();
   try {
     syncHandle.flush();
   } catch {}
-  const tFlushEnd = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const tFlushEnd = typeof performance !== "undefined" ? performance.now() : Date.now();
   const byteSize = typeof syncHandle.getSize === "function" ? syncHandle.getSize() : offset;
-  const tGetSizeEnd = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const tGetSizeEnd = typeof performance !== "undefined" ? performance.now() : Date.now();
   syncHandle.close();
-  const tCloseEnd = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const tCloseEnd = typeof performance !== "undefined" ? performance.now() : Date.now();
   syncHandle = null;
   closed = true;
   devLog("close", { byteSize, chunkCount, fileName });

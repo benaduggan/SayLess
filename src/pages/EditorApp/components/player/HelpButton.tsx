@@ -1,5 +1,5 @@
 import { useContext, useState, useEffect } from "react";
-import styles from "../../styles/player/_HelpButton.module.scss";
+import styles from "../../styles/player/_HelpButton.module.css";
 import { ReactSVG } from "react-svg";
 import { useEditorContent } from "../../context/ContentState";
 
@@ -8,7 +8,7 @@ const assetUrl = (path: string) => chrome.runtime.getURL(`assets/${path}`);
 const HelpButton = () => {
   const [contentState] = useEditorContent();
   const [windowWidth, setWindowWidth] = useState(
-    typeof window !== "undefined" ? window.innerWidth : 1000
+    typeof window !== "undefined" ? window.innerWidth : 1000,
   );
 
   useEffect(() => {
@@ -29,11 +29,7 @@ const HelpButton = () => {
         chrome.runtime.sendMessage({ type: "open-help" });
       }}
     >
-      <ReactSVG
-        src={assetUrl("editor/icons/help.svg")}
-        width="18px"
-        height="18px"
-      />
+      <ReactSVG src={assetUrl("editor/icons/help.svg")} width="18px" height="18px" />
     </button>
   );
 };

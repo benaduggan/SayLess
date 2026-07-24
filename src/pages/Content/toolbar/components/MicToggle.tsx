@@ -18,8 +18,8 @@ const MicToggle = (_props: Record<string, never>) => {
         contentState.microphonePermission && contentState.micActive
           ? chrome.i18n.getMessage("disableMicrophoneTooltip")
           : contentState.microphonePermission && !contentState.micactive
-          ? chrome.i18n.getMessage("enableMicrophoneTooltip")
-          : chrome.i18n.getMessage("noMicrophonePermissionsTooltip")
+            ? chrome.i18n.getMessage("enableMicrophoneTooltip")
+            : chrome.i18n.getMessage("noMicrophonePermissionsTooltip")
       }
     >
       <div className="ToolbarToggleWrap">
@@ -27,10 +27,7 @@ const MicToggle = (_props: Record<string, never>) => {
           className="ToolbarModeItemSingle"
           aria-label="Toggle microphone"
           pressed={contentState.micActive}
-          disabled={
-            !contentState.microphonePermission ||
-            contentState.defaultAudioInput === "none"
-          }
+          disabled={!contentState.microphonePermission || contentState.defaultAudioInput === "none"}
           onPressedChange={(pressed) => {
             setContentState((prevContentState) => ({
               ...prevContentState,
@@ -52,7 +49,7 @@ const MicToggle = (_props: Record<string, never>) => {
               pressed
                 ? chrome.i18n.getMessage("micOnToast")
                 : chrome.i18n.getMessage("micOffToast"),
-              () => {}
+              () => {},
             );
           }}
         >

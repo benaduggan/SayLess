@@ -5,8 +5,7 @@ const RETIRED_ZOOM_TEMPLATE_PLACEHOLDERS = {
   mp4ExportVerified: false,
   keepRemoveVerified: false,
   persistedAfterReopen: false,
-  exportInspection:
-    "Replace with how the MP4 export was inspected for the saved zoom framing.",
+  exportInspection: "Replace with how the MP4 export was inspected for the saved zoom framing.",
 };
 const RETIRED_ZOOM_TEMPLATE_NOTES =
   "Replace with observed zoom suggestion, preview, and export behavior.";
@@ -24,7 +23,7 @@ export const mergeTemplateDefaults = (defaults, existing) => {
     return Array.from({ length }, (_, index) =>
       index < defaults.length
         ? mergeTemplateDefaults(defaults[index], existing[index])
-        : existing[index]
+        : existing[index],
     );
   }
   if (defaults && typeof defaults === "object") {
@@ -40,20 +39,11 @@ export const mergeTemplateDefaults = (defaults, existing) => {
   return existing;
 };
 
-export const migrateRetiredTemplatePlaceholders = (
-  template,
-  canonicalTemplate
-) => {
+export const migrateRetiredTemplatePlaceholders = (template, canonicalTemplate) => {
   let migrated = template;
-  if (
-    template?.zoom &&
-    typeof template.zoom === "object" &&
-    !Array.isArray(template.zoom)
-  ) {
+  if (template?.zoom && typeof template.zoom === "object" && !Array.isArray(template.zoom)) {
     const zoom = { ...template.zoom };
-    for (const [key, retiredValue] of Object.entries(
-      RETIRED_ZOOM_TEMPLATE_PLACEHOLDERS
-    )) {
+    for (const [key, retiredValue] of Object.entries(RETIRED_ZOOM_TEMPLATE_PLACEHOLDERS)) {
       if (zoom[key] === retiredValue) delete zoom[key];
     }
     if (zoom.notes === RETIRED_ZOOM_TEMPLATE_NOTES) {
@@ -77,7 +67,7 @@ export const migrateRetiredTemplatePlaceholders = (
 export const mergeAndMigrateManualTemplate = (canonicalTemplate, evidence) =>
   migrateRetiredTemplatePlaceholders(
     mergeTemplateDefaults(canonicalTemplate, evidence),
-    canonicalTemplate
+    canonicalTemplate,
   );
 
 export const buildSynchronizedManualTemplate = ({
@@ -90,12 +80,9 @@ export const buildSynchronizedManualTemplate = ({
   const sessionMatchesAutomatedEvidence =
     evidence?.releaseVersion === releaseVersion &&
     evidence?.automatedEvidenceGeneratedAt === automatedEvidenceGeneratedAt;
-  const mergedTemplate = mergeAndMigrateManualTemplate(
-    canonicalTemplate,
-    evidence
-  );
+  const mergedTemplate = mergeAndMigrateManualTemplate(canonicalTemplate, evidence);
   const synchronizedEnvironment = {
-    ...(mergedTemplate.environment || {}),
+    ...mergedTemplate.environment,
     extensionSource: "build",
     cleanChromeProfile: true,
   };
@@ -104,12 +91,9 @@ export const buildSynchronizedManualTemplate = ({
     if (
       typeof detectedValue === "string" &&
       detectedValue.trim().length > 0 &&
-      (synchronizedEnvironment[field] ===
-        canonicalTemplate.environment?.[field] ||
+      (synchronizedEnvironment[field] === canonicalTemplate.environment?.[field] ||
         (field === "unpackedExtensionId" &&
-          RETIRED_EXTENSION_ID_PLACEHOLDERS.has(
-            synchronizedEnvironment[field]
-          )))
+          RETIRED_EXTENSION_ID_PLACEHOLDERS.has(synchronizedEnvironment[field])))
     ) {
       synchronizedEnvironment[field] = detectedValue.trim();
     }
@@ -126,30 +110,22 @@ export const buildSynchronizedManualTemplate = ({
   };
 };
 
-export const analyzeManualTemplateSync = ({
-  canonicalTemplate,
-  evidence,
-  automatedEvidence,
-}) => {
+export const analyzeManualTemplateSync = ({ canonicalTemplate, evidence, automatedEvidence }) => {
   const reasons = [];
   const mergedTemplate = mergeTemplateDefaults(canonicalTemplate, evidence);
   if (JSON.stringify(mergedTemplate) !== JSON.stringify(evidence)) {
     reasons.push("canonical template fields are missing");
   }
   if (
-    JSON.stringify(
-      migrateRetiredTemplatePlaceholders(mergedTemplate, canonicalTemplate)
-    ) !== JSON.stringify(mergedTemplate)
+    JSON.stringify(migrateRetiredTemplatePlaceholders(mergedTemplate, canonicalTemplate)) !==
+    JSON.stringify(mergedTemplate)
   ) {
     reasons.push("retired template placeholders are still present");
   }
   if (evidence.releaseVersion !== automatedEvidence.releaseVersion) {
     reasons.push("release version is stale");
   }
-  if (
-    evidence.automatedEvidencePath !==
-    "release-artifacts/release-qa-automated.json"
-  ) {
+  if (evidence.automatedEvidencePath !== "release-artifacts/release-qa-automated.json") {
     reasons.push("automated evidence path is stale");
   }
   if (evidence.automatedEvidenceGeneratedAt !== automatedEvidence.generatedAt) {

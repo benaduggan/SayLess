@@ -22,10 +22,9 @@ test("transcription errors preserve structured user-facing guidance", () => {
 });
 
 test("classifier reports unsupported browser audio decode contexts", () => {
-  const err = classifyTranscriptionError(
-    new Error("audio: WebAudio not available"),
-    { phase: "audio-decode" },
-  );
+  const err = classifyTranscriptionError(new Error("audio: WebAudio not available"), {
+    phase: "audio-decode",
+  });
 
   assert.equal(err.code, TRANSCRIPTION_ERROR_CODES.UNSUPPORTED_BROWSER);
   assert.match(err.userMessage, /current Chromium browser/);
@@ -44,10 +43,9 @@ test("classifier reports quota exhaustion with local cleanup guidance", () => {
 });
 
 test("classifier reports very large recordings as local resource failures", () => {
-  const err = classifyTranscriptionError(
-    new RangeError("Array buffer allocation failed"),
-    { phase: "audio-decode" },
-  );
+  const err = classifyTranscriptionError(new RangeError("Array buffer allocation failed"), {
+    phase: "audio-decode",
+  });
 
   assert.equal(err.code, TRANSCRIPTION_ERROR_CODES.RECORDING_TOO_LONG);
   assert.match(err.userMessage, /split a shorter section/);

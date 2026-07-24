@@ -1,0 +1,118 @@
+@font-face {
+  font-family: "Satoshi-Light";
+  src: url("/assets/fonts/Satoshi-Light.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Satoshi-Medium";
+  src: url("/assets/fonts/Satoshi-Medium.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Satoshi-Bold";
+  src: url("/assets/fonts/Satoshi-Bold.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+/* Colors */
+/* Font */
+/* Spacing */
+/*
+$spacing-01: 0.125rem;
+$spacing-02: 0.25rem;
+$spacing-03: 0.5rem;
+$spacing-04: 0.75rem;
+$spacing-05: 1rem;
+*/
+/* Container */
+/* Gradients */
+/* Events */
+/* Z-index */
+.trimWrap {
+  position: relative;
+  width: 100%;
+  min-height: 176px;
+  border-top: 1px solid #e8e8e8;
+  background-color: #fff;
+  overflow: hidden;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 90%;
+  margin: auto;
+  margin-top: 12px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.controlsRight {
+  display: flex;
+  align-items: center;
+}
+
+.timeWrap {
+  color: #29292f;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: absolute;
+  left: 0px;
+  right: 0px;
+  margin: auto;
+  width: fit-content;
+}
+.timeWrap span {
+  position: relative;
+  font-variant-numeric: tabular-nums;
+}
+.timeWrap svg {
+  color: #9797a4;
+  margin-top: 5px;
+}
+
+.trimInfo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #f6f7fb;
+  border-radius: 30px;
+  padding: 8px 16px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  justify-content: center;
+  align-items: center;
+  color: #29292f;
+  position: absolute;
+  left: 0px;
+  right: 0px;
+  bottom: 8px;
+}
+.trimInfo svg {
+  color: #9797a4;
+  margin-top: 5px;
+  margin-right: 5px;
+}
+.trimInfo .trimInfoLink {
+  color: #3080f8;
+  cursor: pointer;
+  display: inline-block;
+  margin-left: 5px;
+}
+
+@media (max-width: 1000px) {
+  .timeWrap {
+    display: none;
+  }
+}

@@ -43,9 +43,7 @@ try {
 // matches STARTRECORDING_GUARD_TIMEOUT_MS so a crashed start eventually
 // stops shielding cleanup
 export const RECORDING_STARTING_GRACE_MS = 30000;
-export const isRecordingStartInFlight = (
-  flags?: Record<string, unknown> | null,
-): boolean => {
+export const isRecordingStartInFlight = (flags?: Record<string, unknown> | null): boolean => {
   if (!flags) return false;
   if (flags.pendingRecording) return true;
   if (flags.restarting) return true;
@@ -86,30 +84,21 @@ const _startRecordingInner = async (caller: string): Promise<void> => {
   const recordingAttemptId = makeRecordingAttemptId();
   // only gate countdown-finished; direct/fallback/restart don't share it.
   try {
-    const {
-      recordingStoppedAt,
-      recording,
-      restarting,
-      countdownStartedAt,
-      countdownFinishedAt,
-    } = await chrome.storage.local.get([
-      "recordingStoppedAt",
-      "recording",
-      "restarting",
-      "countdownStartedAt",
-      "countdownFinishedAt",
-    ]);
+    const { recordingStoppedAt, recording, restarting, countdownStartedAt, countdownFinishedAt } =
+      await chrome.storage.local.get([
+        "recordingStoppedAt",
+        "recording",
+        "restarting",
+        "countdownStartedAt",
+        "countdownFinishedAt",
+      ]);
     const sinceStopMs =
-      typeof recordingStoppedAt === "number"
-        ? Date.now() - recordingStoppedAt
-        : null;
+      typeof recordingStoppedAt === "number" ? Date.now() - recordingStoppedAt : null;
     // Countdown after prior stop = fresh back-to-back, not stale dispatch.
     const countdownIsFresh =
       typeof recordingStoppedAt === "number" &&
-      ((typeof countdownStartedAt === "number" &&
-        countdownStartedAt > recordingStoppedAt) ||
-        (typeof countdownFinishedAt === "number" &&
-          countdownFinishedAt > recordingStoppedAt));
+      ((typeof countdownStartedAt === "number" && countdownStartedAt > recordingStoppedAt) ||
+        (typeof countdownFinishedAt === "number" && countdownFinishedAt > recordingStoppedAt));
     if (
       caller === "countdown-finished" &&
       sinceStopMs !== null &&
@@ -228,14 +217,8 @@ const _startRecordingInner = async (caller: string): Promise<void> => {
 
   // Clear leaked sceneId so a new recording does not inherit stale project state.
   // pendingSceneIndex owns its own lifecycle; null would crash its .includes().
-  const {
-    recordingToScene,
-    multiMode,
-    activeTab,
-    recordingUiTabId,
-    customRegion,
-    recordingType,
-  } = await _startReads;
+  const { recordingToScene, multiMode, activeTab, recordingUiTabId, customRegion, recordingType } =
+    await _startReads;
   try {
     if (!recordingToScene && !multiMode) {
       // Fire-and-forget: the clear doesn't gate the recorder-start
@@ -315,15 +298,13 @@ const _startRecordingInner = async (caller: string): Promise<void> => {
     audioInput: Boolean(audioInput),
     offscreen: Boolean(offscreen),
     alarm: Boolean(alarm),
-    alarmTime: alarm ? (alarmTime || null) : null,
+    alarmTime: alarm ? alarmTime || null : null,
     countdown: Boolean(countdown),
   });
   // sync log so the event flushes to storage before SW can be killed
   diagEvent("session-start", { region: Boolean(customRegion), caller });
 
-  const { recordingTab: prevRecTab } = await chrome.storage.local.get([
-    "recordingTab",
-  ]);
+  const { recordingTab: prevRecTab } = await chrome.storage.local.get(["recordingTab"]);
   if (prevRecTab != null) {
     try {
       await chrome.tabs.get(Number(prevRecTab));
@@ -347,10 +328,7 @@ const _startRecordingInner = async (caller: string): Promise<void> => {
     setTimeout(async () => {
       let isReallyRecording = false;
       try {
-        const snap = await chrome.storage.local.get([
-          "recording",
-          "pendingRecording",
-        ]);
+        const snap = await chrome.storage.local.get(["recording", "pendingRecording"]);
         isReallyRecording = Boolean(snap.recording);
       } catch {}
       if (isReallyRecording) return;
@@ -371,9 +349,7 @@ const _startRecordingInner = async (caller: string): Promise<void> => {
           sendMessageTab(Number(activeTab), {
             type: "recording-error",
             error: "start-failed",
-            why: isStaleTab
-              ? "stale-recorder-tab"
-              : "recorder-tab-unavailable",
+            why: isStaleTab ? "stale-recorder-tab" : "recorder-tab-unavailable",
           }).catch(() => {});
         }
       });
@@ -399,10 +375,7 @@ const _startRecordingInner = async (caller: string): Promise<void> => {
 export const startAfterCountdown = (caller = "startAfterCountdown"): void => {
   chrome.storage.local.get(["recordingTab", "offscreen"], (result) => {
     if (chrome.runtime.lastError) {
-      console.error(
-        "Failed to start after countdown:",
-        chrome.runtime.lastError
-      );
+      console.error("Failed to start after countdown:", chrome.runtime.lastError);
       return;
     }
 
@@ -418,7 +391,7 @@ export const startAfterCountdown = (caller = "startAfterCountdown"): void => {
     // sendMessageRecord routes via recorderSession/offscreen fallback if needed
     if (recordingTab === null && !offscreen) {
       console.warn(
-        "[SayLess] startAfterCountdown: no recordingTab/offscreen available, starting with fallback routing"
+        "[SayLess] startAfterCountdown: no recordingTab/offscreen available, starting with fallback routing",
       );
     }
     startRecording(caller);

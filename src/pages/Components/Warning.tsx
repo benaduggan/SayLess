@@ -1,8 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import { ReactSVG } from "react-svg";
 
@@ -39,28 +35,24 @@ const Warning: React.FC<WarningProps> = ({ alwaysInteractive = false }) => {
       ({ forceDisplayMediaScreen, macSystemAudioCapture }) => {
         const useDisplayMedia = shouldUseDisplayMediaForScreen({
           forceDisplayMediaScreen:
-            typeof forceDisplayMediaScreen === "boolean"
-              ? forceDisplayMediaScreen
-              : undefined,
+            typeof forceDisplayMediaScreen === "boolean" ? forceDisplayMediaScreen : undefined,
           macSystemAudioCapture:
-            typeof macSystemAudioCapture === "boolean"
-              ? macSystemAudioCapture
-              : undefined,
+            typeof macSystemAudioCapture === "boolean" ? macSystemAudioCapture : undefined,
         });
         if (isMac && !useDisplayMedia) {
           openWarning(
             chrome.i18n.getMessage("recordAudioWarningMacTitle"),
             chrome.i18n.getMessage("recordAudioWarningMacDescription"),
-            10000
+            10000,
           );
         } else {
           openWarning(
             chrome.i18n.getMessage("recordAudioWarningOtherTitle"),
             chrome.i18n.getMessage("recordAudioWarningOtherDescription"),
-            10000
+            10000,
           );
         }
-      }
+      },
     );
   }, [openWarning]);
 
@@ -83,9 +75,7 @@ const Warning: React.FC<WarningProps> = ({ alwaysInteractive = false }) => {
         </div>
         <div className="warning-content">
           <ToastEl.Title className="warning-title">{title}</ToastEl.Title>
-          <ToastEl.Description className="warning-description">
-            {description}
-          </ToastEl.Description>
+          <ToastEl.Description className="warning-description">{description}</ToastEl.Description>
         </div>
         <ToastEl.Close
           className="warning-close"

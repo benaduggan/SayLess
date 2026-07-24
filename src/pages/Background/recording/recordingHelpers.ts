@@ -1,9 +1,4 @@
-import {
-  sendMessageTab,
-  focusTab,
-  removeTab,
-  getCurrentTab,
-} from "../tabManagement";
+import { sendMessageTab, focusTab, removeTab, getCurrentTab } from "../tabManagement";
 import { sendMessageRecord } from "./sendMessageRecord";
 import { stopRecording, clearInMemoryEditorLock } from "./stopRecording";
 import { addAlarmListener } from "../alarms/addAlarmListener";
@@ -36,9 +31,7 @@ interface RecordingErrorRequest {
   [key: string]: unknown;
 }
 
-const appendBgLocalRecordingEvent = async (
-  payload: Record<string, unknown>,
-): Promise<void> => {
+const appendBgLocalRecordingEvent = async (payload: Record<string, unknown>): Promise<void> => {
   await appendLocalRecordingEvent({
     ts: Date.now(),
     recorderType: "bg_recording",
@@ -88,11 +81,10 @@ export const handleOnGetPermissions = async (request: unknown): Promise<void> =>
 
 export const handleRecordingComplete = async () => {
   perfMark("BG.recordingHelpers handleRecordingComplete.enter");
-  const { recordingTab, completingRecordingTab } =
-    await chrome.storage.local.get([
-      "recordingTab",
-      "completingRecordingTab",
-    ]);
+  const { recordingTab, completingRecordingTab } = await chrome.storage.local.get([
+    "recordingTab",
+    "completingRecordingTab",
+  ]);
 
   // snapshot at stop time; live recordingTab may belong to a new session by now
   const target = asTabId(completingRecordingTab);
@@ -100,10 +92,7 @@ export const handleRecordingComplete = async () => {
   if (target) {
     chrome.tabs.get(target, (tab) => {
       if (chrome.runtime.lastError || !tab) return;
-      if (
-        tab.url?.includes("chrome-extension") &&
-        tab.url.includes("recorder.html")
-      ) {
+      if (tab.url?.includes("chrome-extension") && tab.url.includes("recorder.html")) {
         removeTab(target);
       }
     });
@@ -118,25 +107,20 @@ export const handleRecordingComplete = async () => {
     updates.recordingTab = null;
   }
   chrome.storage.local.set(updates);
-  console.log(
-    "[SayLess][BG] handleRecordingComplete fired",
-    { target, liveRecordingTab: recordingTab, cleared: target === recordingTab },
-  );
+  console.log("[SayLess][BG] handleRecordingComplete fired", {
+    target,
+    liveRecordingTab: recordingTab,
+    cleared: target === recordingTab,
+  });
 };
 
-export const handleRecordingError = async (
-  request: RecordingErrorRequest,
-): Promise<void> => {
+export const handleRecordingError = async (request: RecordingErrorRequest): Promise<void> => {
   console.warn("[SayLess][handleRecordingError]", request);
 
-  const errorCode =
-    request?.errorCode ||
-    classifyError(request?.why || "", request?.error || "");
+  const errorCode = request?.errorCode || classifyError(request?.why || "", request?.error || "");
 
   try {
-    const { recordingAttemptId } = await chrome.storage.local.get([
-      "recordingAttemptId",
-    ]);
+    const { recordingAttemptId } = await chrome.storage.local.get(["recordingAttemptId"]);
     await chrome.storage.local.set({
       lastRecordingError: {
         ts: Date.now(),
@@ -147,12 +131,11 @@ export const handleRecordingError = async (
       },
     });
   } catch {}
-  const { activeTab, recordingUiTabId, tabRecordedID } =
-    await chrome.storage.local.get([
-      "activeTab",
-      "recordingUiTabId",
-      "tabRecordedID",
-    ]);
+  const { activeTab, recordingUiTabId, tabRecordedID } = await chrome.storage.local.get([
+    "activeTab",
+    "recordingUiTabId",
+    "tabRecordedID",
+  ]);
 
   await chrome.storage.local.set({
     pendingRecording: false,
@@ -171,7 +154,10 @@ export const handleRecordingError = async (
       type: "stream-ended-warning",
       message: request.why || chrome.i18n.getMessage("streamEndedWarningToast"),
     }).catch((err) => {
-      diagEvent("warning", { note: "stream-ended-warning undelivered", err: String(err).slice(0, 80) });
+      diagEvent("warning", {
+        note: "stream-ended-warning undelivered",
+        err: String(err).slice(0, 80),
+      });
     });
     return;
   }
@@ -192,8 +178,7 @@ export const handleRecordingError = async (
     "sceneId",
     "recordingAttemptId",
   ]);
-  const preserveMultiProject =
-    Boolean(multiMode) && Number(multiSceneCount) > 0;
+  const preserveMultiProject = Boolean(multiMode) && Number(multiSceneCount) > 0;
   // Clear scene state when projectId clears so retries don't inherit it.
   // pendingSceneIndex must be [], not null (defaults don't fire on null).
   const multiState: Record<string, unknown> = preserveMultiProject
@@ -256,7 +241,10 @@ export const handleRecordingError = async (
       reason: "recording-error-terminal",
     })
     .catch((err) => {
-      diagEvent("warning", { note: "clear-session-safe undelivered", err: String(err).slice(0, 80) });
+      diagEvent("warning", {
+        note: "clear-session-safe undelivered",
+        err: String(err).slice(0, 80),
+      });
     });
 
   // sandboxed editor: runtime.onMessage unreliable, storage.onChanged fires.
@@ -293,9 +281,7 @@ export const handleRecordingError = async (
   sendMessageRecord({ type: "recording-error" }).then(() => {
     const candidateTabs = [activeTab, recordingUiTabId, tabRecordedID]
       .map(asTabId)
-      .filter((id, idx, arr): id is number =>
-        id !== null && arr.indexOf(id) === idx,
-      );
+      .filter((id, idx, arr): id is number => id !== null && arr.indexOf(id) === idx);
     candidateTabs.forEach((id) => {
       sendMessageTab(id, { type: "stop-pending" }).catch(() => {});
     });
@@ -373,14 +359,19 @@ export const handleGetStreamingData = async () => {
 
 export const videoReady = async () => {
   perfMark("BG.recordingHelpers videoReady.enter");
-  const { recordingDuration, recordingTab, lastRecordingBackendRef, recordingMeta, recordingAttemptId } =
-    await chrome.storage.local.get([
-      "recordingDuration",
-      "recordingTab",
-      "lastRecordingBackendRef",
-      "recordingMeta",
-      "recordingAttemptId",
-    ]);
+  const {
+    recordingDuration,
+    recordingTab,
+    lastRecordingBackendRef,
+    recordingMeta,
+    recordingAttemptId,
+  } = await chrome.storage.local.get([
+    "recordingDuration",
+    "recordingTab",
+    "lastRecordingBackendRef",
+    "recordingMeta",
+    "recordingAttemptId",
+  ]);
   diagEvent("sw-received-video-ready", {
     recordingDurationMs: Number(recordingDuration) || 0,
   });
@@ -418,7 +409,10 @@ export const videoReady = async () => {
       reason: "video-ready-terminal",
     })
     .catch((err) => {
-      diagEvent("warning", { note: "clear-session-safe undelivered (video-ready)", err: String(err).slice(0, 80) });
+      diagEvent("warning", {
+        note: "clear-session-safe undelivered (video-ready)",
+        err: String(err).slice(0, 80),
+      });
     });
   // For OPFS the editor reads chunks directly, so the recorder tab can
   // close as soon as video-ready fires. Keeping it alive holds Chrome's

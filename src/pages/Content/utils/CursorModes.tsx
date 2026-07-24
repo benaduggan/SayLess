@@ -11,9 +11,7 @@ const CursorModes = () => {
   const spotlightRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const nextEffects = Array.isArray(contentState.cursorEffects)
-      ? contentState.cursorEffects
-      : [];
+    const nextEffects = Array.isArray(contentState.cursorEffects) ? contentState.cursorEffects : [];
     effectsRef.current = new Set(nextEffects);
   }, [contentState.cursorEffects]);
 
@@ -147,7 +145,7 @@ const CursorModes = () => {
       borderRadius: "50%",
       animation: "none",
     }),
-    [showHighlight]
+    [showHighlight],
   );
 
   const targetStyle = useMemo<React.CSSProperties>(
@@ -169,21 +167,13 @@ const CursorModes = () => {
       transition:
         "opacity .5s cubic-bezier(.25,.8,.25,1), transform .35s cubic-bezier(.25,.8,.25,1)",
     }),
-    [showTarget]
+    [showTarget],
   );
 
   return (
     <div>
-      <div
-        ref={cursorHighlightRef}
-        className="cursor-highlight"
-        style={highlightStyle}
-      ></div>
-      <div
-        ref={cursorClickTargetRef}
-        className="cursor-click-target"
-        style={targetStyle}
-      ></div>
+      <div ref={cursorHighlightRef} className="cursor-highlight" style={highlightStyle}></div>
+      <div ref={cursorClickTargetRef} className="cursor-click-target" style={targetStyle}></div>
       <div
         ref={spotlightRef}
         className="spotlight"

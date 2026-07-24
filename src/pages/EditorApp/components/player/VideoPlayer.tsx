@@ -3,10 +3,7 @@ import { createPortal } from "react-dom";
 import { useEditorContent } from "../../context/ContentState";
 import { EdlContext } from "../../context/EdlContext";
 import { cropPreviewLayout, cropRelativePoint } from "../../../../edl/crop";
-import {
-  computeZoomViewportTransform,
-  zoomTransformToCss,
-} from "../../../../edl/zoomViewport";
+import { computeZoomViewportTransform, zoomTransformToCss } from "../../../../edl/zoomViewport";
 import { useProjectAudioPreview } from "../editor/useProjectAudioPreview";
 
 import Title from "./Title";
@@ -33,30 +30,26 @@ const VideoPlayer = () => {
     if (!activeZoom) return undefined;
     const viewportZoom = {
       ...activeZoom,
-      ...cropRelativePoint(
-        edlCtx?.crop,
-        activeZoom.xRatio,
-        activeZoom.yRatio,
-      ),
+      ...cropRelativePoint(edlCtx?.crop, activeZoom.xRatio, activeZoom.yRatio),
     };
-    return zoomTransformToCss(
-      computeZoomViewportTransform(viewportZoom, 100, 100),
-    );
+    return zoomTransformToCss(computeZoomViewportTransform(viewportZoom, 100, 100));
   }, [activeZoom, edlCtx?.crop]);
   const cropLayout = useMemo(
-    () => cropPreviewLayout(
+    () =>
+      cropPreviewLayout(
+        edlCtx?.crop,
+        contentState.prevWidth || contentState.width,
+        contentState.prevHeight || contentState.height,
+      ),
+    [
+      contentState.height,
+      contentState.prevHeight,
+      contentState.prevWidth,
+      contentState.width,
       edlCtx?.crop,
-      contentState.prevWidth || contentState.width,
-      contentState.prevHeight || contentState.height,
-    ),
-    [contentState.height, contentState.prevHeight, contentState.prevWidth, contentState.width, edlCtx?.crop],
+    ],
   );
-  useProjectAudioPreview(
-    videoRef,
-    edlCtx?.audioAsset,
-    edlCtx?.audioTrack,
-    edlCtx?.timeline,
-  );
+  useProjectAudioPreview(videoRef, edlCtx?.audioAsset, edlCtx?.audioTrack, edlCtx?.timeline);
 
   useEffect(() => {
     contentStateRef.current = contentState;
@@ -72,10 +65,7 @@ const VideoPlayer = () => {
   };
 
   useEffect(() => {
-    if (
-      videoRef.current &&
-      contentState.updatePlayerTime
-    ) {
+    if (videoRef.current && contentState.updatePlayerTime) {
       videoRef.current.currentTime = Number(contentState.time) || 0;
     }
   }, [contentState.time]);
@@ -112,9 +102,7 @@ const VideoPlayer = () => {
     const clear = () => {
       if (cleared) return;
       cleared = true;
-      setContentState((prev) =>
-        prev.playerLoading ? { ...prev, playerLoading: false } : prev,
-      );
+      setContentState((prev) => (prev.playerLoading ? { ...prev, playerLoading: false } : prev));
     };
     let videoEl: HTMLVideoElement | null = null;
     let safetyId: ReturnType<typeof setTimeout> | null = null;
@@ -140,8 +128,7 @@ const VideoPlayer = () => {
           event: "editor-video-decode-error",
           data: {
             mediaError: videoEl?.error?.code ?? null,
-            mediaErrorMessage:
-              String(videoEl?.error?.message || "").slice(0, 120) || null,
+            mediaErrorMessage: String(videoEl?.error?.message || "").slice(0, 120) || null,
             blobSize: contentStateRef.current?.blob?.size ?? null,
           },
         });
@@ -149,10 +136,8 @@ const VideoPlayer = () => {
       clear();
     };
     const tryAttach = () => {
-      videoEl =
-        videoRef.current || document.querySelector<HTMLVideoElement>("#plyr-player");
-      const playerEl =
-        playerRef.current || document.querySelector<HTMLElement>(".plyr");
+      videoEl = videoRef.current || document.querySelector<HTMLVideoElement>("#plyr-player");
+      const playerEl = playerRef.current || document.querySelector<HTMLElement>(".plyr");
       if (playerEl) setOverlayHost(playerEl);
       if (!videoEl) return false;
       videoEl.addEventListener("loadedmetadata", clear);
@@ -180,8 +165,7 @@ const VideoPlayer = () => {
   }, [url]);
 
   useEffect(() => {
-    if (contentStateRef.current.mp4ready || contentStateRef.current.blob)
-      return;
+    if (contentStateRef.current.mp4ready || contentStateRef.current.blob) return;
     const config = { attributes: true, childList: true, subtree: true };
 
     const callback = function (mutationsList: MutationRecord[]) {
@@ -193,8 +177,7 @@ const VideoPlayer = () => {
           !bannerRef.current &&
           !contentStateRef.current.noffmpeg &&
           !(
-            Number(contentStateRef.current.duration) >
-              Number(contentStateRef.current.editLimit) &&
+            Number(contentStateRef.current.duration) > Number(contentStateRef.current.editLimit) &&
             !contentStateRef.current.override
           )
         ) {
@@ -249,9 +232,7 @@ const VideoPlayer = () => {
               overflow: "hidden",
             }}
           >
-            <div
-              style={{ position: "absolute", inset: 0, overflow: "hidden", ...activeZoomStyle }}
-            >
+            <div style={{ position: "absolute", inset: 0, overflow: "hidden", ...activeZoomStyle }}>
               <video
                 ref={videoRef}
                 id="plyr-player"
@@ -260,14 +241,18 @@ const VideoPlayer = () => {
                 controls
                 playsInline
                 preload="metadata"
-                style={cropLayout ? {
-                  position: "absolute",
-                  maxWidth: "none",
-                  left: `${cropLayout.leftPercent}%`,
-                  top: `${cropLayout.topPercent}%`,
-                  width: `${cropLayout.widthPercent}%`,
-                  height: `${cropLayout.heightPercent}%`,
-                } : undefined}
+                style={
+                  cropLayout
+                    ? {
+                        position: "absolute",
+                        maxWidth: "none",
+                        left: `${cropLayout.leftPercent}%`,
+                        top: `${cropLayout.topPercent}%`,
+                        width: `${cropLayout.widthPercent}%`,
+                        height: `${cropLayout.heightPercent}%`,
+                      }
+                    : undefined
+                }
               />
             </div>
           </div>
@@ -313,7 +298,7 @@ const VideoPlayer = () => {
                 </div>
               )}
             </div>,
-            overlayHost
+            overlayHost,
           )}
         {contentState.mode === "player" && <Title />}
       </div>

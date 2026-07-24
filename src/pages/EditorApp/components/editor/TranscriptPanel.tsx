@@ -64,10 +64,7 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
       updatePlayerTime: true,
     }));
 
-  const onWordClick = (
-    event: { shiftKey: boolean },
-    word: TimelineWord,
-  ) => {
+  const onWordClick = (event: { shiftKey: boolean }, word: TimelineWord) => {
     if (event.shiftKey && sel) {
       setSel({
         from: Math.min(sel.from, word.index),
@@ -118,38 +115,37 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
           ? "No long audio silences detected."
           : null;
 
-  const suggestionPanel =
-    suggestions?.length ? (
-      <div style={suggestionsPanel}>
-        <div style={suggestionsHeader}>
-          <span>Suggestions</span>
-          <span style={suggestionsSubhead}>
-            {transcript ? "local transcript and audio analysis" : "local audio analysis"}
-          </span>
-        </div>
-        <div style={suggestionsList}>
-          {suggestions.slice(0, 8).map((suggestion) => (
-            <div key={suggestion.id} style={suggestionRow}>
-              <button
-                style={suggestionSeekButton}
-                onClick={() => onSuggestionSeek(suggestion)}
-                title="Seek to suggestion"
-              >
-                {suggestion.label}
-              </button>
-              <span style={suggestionReason}>{suggestion.reason}</span>
-              <button
-                style={miniButton}
-                onClick={() => applySuggestion(suggestion)}
-                disabled={exporting || transcribing}
-              >
-                Cut
-              </button>
-            </div>
-          ))}
-        </div>
+  const suggestionPanel = suggestions?.length ? (
+    <div style={suggestionsPanel}>
+      <div style={suggestionsHeader}>
+        <span>Suggestions</span>
+        <span style={suggestionsSubhead}>
+          {transcript ? "local transcript and audio analysis" : "local audio analysis"}
+        </span>
       </div>
-    ) : null;
+      <div style={suggestionsList}>
+        {suggestions.slice(0, 8).map((suggestion) => (
+          <div key={suggestion.id} style={suggestionRow}>
+            <button
+              style={suggestionSeekButton}
+              onClick={() => onSuggestionSeek(suggestion)}
+              title="Seek to suggestion"
+            >
+              {suggestion.label}
+            </button>
+            <span style={suggestionReason}>{suggestion.reason}</span>
+            <button
+              style={miniButton}
+              onClick={() => applySuggestion(suggestion)}
+              disabled={exporting || transcribing}
+            >
+              Cut
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
 
   const chaptersPanel =
     chapterMarkers?.length > 1 ? (
@@ -183,9 +179,7 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
         </div>
         <div style={chaptersList}>
           {zoomSuggestions.slice(0, 8).map((suggestion) => {
-            const saved = zoomKeyframes?.some(
-              (keyframe) => keyframe.id === suggestion.id,
-            );
+            const saved = zoomKeyframes?.some((keyframe) => keyframe.id === suggestion.id);
             return (
               <div key={suggestion.id} style={zoomRow}>
                 <button
@@ -260,8 +254,18 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
   const modelStatusPanel = (
     <div style={{ ...modelStatusBase, ...modelStatusStyle }}>
       <div style={modelStatusTopLine}>
-        <span>{modelReady ? "Model ready" : modelState === "checking" ? "Checking model" : "Model incomplete"}</span>
-        <button style={miniButton} onClick={refreshModelStatus} disabled={modelState === "checking"}>
+        <span>
+          {modelReady
+            ? "Model ready"
+            : modelState === "checking"
+              ? "Checking model"
+              : "Model incomplete"}
+        </span>
+        <button
+          style={miniButton}
+          onClick={refreshModelStatus}
+          disabled={modelState === "checking"}
+        >
           Refresh
         </button>
       </div>
@@ -312,17 +316,26 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
         <div>
           Transcribing… {Math.round((transcribeProgress || 0) * 100)}%
           <div style={barOuter}>
-            <div style={{ ...barInner, width: `${Math.round((transcribeProgress || 0) * 100)}%` }} />
+            <div
+              style={{ ...barInner, width: `${Math.round((transcribeProgress || 0) * 100)}%` }}
+            />
           </div>
-          <div style={hintText}>Loads the bundled local speech model; no remote transcription service is used.</div>
+          <div style={hintText}>
+            Loads the bundled local speech model; no remote transcription service is used.
+          </div>
         </div>
       ) : (
         <>
-          <button style={btnPrimary} onClick={() => runTranscription()} data-testid="transcript-generate">
+          <button
+            style={btnPrimary}
+            onClick={() => runTranscription()}
+            data-testid="transcript-generate"
+          >
             Generate transcript
           </button>
           <div style={hintText}>
-            Transcribe on-device with a bundled local model, then delete &amp; mute words here, or split / reorder clips on the timeline below.
+            Transcribe on-device with a bundled local model, then delete &amp; mute words here, or
+            split / reorder clips on the timeline below.
           </div>
         </>
       )}
@@ -350,15 +363,32 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
           Mute words
         </button>
         <span style={{ flex: 1 }} />
-        <button style={btn} onClick={regenerateTranscript} disabled={!modelReady || transcribing || exporting} data-testid="transcript-regenerate">
+        <button
+          style={btn}
+          onClick={regenerateTranscript}
+          disabled={!modelReady || transcribing || exporting}
+          data-testid="transcript-regenerate"
+        >
           Regenerate
         </button>
-        <button style={btnDanger} onClick={deleteTranscript} disabled={transcribing || exporting} data-testid="transcript-delete">
+        <button
+          style={btnDanger}
+          onClick={deleteTranscript}
+          disabled={transcribing || exporting}
+          data-testid="transcript-delete"
+        >
           Delete transcript
         </button>
         {hasEdits && (
           <>
-            <button style={btn} onClick={resetTimeline} disabled={exporting} data-testid="transcript-reset-edits">Reset</button>
+            <button
+              style={btn}
+              onClick={resetTimeline}
+              disabled={exporting}
+              data-testid="transcript-reset-edits"
+            >
+              Reset
+            </button>
             <button style={btnPrimary} onClick={applyEdits} disabled={exporting}>
               {exporting ? `Applying ${Math.round((exportProgress || 0) * 100)}%` : "Apply edits"}
             </button>
@@ -429,14 +459,18 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
           <span style={{ fontWeight: 700 }}>Transcript</span>
           <span style={inlineSubheadStyle}>word-level local editing</span>
         </div>
-        <div style={inlineBodyStyle} data-testid="transcript-body">{body}</div>
+        <div style={inlineBodyStyle} data-testid="transcript-body">
+          {body}
+        </div>
       </div>
     );
   }
 
   if (!open) {
     return (
-      <button style={launcherStyle} onClick={() => setOpen(true)}>Transcript</button>
+      <button style={launcherStyle} onClick={() => setOpen(true)}>
+        Transcript
+      </button>
     );
   }
 
@@ -445,7 +479,9 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
       <div style={drawerHeaderStyle}>
         <span style={{ fontWeight: 700 }}>Transcript &amp; Timeline</span>
         <span style={{ flex: 1 }} />
-        <button style={closeBtn} onClick={() => setOpen(false)} title="Hide">✕</button>
+        <button style={closeBtn} onClick={() => setOpen(false)} title="Hide">
+          ✕
+        </button>
       </div>
       <div style={drawerBodyStyle}>{body}</div>
     </div>
@@ -454,12 +490,29 @@ const TranscriptPanel = ({ variant = "drawer" }: TranscriptPanelProps) => {
 
 const Z = 2147483000;
 const drawerStyle: CSSProperties = {
-  position: "fixed", top: 88, right: 0, height: "calc(100vh - 88px)", width: 400,
-  maxWidth: "92vw", background: "#fff", borderLeft: "1px solid #eee",
-  boxShadow: "-8px 0 24px rgba(0,0,0,0.08)", zIndex: Z, display: "flex",
-  flexDirection: "column", fontSize: 14, lineHeight: 1.7, pointerEvents: "auto",
+  position: "fixed",
+  top: 88,
+  right: 0,
+  height: "calc(100vh - 88px)",
+  width: 400,
+  maxWidth: "92vw",
+  background: "#fff",
+  borderLeft: "1px solid #eee",
+  boxShadow: "-8px 0 24px rgba(0,0,0,0.08)",
+  zIndex: Z,
+  display: "flex",
+  flexDirection: "column",
+  fontSize: 14,
+  lineHeight: 1.7,
+  pointerEvents: "auto",
 };
-const drawerHeaderStyle = { display: "flex", alignItems: "center", gap: 8, padding: "12px 16px", borderBottom: "1px solid #eee" };
+const drawerHeaderStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "12px 16px",
+  borderBottom: "1px solid #eee",
+};
 const drawerBodyStyle = { padding: 16, overflow: "auto", flex: 1 };
 const inlinePanelStyle: CSSProperties = {
   height: "100%",
@@ -480,20 +533,47 @@ const inlineHeaderStyle = {
 const inlineSubheadStyle = { color: "#888", fontSize: 12 };
 const inlineBodyStyle = { padding: 16, overflow: "auto", flex: 1, minHeight: 0 };
 const launcherStyle: CSSProperties = {
-  position: "fixed", bottom: 20, right: 20, zIndex: Z, padding: "10px 16px",
-  borderRadius: 999, border: "none", background: "#4597F7", color: "#fff",
-  cursor: "pointer", boxShadow: "0 4px 14px rgba(0,0,0,0.18)", pointerEvents: "auto",
+  position: "fixed",
+  bottom: 20,
+  right: 20,
+  zIndex: Z,
+  padding: "10px 16px",
+  borderRadius: 999,
+  border: "none",
+  background: "#4597F7",
+  color: "#fff",
+  cursor: "pointer",
+  boxShadow: "0 4px 14px rgba(0,0,0,0.18)",
+  pointerEvents: "auto",
 };
-const closeBtn = { border: "none", background: "transparent", cursor: "pointer", fontSize: 16, color: "#666", lineHeight: 1 };
+const closeBtn = {
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  fontSize: 16,
+  color: "#666",
+  lineHeight: 1,
+};
 const wordsWrap = { whiteSpace: "pre-wrap" };
-const clipBlock = { border: "1px solid #eee", borderRadius: 8, padding: "8px 10px", marginBottom: 8 };
+const clipBlock = {
+  border: "1px solid #eee",
+  borderRadius: 8,
+  padding: "8px 10px",
+  marginBottom: 8,
+};
 const clipBlockMuted = { background: "#fffaf0", borderColor: "#f0e0b0" };
 const clipBadge = { fontSize: 11, color: "#888", marginBottom: 4, fontWeight: 600 };
 const wordStyle = { cursor: "pointer", borderRadius: 4, padding: "0 1px" };
 const mutedStyle = { color: "#a98800" };
 const selectedStyle = { background: "#cfe3ff" };
 const currentStyle = { boxShadow: "inset 0 -2px 0 #4597F7" };
-const btn = { padding: "6px 10px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer" };
+const btn = {
+  padding: "6px 10px",
+  borderRadius: 8,
+  border: "1px solid #ddd",
+  background: "#fff",
+  cursor: "pointer",
+};
 const btnDisabled = { ...btn, color: "#bbb", cursor: "default" };
 const btnPrimary = { ...btn, background: "#4597F7", color: "#fff", border: "none" };
 const btnDanger = { ...btn, background: "#ffe2e2", color: "#b00020", border: "1px solid #f3c2c2" };

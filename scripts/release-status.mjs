@@ -11,26 +11,10 @@ const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = process.env.SAYLESS_RELEASE_STATUS_ROOT
   ? resolve(process.env.SAYLESS_RELEASE_STATUS_ROOT)
   : DEFAULT_ROOT;
-const AUTOMATED_EVIDENCE_PATH = join(
-  ROOT,
-  "release-artifacts",
-  "release-qa-automated.json"
-);
-const MANUAL_EVIDENCE_PATH = join(
-  ROOT,
-  "release-artifacts",
-  "manual-qa-evidence.json"
-);
-const MANUAL_SESSION_PATH = join(
-  ROOT,
-  "release-artifacts",
-  "manual-qa-session.json"
-);
-const PACKAGE_EVIDENCE_PATH = join(
-  ROOT,
-  "release-artifacts",
-  "package-release.json"
-);
+const AUTOMATED_EVIDENCE_PATH = join(ROOT, "release-artifacts", "release-qa-automated.json");
+const MANUAL_EVIDENCE_PATH = join(ROOT, "release-artifacts", "manual-qa-evidence.json");
+const MANUAL_SESSION_PATH = join(ROOT, "release-artifacts", "manual-qa-session.json");
+const PACKAGE_EVIDENCE_PATH = join(ROOT, "release-artifacts", "package-release.json");
 const CWS_EVIDENCE_PATH = join(ROOT, "release-artifacts", "cws-package.json");
 const BUILD_DIR = join(ROOT, "build");
 const WHISPER_BUILD_DIR = join(BUILD_DIR, "assets", "whisper");
@@ -38,26 +22,10 @@ const PACKAGE_PATH = join(ROOT, "package.json");
 const PACKAGE_LOCK_PATH = join(ROOT, "package-lock.json");
 const SOURCE_MANIFEST_PATH = join(ROOT, "src", "manifest.json");
 const BUILD_MANIFEST_PATH = join(BUILD_DIR, "manifest.json");
-const MANUAL_QA_VERIFIER_PATH = join(
-  DEFAULT_ROOT,
-  "scripts",
-  "verify-manual-qa-evidence.mjs"
-);
-const MANUAL_QA_PROFILE_PATH = join(
-  DEFAULT_ROOT,
-  "scripts",
-  "manual-qa-profile.mjs"
-);
-const RELEASE_PACKAGE_VERIFIER_PATH = join(
-  DEFAULT_ROOT,
-  "scripts",
-  "verify-release-package.mjs"
-);
-const CWS_PACKAGE_VERIFIER_PATH = join(
-  DEFAULT_ROOT,
-  "scripts",
-  "verify-cws-package.mjs"
-);
+const MANUAL_QA_VERIFIER_PATH = join(DEFAULT_ROOT, "scripts", "verify-manual-qa-evidence.mjs");
+const MANUAL_QA_PROFILE_PATH = join(DEFAULT_ROOT, "scripts", "manual-qa-profile.mjs");
+const RELEASE_PACKAGE_VERIFIER_PATH = join(DEFAULT_ROOT, "scripts", "verify-release-package.mjs");
+const CWS_PACKAGE_VERIFIER_PATH = join(DEFAULT_ROOT, "scripts", "verify-cws-package.mjs");
 const READY_NEXT_ACTIONS = [
   "npm run verify:release-package",
   "npm run verify:cws-package",
@@ -75,13 +43,14 @@ const READY_NEXT_ACTIONS = [
 ];
 const COMPLETE_MANUAL_QA_ACTION =
   "complete docs/RELEASE_QA.md, fill release-artifacts/manual-qa-evidence.json, then run npm run qa:release:manual";
-const OPEN_MANUAL_QA_PROFILE_ACTION =
-  "npm run qa:release:manual:profile -- --launch";
+const OPEN_MANUAL_QA_PROFILE_ACTION = "npm run qa:release:manual:profile -- --launch";
 const SYNC_MANUAL_QA_PROFILE_ACTION =
   "npm run qa:release:manual:profile -- --sync-template --launch";
 const REVIEW_MANUAL_QA_PROGRESS_ACTION = "npm run qa:release:manual:progress";
 const MANUAL_SESSION_KIND = "sayless.manualQaSession";
 const REQUIRED_AUTOMATED_COMMANDS = [
+  "lint",
+  "format:check",
   "typecheck",
   "test:unit",
   "test:e2e:offline-whisper-assets",
@@ -93,13 +62,12 @@ const REQUIRED_AUTOMATED_COMMANDS = [
   "test:e2e:built-extension-surface",
   "verify:release",
 ];
-const CONDITIONAL_AUTOMATED_COMMANDS = [
-  "test:e2e:offline-transcription-speech",
-];
+const CONDITIONAL_AUTOMATED_COMMANDS = ["test:e2e:offline-transcription-speech"];
 const EXPECTED_AUTOMATED_COMMANDS = new Map(
-  [...REQUIRED_AUTOMATED_COMMANDS, ...CONDITIONAL_AUTOMATED_COMMANDS].map(
-    (label) => [label, `npm run ${label}`]
-  )
+  [...REQUIRED_AUTOMATED_COMMANDS, ...CONDITIONAL_AUTOMATED_COMMANDS].map((label) => [
+    label,
+    `npm run ${label}`,
+  ]),
 );
 const AUTOMATED_RUN_WINDOW_TOLERANCE_MS = 5_000;
 
@@ -117,8 +85,7 @@ const isIsoDate = (value) =>
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value) &&
   !Number.isNaN(Date.parse(value));
 const timestampMs = (value) => (isIsoDate(value) ? Date.parse(value) : null);
-const nonEmptyString = (value) =>
-  typeof value === "string" && value.trim().length > 0;
+const nonEmptyString = (value) => typeof value === "string" && value.trim().length > 0;
 const quoteShellArg = (value) => {
   if (/^[A-Za-z0-9_/:=.,@%+-]+$/.test(value)) return value;
   return `'${value.replace(/'/g, "'\\''")}'`;
@@ -158,12 +125,7 @@ const discoverActiveManualQaSession = () => {
   }
   const validation = spawnSync(
     process.execPath,
-    [
-      MANUAL_QA_PROFILE_PATH,
-      "--json",
-      "--resume-profile",
-      `--profile-dir=${session.profileDir}`,
-    ],
+    [MANUAL_QA_PROFILE_PATH, "--json", "--resume-profile", `--profile-dir=${session.profileDir}`],
     {
       cwd: ROOT,
       env: {
@@ -171,7 +133,7 @@ const discoverActiveManualQaSession = () => {
         SAYLESS_MANUAL_QA_PROFILE_ROOT: ROOT,
       },
       encoding: "utf8",
-    }
+    },
   );
   if (validation.status !== 0) {
     let reason = validation.stderr.trim() || validation.stdout.trim();
@@ -204,8 +166,7 @@ const discoverActiveManualQaSession = () => {
     profile.profileMarkerPath === session.profileMarkerPath &&
     profile.profileCreatedAt === session.profileCreatedAt &&
     profile.buildManifestVersion === session.releaseVersion &&
-    profile.automatedEvidenceGeneratedAt ===
-      session.automatedEvidenceGeneratedAt &&
+    profile.automatedEvidenceGeneratedAt === session.automatedEvidenceGeneratedAt &&
     profile.buildSha256 === session.buildSha256 &&
     profile.browserObservedExtensionId === session.unpackedExtensionId &&
     profile.detectedEnvironment?.os === session.operatingSystem &&
@@ -217,8 +178,7 @@ const discoverActiveManualQaSession = () => {
       exists: true,
       usable: false,
       profileDir: session.profileDir,
-      reason:
-        "active session metadata does not match its strictly validated profile marker",
+      reason: "active session metadata does not match its strictly validated profile marker",
     };
   }
   return {
@@ -241,8 +201,7 @@ const sortedStrings = (value) =>
     .sort();
 
 const arraysEqual = (left, right) =>
-  left.length === right.length &&
-  left.every((value, index) => value === right[index]);
+  left.length === right.length && left.every((value, index) => value === right[index]);
 
 const formatBytes = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -279,8 +238,7 @@ const dirFingerprint = (dir) => {
   return { fileCount: files.length, sha256: hash.digest("hex") };
 };
 
-const dirSize = (dir) =>
-  walkFiles(dir).reduce((total, file) => total + file.size, 0);
+const dirSize = (dir) => walkFiles(dir).reduce((total, file) => total + file.size, 0);
 
 const gitOutput = (args) => {
   const result = spawnSync("git", args, {
@@ -348,8 +306,7 @@ const releaseManifestSurface = (manifest) => {
     hasIdentityPermission: allPermissions.has("identity"),
     hasGoogleDrivePermission: allPermissions.has("drive.file"),
     hasRemoteConnectSrc:
-      /\bconnect-src\b[^;]*(?:https?:|wss?:)/i.test(csp) ||
-      /\bconnect-src\b[^;]*\*/i.test(csp),
+      /\bconnect-src\b[^;]*(?:https?:|wss?:)/i.test(csp) || /\bconnect-src\b[^;]*\*/i.test(csp),
     contentSecurityPolicyExtensionPages: csp,
   };
 };
@@ -357,9 +314,7 @@ const releaseManifestSurface = (manifest) => {
 const compareEvidenceRecord = ({ label, actual, expected, fields, errors }) => {
   for (const field of fields) {
     if (actual?.[field] !== expected?.[field]) {
-      errors.push(
-        `automated QA evidence ${label}.${field} must match current ${label}.`
-      );
+      errors.push(`automated QA evidence ${label}.${field} must match current ${label}.`);
     }
   }
 };
@@ -375,9 +330,7 @@ const validateAutomatedEvidence = (state) => {
     return {
       passed: false,
       exitCode: 1,
-      output: errors
-        .map((error) => `AUTOMATED QA EVIDENCE FAIL: ${error}`)
-        .join("\n"),
+      output: errors.map((error) => `AUTOMATED QA EVIDENCE FAIL: ${error}`).join("\n"),
     };
   }
 
@@ -387,41 +340,29 @@ const validateAutomatedEvidence = (state) => {
   const sourceManifest = readJson(SOURCE_MANIFEST_PATH);
   const buildManifest = readJson(BUILD_MANIFEST_PATH);
 
-  if (packageJson.error)
-    errors.push(`package.json is not valid JSON: ${packageJson.error}`);
-  if (packageLock.error)
-    errors.push(`package-lock.json is not valid JSON: ${packageLock.error}`);
-  if (sourceManifest.error)
-    errors.push(`src manifest is not valid JSON: ${sourceManifest.error}`);
-  if (buildManifest.error)
-    errors.push(`build manifest is not valid JSON: ${buildManifest.error}`);
+  if (packageJson.error) errors.push(`package.json is not valid JSON: ${packageJson.error}`);
+  if (packageLock.error) errors.push(`package-lock.json is not valid JSON: ${packageLock.error}`);
+  if (sourceManifest.error) errors.push(`src manifest is not valid JSON: ${sourceManifest.error}`);
+  if (buildManifest.error) errors.push(`build manifest is not valid JSON: ${buildManifest.error}`);
   if (errors.length) {
     return {
       passed: false,
       exitCode: 1,
-      output: errors
-        .map((error) => `AUTOMATED QA EVIDENCE FAIL: ${error}`)
-        .join("\n"),
+      output: errors.map((error) => `AUTOMATED QA EVIDENCE FAIL: ${error}`).join("\n"),
     };
   }
 
   if (evidence.kind !== "sayless.releaseQaAutomated") {
-    errors.push(
-      'automated QA evidence kind must be "sayless.releaseQaAutomated".'
-    );
+    errors.push('automated QA evidence kind must be "sayless.releaseQaAutomated".');
   }
   if (evidence.status !== "passed") {
     errors.push('automated QA evidence status must be "passed".');
   }
   if (!isIsoDate(evidence.startedAt)) {
-    errors.push(
-      "automated QA evidence startedAt must be an ISO UTC timestamp."
-    );
+    errors.push("automated QA evidence startedAt must be an ISO UTC timestamp.");
   }
   if (!isIsoDate(evidence.generatedAt)) {
-    errors.push(
-      "automated QA evidence generatedAt must be an ISO UTC timestamp."
-    );
+    errors.push("automated QA evidence generatedAt must be an ISO UTC timestamp.");
   }
   const automatedStartedAtMs = timestampMs(evidence.startedAt);
   const automatedGeneratedAtMs = timestampMs(evidence.generatedAt);
@@ -430,9 +371,7 @@ const validateAutomatedEvidence = (state) => {
     automatedGeneratedAtMs !== null &&
     automatedGeneratedAtMs < automatedStartedAtMs
   ) {
-    errors.push(
-      "automated QA evidence generatedAt must be at or after startedAt."
-    );
+    errors.push("automated QA evidence generatedAt must be at or after startedAt.");
   }
   if (!Number.isFinite(evidence.durationMs) || evidence.durationMs <= 0) {
     errors.push("automated QA evidence durationMs must be a positive number.");
@@ -444,12 +383,9 @@ const validateAutomatedEvidence = (state) => {
     evidence.durationMs > 0
   ) {
     const runWindowMs = automatedGeneratedAtMs - automatedStartedAtMs;
-    if (
-      Math.abs(runWindowMs - evidence.durationMs) >
-      AUTOMATED_RUN_WINDOW_TOLERANCE_MS
-    ) {
+    if (Math.abs(runWindowMs - evidence.durationMs) > AUTOMATED_RUN_WINDOW_TOLERANCE_MS) {
       errors.push(
-        "automated QA evidence durationMs must match the startedAt/generatedAt run window."
+        "automated QA evidence durationMs must match the startedAt/generatedAt run window.",
       );
     }
   }
@@ -459,17 +395,12 @@ const validateAutomatedEvidence = (state) => {
   if (!nonEmptyString(evidence?.git?.commit)) {
     errors.push("automated QA evidence git.commit is required.");
   } else if (!/^[0-9a-f]{40}$/i.test(evidence.git.commit)) {
-    errors.push(
-      "automated QA evidence git.commit must be a 40-character SHA-1 commit."
-    );
+    errors.push("automated QA evidence git.commit must be a 40-character SHA-1 commit.");
   }
   if (typeof evidence?.git?.dirty !== "boolean") {
     errors.push("automated QA evidence git.dirty must be a boolean.");
   }
-  if (
-    !evidence?.git?.workingTree ||
-    typeof evidence.git.workingTree !== "object"
-  ) {
+  if (!evidence?.git?.workingTree || typeof evidence.git.workingTree !== "object") {
     errors.push("automated QA evidence git.workingTree is required.");
   } else {
     const workingTree = evidence.git.workingTree;
@@ -477,22 +408,15 @@ const validateAutomatedEvidence = (state) => {
       errors.push("automated QA evidence git.workingTree.sha256 is required.");
     }
     if (!Number.isFinite(workingTree.fileCount) || workingTree.fileCount < 0) {
-      errors.push(
-        "automated QA evidence git.workingTree.fileCount must be a non-negative number."
-      );
+      errors.push("automated QA evidence git.workingTree.fileCount must be a non-negative number.");
     }
     if (!nonEmptyString(workingTree.statusSha256)) {
-      errors.push(
-        "automated QA evidence git.workingTree.statusSha256 is required."
-      );
+      errors.push("automated QA evidence git.workingTree.statusSha256 is required.");
     }
     const currentWorkingTree = gitWorktreeFingerprint();
-    if (
-      nonEmptyString(workingTree.sha256) &&
-      workingTree.sha256 !== currentWorkingTree.sha256
-    ) {
+    if (nonEmptyString(workingTree.sha256) && workingTree.sha256 !== currentWorkingTree.sha256) {
       errors.push(
-        "automated QA evidence git.workingTree.sha256 must match the current git worktree."
+        "automated QA evidence git.workingTree.sha256 must match the current git worktree.",
       );
     }
     if (
@@ -500,7 +424,7 @@ const validateAutomatedEvidence = (state) => {
       workingTree.fileCount !== currentWorkingTree.fileCount
     ) {
       errors.push(
-        "automated QA evidence git.workingTree.fileCount must match the current git worktree."
+        "automated QA evidence git.workingTree.fileCount must match the current git worktree.",
       );
     }
     if (
@@ -508,74 +432,54 @@ const validateAutomatedEvidence = (state) => {
       workingTree.statusSha256 !== currentWorkingTree.statusSha256
     ) {
       errors.push(
-        "automated QA evidence git.workingTree.statusSha256 must match the current git status."
+        "automated QA evidence git.workingTree.statusSha256 must match the current git status.",
       );
     }
   }
   if (evidence.releaseVersion !== packageJson.version) {
-    errors.push(
-      "automated QA evidence releaseVersion must match package.json."
-    );
+    errors.push("automated QA evidence releaseVersion must match package.json.");
   }
   if (evidence.packageLockVersion !== packageLock.version) {
-    errors.push(
-      "automated QA evidence packageLockVersion must match package-lock.json."
-    );
+    errors.push("automated QA evidence packageLockVersion must match package-lock.json.");
   }
   if (evidence.packageLockRootVersion !== packageLock.packages?.[""]?.version) {
     errors.push(
-      "automated QA evidence packageLockRootVersion must match package-lock root package."
+      "automated QA evidence packageLockRootVersion must match package-lock root package.",
     );
   }
   if (evidence.manifestVersion !== sourceManifest.version) {
-    errors.push(
-      "automated QA evidence manifestVersion must match src/manifest.json."
-    );
+    errors.push("automated QA evidence manifestVersion must match src/manifest.json.");
   }
   if (evidence.buildManifestVersion !== buildManifest.version) {
-    errors.push(
-      "automated QA evidence buildManifestVersion must match build/manifest.json."
-    );
+    errors.push("automated QA evidence buildManifestVersion must match build/manifest.json.");
   }
   if (!/^[a-p]{32}$/.test(evidence?.builtExtension?.id || "")) {
     errors.push(
-      "automated QA evidence builtExtension.id must be a browser-observed 32-character Chrome extension id."
+      "automated QA evidence builtExtension.id must be a browser-observed 32-character Chrome extension id.",
     );
   }
   if (evidence?.builtExtension?.buildPath !== "build") {
-    errors.push(
-      "automated QA evidence builtExtension.buildPath must match build."
-    );
+    errors.push("automated QA evidence builtExtension.buildPath must match build.");
   }
   if (evidence?.builtExtension?.cleanChromeProfile !== true) {
-    errors.push(
-      "automated QA evidence builtExtension.cleanChromeProfile must be true."
-    );
+    errors.push("automated QA evidence builtExtension.cleanChromeProfile must be true.");
   }
-  const builtExtensionObservedAtMs = timestampMs(
-    evidence?.builtExtension?.observedAt
-  );
+  const builtExtensionObservedAtMs = timestampMs(evidence?.builtExtension?.observedAt);
   if (builtExtensionObservedAtMs === null) {
-    errors.push(
-      "automated QA evidence builtExtension.observedAt must be an ISO UTC timestamp."
-    );
+    errors.push("automated QA evidence builtExtension.observedAt must be an ISO UTC timestamp.");
   } else if (
-    (automatedStartedAtMs !== null &&
-      builtExtensionObservedAtMs < automatedStartedAtMs) ||
-    (automatedGeneratedAtMs !== null &&
-      builtExtensionObservedAtMs > automatedGeneratedAtMs)
+    (automatedStartedAtMs !== null && builtExtensionObservedAtMs < automatedStartedAtMs) ||
+    (automatedGeneratedAtMs !== null && builtExtensionObservedAtMs > automatedGeneratedAtMs)
   ) {
     errors.push(
-      "automated QA evidence builtExtension.observedAt must fall within the automated QA run window."
+      "automated QA evidence builtExtension.observedAt must fall within the automated QA run window.",
     );
   }
   if (
     !Number.isInteger(evidence?.builtExtension?.summaryCount) ||
     evidence.builtExtension.summaryCount <= 0
   ) {
-    errors.push(
-      "automated QA evidence builtExtension.summaryCount must be a positive integer."
-    );
+    errors.push("automated QA evidence builtExtension.summaryCount must be a positive integer.");
   }
 
   const commandLabels = new Set();
@@ -583,11 +487,7 @@ const validateAutomatedEvidence = (state) => {
   for (const command of arrayFrom(evidence.commands)) {
     const label = command?.label;
     if (!EXPECTED_AUTOMATED_COMMANDS.has(label)) {
-      errors.push(
-        `automated QA evidence contains unexpected command ${
-          label || "<missing>"
-        }.`
-      );
+      errors.push(`automated QA evidence contains unexpected command ${label || "<missing>"}.`);
       continue;
     }
     if (commandLabels.has(label)) {
@@ -595,26 +495,17 @@ const validateAutomatedEvidence = (state) => {
     }
     commandLabels.add(label);
     if (command.status !== "passed") {
-      errors.push(
-        `automated QA evidence command ${label} must have status "passed".`
-      );
+      errors.push(`automated QA evidence command ${label} must have status "passed".`);
     }
-    if (
-      !commandMatchesExpected(
-        command.command,
-        EXPECTED_AUTOMATED_COMMANDS.get(label)
-      )
-    ) {
+    if (!commandMatchesExpected(command.command, EXPECTED_AUTOMATED_COMMANDS.get(label))) {
       errors.push(
         `automated QA evidence command ${label} must be "${EXPECTED_AUTOMATED_COMMANDS.get(
-          label
-        )}".`
+          label,
+        )}".`,
       );
     }
     if (!Number.isFinite(command.durationMs) || command.durationMs < 0) {
-      errors.push(
-        `automated QA evidence command ${label} must include a non-negative durationMs.`
-      );
+      errors.push(`automated QA evidence command ${label} must include a non-negative durationMs.`);
     } else {
       commandDurationTotal += command.durationMs;
     }
@@ -627,41 +518,30 @@ const validateAutomatedEvidence = (state) => {
   for (const skipped of arrayFrom(evidence.skippedCommands)) {
     if (!CONDITIONAL_AUTOMATED_COMMANDS.includes(skipped?.label)) {
       errors.push(
-        `automated QA evidence skipped command ${
-          skipped?.label || "<missing>"
-        } is not expected.`
+        `automated QA evidence skipped command ${skipped?.label || "<missing>"} is not expected.`,
       );
     }
     if (!nonEmptyString(skipped?.reason)) {
       errors.push(
         `automated QA evidence skipped command ${
           skipped?.label || "<missing>"
-        } must include a useful reason.`
+        } must include a useful reason.`,
       );
     }
   }
   for (const label of CONDITIONAL_AUTOMATED_COMMANDS) {
     const hasCommand = commandLabels.has(label);
-    const hasSkip = arrayFrom(evidence.skippedCommands).some(
-      (skipped) => skipped?.label === label
-    );
+    const hasSkip = arrayFrom(evidence.skippedCommands).some((skipped) => skipped?.label === label);
     if (hasCommand && hasSkip) {
-      errors.push(
-        `automated QA evidence command ${label} cannot be both completed and skipped.`
-      );
+      errors.push(`automated QA evidence command ${label} cannot be both completed and skipped.`);
     } else if (!hasCommand && !hasSkip) {
       errors.push(
-        `automated QA evidence command ${label} must be completed or skipped with a reason.`
+        `automated QA evidence command ${label} must be completed or skipped with a reason.`,
       );
     }
   }
-  if (
-    Number.isFinite(evidence.durationMs) &&
-    commandDurationTotal > evidence.durationMs
-  ) {
-    errors.push(
-      "automated QA evidence command durations must not exceed total durationMs."
-    );
+  if (Number.isFinite(evidence.durationMs) && commandDurationTotal > evidence.durationMs) {
+    errors.push("automated QA evidence command durations must not exceed total durationMs.");
   }
 
   const buildFingerprint = dirFingerprint(BUILD_DIR);
@@ -702,13 +582,11 @@ const validateAutomatedEvidence = (state) => {
     if (Array.isArray(expected)) {
       if (!arraysEqual(sortedStrings(actual), expected)) {
         errors.push(
-          `automated QA evidence releaseSurface.${field} must match build/manifest.json.`
+          `automated QA evidence releaseSurface.${field} must match build/manifest.json.`,
         );
       }
     } else if (actual !== expected) {
-      errors.push(
-        `automated QA evidence releaseSurface.${field} must match build/manifest.json.`
-      );
+      errors.push(`automated QA evidence releaseSurface.${field} must match build/manifest.json.`);
     }
   }
   for (const field of [
@@ -719,18 +597,14 @@ const validateAutomatedEvidence = (state) => {
     "hasRemoteConnectSrc",
   ]) {
     if (evidence.releaseSurface?.[field] !== false) {
-      errors.push(
-        `automated QA evidence releaseSurface.${field} must be false.`
-      );
+      errors.push(`automated QA evidence releaseSurface.${field} must be false.`);
     }
   }
 
   return {
     passed: errors.length === 0,
     exitCode: errors.length === 0 ? 0 : 1,
-    output: errors
-      .map((error) => `AUTOMATED QA EVIDENCE FAIL: ${error}`)
-      .join("\n"),
+    output: errors.map((error) => `AUTOMATED QA EVIDENCE FAIL: ${error}`).join("\n"),
   };
 };
 
@@ -754,9 +628,7 @@ const manualTemplateSyncState = (state, automatedPassed) => {
   if (!automatedPassed) {
     return {
       required: true,
-      reasons: [
-        "current automated QA must pass before template freshness can be established",
-      ],
+      reasons: ["current automated QA must pass before template freshness can be established"],
     };
   }
   const evidence = readJson(MANUAL_EVIDENCE_PATH);
@@ -770,7 +642,7 @@ const manualTemplateSyncState = (state, automatedPassed) => {
       cwd: ROOT,
       env: { ...process.env, SAYLESS_MANUAL_QA_ROOT: ROOT },
       encoding: "utf8",
-    }
+    },
   );
   if (templateResult.status !== 0) {
     return {
@@ -817,8 +689,7 @@ const evidenceState = (path, expectedKind) => {
     generatedAt: evidence.generatedAt,
     releaseVersion: evidence.releaseVersion,
     failedStep: evidence.failedStep,
-    remainingReleaseWork:
-      evidence.remainingReleaseWork || evidence.remainingManualQa,
+    remainingReleaseWork: evidence.remainingReleaseWork || evidence.remainingManualQa,
   };
 };
 
@@ -865,12 +736,7 @@ const summarizeVerifier = (state, verifier) => ({
   ...summarizeVerifierOutput(verifier.output),
 });
 
-const manualQaTodo = (
-  state,
-  verifier,
-  templateSyncRequired,
-  currentProfileAction
-) => {
+const manualQaTodo = (state, verifier, templateSyncRequired, currentProfileAction) => {
   if (!state.exists) {
     return [
       "Generate release-artifacts/manual-qa-evidence.json with npm run qa:release:manual:template.",
@@ -908,10 +774,7 @@ const manualQaTodo = (
   return [];
 };
 
-const automated = evidenceState(
-  AUTOMATED_EVIDENCE_PATH,
-  "sayless.releaseQaAutomated"
-);
+const automated = evidenceState(AUTOMATED_EVIDENCE_PATH, "sayless.releaseQaAutomated");
 const automatedVerifier = validateAutomatedEvidence(automated);
 const manualVerifier = runVerifier(MANUAL_QA_VERIFIER_PATH, {
   SAYLESS_MANUAL_QA_ROOT: ROOT,
@@ -927,15 +790,15 @@ const status = {
   automatedQa: summarizeVerifier(automated, automatedVerifier),
   manualQa: summarizeVerifier(
     evidenceState(MANUAL_EVIDENCE_PATH, "sayless.manualQaEvidence"),
-    manualVerifier
+    manualVerifier,
   ),
   releasePackage: summarizeVerifier(
     evidenceState(PACKAGE_EVIDENCE_PATH, "sayless.releasePackage"),
-    releasePackageVerifier
+    releasePackageVerifier,
   ),
   cwsPackage: summarizeVerifier(
     evidenceState(CWS_EVIDENCE_PATH, "sayless.cwsPackage"),
-    cwsPackageVerifier
+    cwsPackageVerifier,
   ),
 };
 
@@ -960,10 +823,9 @@ status.manualQa.todo = manualQaTodo(
   status.manualQa,
   manualVerifier,
   templateSync.required,
-  currentManualQaProfileAction
+  currentManualQaProfileAction,
 );
-const manualQaNeedsCompletion =
-  status.manualQa.exists && status.manualQa.status === "template";
+const manualQaNeedsCompletion = status.manualQa.exists && status.manualQa.status === "template";
 
 let overall = "blocked";
 let nextAction = "npm run qa:release:auto";
@@ -986,20 +848,13 @@ if (!automatedPassed) {
     : "npm run qa:release:manual";
   nextActions = manualQaNeedsCompletion
     ? [nextAction, REVIEW_MANUAL_QA_PROGRESS_ACTION, COMPLETE_MANUAL_QA_ACTION]
-    : [
-        "fix release-artifacts/manual-qa-evidence.json",
-        "npm run qa:release:manual",
-      ];
+    : ["fix release-artifacts/manual-qa-evidence.json", "npm run qa:release:manual"];
 } else if (!status.releasePackage.verifierPassed) {
   nextAction = "npm run package:release";
   nextActions = ["npm run package:release", "npm run verify:release-package"];
 } else if (!status.cwsPackage.verifierPassed) {
   nextAction = "npm run build:cws";
-  nextActions = [
-    "npm run build:cws",
-    "npm run verify:cws-package",
-    "npm run qa:release:status",
-  ];
+  nextActions = ["npm run build:cws", "npm run verify:cws-package", "npm run qa:release:status"];
 } else {
   overall = "ready";
   nextActions = READY_NEXT_ACTIONS;
@@ -1023,21 +878,15 @@ if (process.argv.includes("--json")) {
   console.log("");
   for (const [label, item] of Object.entries(status)) {
     const verifier =
-      "verifierPassed" in item
-        ? `, verifier=${item.verifierPassed ? "passed" : "failed"}`
-        : "";
+      "verifierPassed" in item ? `, verifier=${item.verifierPassed ? "passed" : "failed"}` : "";
     const displayStatus = item.gateStatus || item.status;
     console.log(`${label}: ${displayStatus} (${item.path}${verifier})`);
     if (item.remainingReleaseWork) {
       console.log(`  ${item.remainingReleaseWork}`);
     }
     if (!item.verifierPassed && item.verifierErrorCount) {
-      const firstSummary = item.verifierSummary?.[0]
-        ? `; first: ${item.verifierSummary[0]}`
-        : "";
-      console.log(
-        `  ${item.verifierErrorCount} verifier issue(s)${firstSummary}`
-      );
+      const firstSummary = item.verifierSummary?.[0] ? `; first: ${item.verifierSummary[0]}` : "";
+      console.log(`  ${item.verifierErrorCount} verifier issue(s)${firstSummary}`);
     }
     if (label === "manualQa" && item.todo?.length) {
       if (item.activeSession) {
@@ -1046,7 +895,7 @@ if (process.argv.includes("--json")) {
             item.activeSession.usable
               ? `resumable (${item.activeSession.profileDir})`
               : item.activeSession.reason
-          }`
+          }`,
         );
       }
       console.log("  Manual QA todo:");
@@ -1066,7 +915,7 @@ if (process.argv.includes("--json")) {
 
 if (requireReady && overall !== "ready") {
   console.error(
-    `Release status must be ready before this action can continue; current status is ${overall}.`
+    `Release status must be ready before this action can continue; current status is ${overall}.`,
   );
   console.error(`Next action: ${nextAction}`);
   process.exit(1);

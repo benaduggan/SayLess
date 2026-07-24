@@ -6,10 +6,7 @@ export interface ProjectAudioProbe {
   sampleRate: number;
 }
 
-type AudioContextLike = Pick<
-  AudioContext,
-  "decodeAudioData" | "close"
->;
+type AudioContextLike = Pick<AudioContext, "decodeAudioData" | "close">;
 
 type ProjectAudioValidationOptions = {
   createAudioContext?: () => AudioContextLike;
@@ -18,8 +15,7 @@ type ProjectAudioValidationOptions = {
 const defaultAudioContext = (): AudioContextLike => {
   const AudioContextCtor =
     window.AudioContext ||
-    (window as unknown as { webkitAudioContext?: typeof AudioContext })
-      .webkitAudioContext;
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AudioContextCtor) {
     throw new Error("project-audio-decode-unavailable");
   }
@@ -56,10 +52,7 @@ export async function validateProjectAudioBlob(
     }
     return { duration, numberOfChannels, sampleRate };
   } catch (cause) {
-    if (
-      cause instanceof Error &&
-      cause.message.startsWith("project-audio-decode-")
-    ) {
+    if (cause instanceof Error && cause.message.startsWith("project-audio-decode-")) {
       throw cause;
     }
     throw new Error("project-audio-decode-unsupported", { cause });

@@ -12,14 +12,12 @@ if (container) {
   root.render(
     <CameraProvider>
       <Camera />
-    </CameraProvider>
+    </CameraProvider>,
   );
 }
 
 // Hot Module Replacement
-const hotModule = (
-  import.meta as ImportMeta & { webpackHot?: { accept: () => void } }
-).webpackHot;
+const hotModule = (import.meta as ImportMeta & { webpackHot?: { accept: () => void } }).webpackHot;
 if (hotModule) {
   hotModule.accept();
 }

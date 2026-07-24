@@ -15,10 +15,8 @@ const runProbe = (...args) =>
     encoding: "utf8",
   });
 
-const writeJson = (path, value) =>
-  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
-const sha256 = (path) =>
-  createHash("sha256").update(readFileSync(path)).digest("hex");
+const writeJson = (path, value) => writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+const sha256 = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
 
 const makeFixture = () => {
   const dir = mkdtempSync(join(tmpdir(), "sayless-sidecar-probe-"));
@@ -27,7 +25,7 @@ const makeFixture = () => {
   const projectPath = join(dir, "Real recording.sayless-project.json");
   writeFileSync(
     vttPath,
-    "WEBVTT\n\n00:00:00.100 --> 00:00:00.400\nhello\n\n00:00:01.200 --> 00:00:01.700\noffline recording\n"
+    "WEBVTT\n\n00:00:00.100 --> 00:00:00.400\nhello\n\n00:00:01.200 --> 00:00:01.700\noffline recording\n",
   );
   writeJson(transcriptPath, {
     kind: "sayless.localRecordingTranscript",
@@ -97,7 +95,7 @@ test("manual QA sidecar probe validates a complete export set", () => {
       "--require-complete",
       fixture.vttPath,
       fixture.transcriptPath,
-      fixture.projectPath
+      fixture.projectPath,
     );
     assert.equal(result.status, 0, result.stderr);
     const report = JSON.parse(result.stdout);
@@ -179,7 +177,7 @@ test("manual QA sidecar probe prints read-only human guidance", () => {
     assert.match(result.stdout, /Timeline-aware words: 1/);
     assert.match(
       result.stdout,
-      /Sidecar coverage: incomplete \(2\/3 formats, 0 matched complete sets\)/
+      /Sidecar coverage: incomplete \(2\/3 formats, 0 matched complete sets\)/,
     );
     assert.match(result.stdout, /TODO: sayless-project-json/);
     assert.match(result.stdout, /Structural checks are read-only/);
@@ -191,23 +189,17 @@ test("manual QA sidecar probe prints read-only human guidance", () => {
 test("manual QA sidecar probe requires one matched three-format export set", () => {
   const fixture = makeFixture();
   try {
-    const otherProjectPath = join(
-      fixture.dir,
-      "Other recording.sayless-project.json"
-    );
+    const otherProjectPath = join(fixture.dir, "Other recording.sayless-project.json");
     writeFileSync(otherProjectPath, readFileSync(fixture.projectPath));
     const splitSetResult = runProbe(
       "--json",
       "--require-complete",
       fixture.vttPath,
       fixture.transcriptPath,
-      otherProjectPath
+      otherProjectPath,
     );
     assert.equal(splitSetResult.status, 1);
-    assert.match(
-      splitSetResult.stderr,
-      /no filename-matched structurally complete/
-    );
+    assert.match(splitSetResult.stderr, /no filename-matched structurally complete/);
     const splitSetReport = JSON.parse(splitSetResult.stdout);
     assert.equal(splitSetReport.coverage.passedFormatCount, 3);
     assert.equal(splitSetReport.coverage.completeSetCount, 0);
@@ -217,12 +209,10 @@ test("manual QA sidecar probe requires one matched three-format export set", () 
       [
         ["Other recording", "incomplete"],
         ["Real recording", "incomplete"],
-      ]
+      ],
     );
 
-    const mismatchedProject = JSON.parse(
-      readFileSync(fixture.projectPath, "utf8")
-    );
+    const mismatchedProject = JSON.parse(readFileSync(fixture.projectPath, "utf8"));
     mismatchedProject.recording.id = "different-recording";
     mismatchedProject.project.recordingId = "different-recording";
     writeJson(fixture.projectPath, mismatchedProject);
@@ -231,20 +221,14 @@ test("manual QA sidecar probe requires one matched three-format export set", () 
       "--require-complete",
       fixture.vttPath,
       fixture.transcriptPath,
-      fixture.projectPath
+      fixture.projectPath,
     );
     assert.equal(mismatchedIdResult.status, 1);
-    assert.match(
-      mismatchedIdResult.stderr,
-      /no filename-matched structurally complete/
-    );
+    assert.match(mismatchedIdResult.stderr, /no filename-matched structurally complete/);
     const mismatchedIdReport = JSON.parse(mismatchedIdResult.stdout);
     assert.equal(mismatchedIdReport.coverage.status, "incomplete");
     assert.equal(mismatchedIdReport.coverage.completeSetCount, 0);
-    assert.equal(
-      mismatchedIdReport.coverage.sidecarSets[0].status,
-      "recording-id-mismatch"
-    );
+    assert.equal(mismatchedIdReport.coverage.sidecarSets[0].status, "recording-id-mismatch");
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -259,7 +243,7 @@ test("manual QA sidecar probe atomically preserves strict diagnostic reports", (
       "--require-complete",
       `--output=${reportPath}`,
       fixture.vttPath,
-      fixture.transcriptPath
+      fixture.transcriptPath,
     );
     assert.equal(result.status, 1);
     const report = JSON.parse(result.stdout);
@@ -268,15 +252,9 @@ test("manual QA sidecar probe atomically preserves strict diagnostic reports", (
     assert.deepEqual(JSON.parse(readFileSync(reportPath, "utf8")), report);
 
     const originalVtt = readFileSync(fixture.vttPath);
-    const overwriteResult = runProbe(
-      `--output=${fixture.vttPath}`,
-      fixture.vttPath
-    );
+    const overwriteResult = runProbe(`--output=${fixture.vttPath}`, fixture.vttPath);
     assert.equal(overwriteResult.status, 1);
-    assert.match(
-      overwriteResult.stderr,
-      /must not overwrite an inspected input/
-    );
+    assert.match(overwriteResult.stderr, /must not overwrite an inspected input/);
     assert.deepEqual(readFileSync(fixture.vttPath), originalVtt);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -306,21 +284,13 @@ test("manual QA sidecar probe rejects malformed or substituted exports", () => {
     assert.equal(oldProjectResult.status, 1);
     assert.match(oldProjectResult.stderr, /project\.version must be 4/);
 
-    const invalidClipProject = JSON.parse(
-      readFileSync(fixture.projectPath, "utf8")
-    );
+    const invalidClipProject = JSON.parse(readFileSync(fixture.projectPath, "utf8"));
     invalidClipProject.project.timeline.clips[0].sourceEnd = 3;
-    const invalidClipPath = join(
-      fixture.dir,
-      "invalid-clip.sayless-project.json"
-    );
+    const invalidClipPath = join(fixture.dir, "invalid-clip.sayless-project.json");
     writeJson(invalidClipPath, invalidClipProject);
     const invalidClipResult = runProbe(invalidClipPath);
     assert.equal(invalidClipResult.status, 1);
-    assert.match(
-      invalidClipResult.stderr,
-      /project\.timeline\.clips\[0\] is invalid/
-    );
+    assert.match(invalidClipResult.stderr, /project\.timeline\.clips\[0\] is invalid/);
 
     const unknownJson = join(fixture.dir, "unknown.json");
     writeJson(unknownJson, { kind: "not-sayless" });

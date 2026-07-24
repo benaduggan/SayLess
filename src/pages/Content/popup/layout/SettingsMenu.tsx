@@ -97,7 +97,7 @@ const SettingsMenu = (props: SettingsMenuProps) => {
             console.error("[SayLess] Troubleshooting export failed:", err);
           }
         },
-        () => {}
+        () => {},
       );
     }
   };
@@ -113,9 +113,7 @@ const SettingsMenu = (props: SettingsMenuProps) => {
     const isMac = navigator.userAgent.includes("Macintosh");
     const ram = isMac
       ? 32
-      : Number(
-          (navigator as Navigator & { deviceMemory?: number }).deviceMemory
-        ) || 4;
+      : Number((navigator as Navigator & { deviceMemory?: number }).deviceMemory) || 4;
     setRAM(ram);
   }, []);
 
@@ -143,8 +141,8 @@ const SettingsMenu = (props: SettingsMenuProps) => {
       contentState.useWebCodecsRecorder === true
         ? true
         : contentState.useWebCodecsRecorder === false
-        ? false
-        : null;
+          ? false
+          : null;
     const sticky = await getFastRecorderStickyState();
     const probe = await probeFastRecorderSupport();
     const useFast = shouldUseFastRecorder(userSetting, probe, sticky);
@@ -154,10 +152,10 @@ const SettingsMenu = (props: SettingsMenuProps) => {
         userSetting === false
           ? "user_disabled"
           : sticky?.disabled && userSetting !== true
-          ? "sticky_disabled"
-          : probe.ok
-          ? "probe_ok"
-          : "probe_failed",
+            ? "sticky_disabled"
+            : probe.ok
+              ? "probe_ok"
+              : "probe_failed",
       at: Date.now(),
     };
     const status = {
@@ -194,9 +192,7 @@ const SettingsMenu = (props: SettingsMenuProps) => {
       const status: any = existing.fastRecorderStatus;
       if (!hasLadderFields(status?.probe)) {
         await runFastRecorderProbe("stale-status");
-        const refreshed = await chrome.storage.local.get([
-          "fastRecorderStatus",
-        ]);
+        const refreshed = await chrome.storage.local.get(["fastRecorderStatus"]);
         return (refreshed.fastRecorderStatus as any) || status;
       }
       return status;
@@ -212,11 +208,7 @@ const SettingsMenu = (props: SettingsMenuProps) => {
     ]);
     const status = {
       userSetting:
-        legacy.fastRecorderBeta === true
-          ? true
-          : legacy.fastRecorderBeta === false
-          ? false
-          : null,
+        legacy.fastRecorderBeta === true ? true : legacy.fastRecorderBeta === false ? false : null,
       probe: legacy.fastRecorderProbe || null,
       decision: legacy.fastRecorderDecision || null,
       disabled: Boolean(legacy.fastRecorderDisabledForDevice),
@@ -275,11 +267,9 @@ const SettingsMenu = (props: SettingsMenuProps) => {
       onOpenChange={(open) => {
         props.setOpen(open);
 
-        chrome.runtime
-          .sendMessage({ type: "check-restore" })
-          .then((response) => {
-            setRestore(response.restore);
-          });
+        chrome.runtime.sendMessage({ type: "check-restore" }).then((response) => {
+          setRestore(response.restore);
+        });
 
         chrome.storage.local.get(["fastRecorderStatus"], (result) => {
           const status: any = result.fastRecorderStatus || null;
@@ -303,10 +293,7 @@ const SettingsMenu = (props: SettingsMenuProps) => {
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal
-        container={
-          props.shadowRef.current?.shadowRoot?.querySelector(".container") ||
-          undefined
-        }
+        container={props.shadowRef.current?.shadowRoot?.querySelector(".container") || undefined}
       >
         <DropdownMenu.Content className="DropdownMenuContent" sideOffset={5}>
           {
@@ -554,28 +541,19 @@ const SettingsMenu = (props: SettingsMenuProps) => {
                         </DropdownMenu.ItemIndicator>
                       </DropdownMenu.RadioItem>
                     </TooltipWrap>
-                    <DropdownMenu.RadioItem
-                      className="ScreenityDropdownMenuItem"
-                      value="480p"
-                    >
+                    <DropdownMenu.RadioItem className="ScreenityDropdownMenuItem" value="480p">
                       480p
                       <DropdownMenu.ItemIndicator className="ScreenityItemIndicator">
                         <img src={CheckWhiteIcon} />
                       </DropdownMenu.ItemIndicator>
                     </DropdownMenu.RadioItem>
-                    <DropdownMenu.RadioItem
-                      className="ScreenityDropdownMenuItem"
-                      value="360p"
-                    >
+                    <DropdownMenu.RadioItem className="ScreenityDropdownMenuItem" value="360p">
                       360p
                       <DropdownMenu.ItemIndicator className="ScreenityItemIndicator">
                         <img src={CheckWhiteIcon} />
                       </DropdownMenu.ItemIndicator>
                     </DropdownMenu.RadioItem>
-                    <DropdownMenu.RadioItem
-                      className="ScreenityDropdownMenuItem"
-                      value="240p"
-                    >
+                    <DropdownMenu.RadioItem className="ScreenityDropdownMenuItem" value="240p">
                       240p
                       <DropdownMenu.ItemIndicator className="ScreenityItemIndicator">
                         <img src={CheckWhiteIcon} />
@@ -598,10 +576,7 @@ const SettingsMenu = (props: SettingsMenuProps) => {
               }}
             >
               <DropdownMenu.SubTrigger className="DropdownMenuItem">
-                {chrome.i18n.getMessage("maxFPSLabel") +
-                  " (" +
-                  contentState.fpsValue +
-                  " fps)"}
+                {chrome.i18n.getMessage("maxFPSLabel") + " (" + contentState.fpsValue + " fps)"}
                 <div className="ItemIndicatorArrow">
                   <img src={DropdownGroup} />
                 </div>
@@ -624,55 +599,37 @@ const SettingsMenu = (props: SettingsMenuProps) => {
                       });
                     }}
                   >
-                    <DropdownMenu.RadioItem
-                      className="ScreenityDropdownMenuItem"
-                      value="60"
-                    >
+                    <DropdownMenu.RadioItem className="ScreenityDropdownMenuItem" value="60">
                       60 fps
                       <DropdownMenu.ItemIndicator className="ScreenityItemIndicator">
                         <img src={CheckWhiteIcon} />
                       </DropdownMenu.ItemIndicator>
                     </DropdownMenu.RadioItem>
-                    <DropdownMenu.RadioItem
-                      className="ScreenityDropdownMenuItem"
-                      value="30"
-                    >
+                    <DropdownMenu.RadioItem className="ScreenityDropdownMenuItem" value="30">
                       30 fps
                       <DropdownMenu.ItemIndicator className="ScreenityItemIndicator">
                         <img src={CheckWhiteIcon} />
                       </DropdownMenu.ItemIndicator>
                     </DropdownMenu.RadioItem>
-                    <DropdownMenu.RadioItem
-                      className="ScreenityDropdownMenuItem"
-                      value="24"
-                    >
+                    <DropdownMenu.RadioItem className="ScreenityDropdownMenuItem" value="24">
                       24 fps
                       <DropdownMenu.ItemIndicator className="ScreenityItemIndicator">
                         <img src={CheckWhiteIcon} />
                       </DropdownMenu.ItemIndicator>
                     </DropdownMenu.RadioItem>
-                    <DropdownMenu.RadioItem
-                      className="ScreenityDropdownMenuItem"
-                      value="15"
-                    >
+                    <DropdownMenu.RadioItem className="ScreenityDropdownMenuItem" value="15">
                       15 fps
                       <DropdownMenu.ItemIndicator className="ScreenityItemIndicator">
                         <img src={CheckWhiteIcon} />
                       </DropdownMenu.ItemIndicator>
                     </DropdownMenu.RadioItem>
-                    <DropdownMenu.RadioItem
-                      className="ScreenityDropdownMenuItem"
-                      value="10"
-                    >
+                    <DropdownMenu.RadioItem className="ScreenityDropdownMenuItem" value="10">
                       10 fps
                       <DropdownMenu.ItemIndicator className="ScreenityItemIndicator">
                         <img src={CheckWhiteIcon} />
                       </DropdownMenu.ItemIndicator>
                     </DropdownMenu.RadioItem>
-                    <DropdownMenu.RadioItem
-                      className="ScreenityDropdownMenuItem"
-                      value="5"
-                    >
+                    <DropdownMenu.RadioItem className="ScreenityDropdownMenuItem" value="5">
                       5 fps
                       <DropdownMenu.ItemIndicator className="ScreenityItemIndicator">
                         <img src={CheckWhiteIcon} />

@@ -31,7 +31,7 @@ export class VideoAudioMixer {
       verbose = false,
       onProgress,
       signal,
-    } = {}
+    } = {},
   ) {
     throwIfAborted(signal);
     const input = new Input({
@@ -60,12 +60,9 @@ export class VideoAudioMixer {
 
       const videoDuration = await this._getDuration(videoBlob);
 
-      const videoAudioTrack = await input
-        .getPrimaryAudioTrack()
-        .catch(() => null);
+      const videoAudioTrack = await input.getPrimaryAudioTrack().catch(() => null);
       const hasVideoAudio =
-        !!videoAudioTrack &&
-        (await videoAudioTrack.canDecode().catch(() => false));
+        !!videoAudioTrack && (await videoAudioTrack.canDecode().catch(() => false));
 
       const audioSource = new AudioSampleSource({
         codec: "aac",
@@ -117,8 +114,7 @@ export class VideoAudioMixer {
           throwIfAborted(signal);
           const timestamp = frame.timestamp;
           await videoSource.add(frame);
-          if (onProgress && videoDuration > 0)
-            onProgress((timestamp / videoDuration) * 0.8);
+          if (onProgress && videoDuration > 0) onProgress((timestamp / videoDuration) * 0.8);
           throwIfAborted(signal);
         } finally {
           frame.close();
@@ -143,10 +139,7 @@ export class VideoAudioMixer {
             }
 
             const sourceDuration = sample.duration || N / sr;
-            const outputFrames = Math.max(
-              1,
-              Math.round(sourceDuration * AAC_SAMPLE_RATE)
-            );
+            const outputFrames = Math.max(1, Math.round(sourceDuration * AAC_SAMPLE_RATE));
             const mixed = new Float32Array(outputFrames * AAC_CHANNELS);
             for (let ch = 0; ch < AAC_CHANNELS; ch++) {
               const sourceChannel = Math.min(ch, numCh - 1);
@@ -159,11 +152,9 @@ export class VideoAudioMixer {
                 const fraction = sourcePosition - i0;
                 const sourceValue =
                   source[sourceOffset + i0] +
-                  (source[sourceOffset + i1] - source[sourceOffset + i0]) *
-                    fraction;
+                  (source[sourceOffset + i1] - source[sourceOffset + i0]) * fraction;
                 const t = ts + f / AAC_SAMPLE_RATE;
-                mixed[outputOffset + f] =
-                  sourceValue * videoVolume + bgSampleAt(t) * audioVolume;
+                mixed[outputOffset + f] = sourceValue * videoVolume + bgSampleAt(t) * audioVolume;
               }
             }
 
@@ -250,8 +241,7 @@ export class VideoAudioMixer {
             out.close();
           }
           frame += n;
-          if (onProgress && totalFrames > 0)
-            onProgress(0.8 + (frame / totalFrames) * 0.2);
+          if (onProgress && totalFrames > 0) onProgress(0.8 + (frame / totalFrames) * 0.2);
         }
       }
 

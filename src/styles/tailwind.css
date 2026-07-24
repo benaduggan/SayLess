@@ -1,0 +1,27 @@
+/*
+ * Tailwind is the CSS build layer for every extension surface.
+ * Preflight is intentionally omitted because SayLess is injected into arbitrary
+ * pages and its established component styles already own their resets.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --color-sayless-surface: #ffffff;
+  --color-sayless-canvas: #f6f7fb;
+  --color-sayless-primary: #3080f8;
+  --color-sayless-border: #e8e8e8;
+  --color-sayless-ink: #29292f;
+  --color-sayless-muted: #6e7684;
+  --color-sayless-danger: #d2234d;
+  --color-sayless-icon: #9797a4;
+
+  --font-sayless-light: "Satoshi-Light", sans-serif;
+  --font-sayless: "Satoshi-Medium", sans-serif;
+  --font-sayless-bold: "Satoshi-Bold", sans-serif;
+
+  --radius-sayless: 30px;
+  --shadow-sayless-focus: 0 0 0 2px rgb(48 128 248 / 50%);
+  --shadow-sayless-soft: 0 4px 20px rgb(38 38 52 / 8%);
+}

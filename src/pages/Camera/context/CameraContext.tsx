@@ -7,17 +7,9 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import type {
-  Dispatch,
-  MutableRefObject,
-  PropsWithChildren,
-  SetStateAction,
-} from "react";
+import type { Dispatch, MutableRefObject, PropsWithChildren, SetStateAction } from "react";
 import type { ImageSegmenter } from "@mediapipe/tasks-vision";
-import {
-  loadSegmentationModel,
-  loadEffect,
-} from "../utils/backgroundUtils";
+import { loadSegmentationModel, loadEffect } from "../utils/backgroundUtils";
 import { initializeCanvases, setupCanvasContexts } from "../utils/canvasUtils";
 
 export interface CameraContextValue {
@@ -46,20 +38,22 @@ export interface CameraContextValue {
   clearEffect: () => boolean;
 }
 
-type CameraGlobalRefs = Partial<Pick<
-  CameraContextValue,
-  | "videoRef"
-  | "streamRef"
-  | "recordingTypeRef"
-  | "offScreenCanvasRef"
-  | "offScreenCanvasContextRef"
-  | "segmenterRef"
-  | "blurRef"
-  | "effectRef"
-  | "setWidth"
-  | "setHeight"
-  | "setBackgroundEffects"
->> & {
+type CameraGlobalRefs = Partial<
+  Pick<
+    CameraContextValue,
+    | "videoRef"
+    | "streamRef"
+    | "recordingTypeRef"
+    | "offScreenCanvasRef"
+    | "offScreenCanvasContextRef"
+    | "segmenterRef"
+    | "blurRef"
+    | "effectRef"
+    | "setWidth"
+    | "setHeight"
+    | "setBackgroundEffects"
+  >
+> & {
   backgroundEffectsRef?: MutableRefObject<boolean>;
   bottomCanvasRef?: MutableRefObject<HTMLCanvasElement | null>;
   bottomCanvasContextRef?: MutableRefObject<CanvasRenderingContext2D | null>;
@@ -86,24 +80,17 @@ export const getContextRefs = () => {
   if (!globalRefs.streamRef) missingRefs.push("streamRef");
   if (!globalRefs.recordingTypeRef) missingRefs.push("recordingTypeRef");
   if (!globalRefs.offScreenCanvasRef) missingRefs.push("offScreenCanvasRef");
-  if (!globalRefs.offScreenCanvasContextRef)
-    missingRefs.push("offScreenCanvasContextRef");
+  if (!globalRefs.offScreenCanvasContextRef) missingRefs.push("offScreenCanvasContextRef");
   if (!globalRefs.segmenterRef) missingRefs.push("segmenterRef");
   if (!globalRefs.blurRef) missingRefs.push("blurRef");
   if (!globalRefs.effectRef) missingRefs.push("effectRef");
   if (!globalRefs.setWidth) missingRefs.push("setWidth");
   if (!globalRefs.setHeight) missingRefs.push("setHeight");
-  if (!globalRefs.setBackgroundEffects)
-    missingRefs.push("setBackgroundEffects");
-  if (!globalRefs.backgroundEffectsRef)
-    missingRefs.push("backgroundEffectsRef");
+  if (!globalRefs.setBackgroundEffects) missingRefs.push("setBackgroundEffects");
+  if (!globalRefs.backgroundEffectsRef) missingRefs.push("backgroundEffectsRef");
 
   if (missingRefs.length > 0) {
-    console.warn(
-      `⚠️ Some context references are not initialized yet: ${missingRefs.join(
-        ", "
-      )}`
-    );
+    console.warn(`⚠️ Some context references are not initialized yet: ${missingRefs.join(", ")}`);
   }
 
   return {
@@ -118,11 +105,9 @@ export const getContextRefs = () => {
     blurRef: globalRefs.blurRef ?? { current: false },
     effectRef: globalRefs.effectRef ?? { current: null },
     setWidth:
-      globalRefs.setWidth ??
-      ((_width: string) => console.warn("⚠️ setWidth not initialized")),
+      globalRefs.setWidth ?? ((_width: string) => console.warn("⚠️ setWidth not initialized")),
     setHeight:
-      globalRefs.setHeight ??
-      ((_height: string) => console.warn("⚠️ setHeight not initialized")),
+      globalRefs.setHeight ?? ((_height: string) => console.warn("⚠️ setHeight not initialized")),
     setBackgroundEffects: globalRefs.setBackgroundEffects ?? (() => {}),
     backgroundEffectsRef: globalRefs.backgroundEffectsRef ?? { current: false },
     bottomCanvasRef: globalRefs.bottomCanvasRef ?? { current: null },
@@ -146,8 +131,7 @@ export const CameraProvider = ({ children }: PropsWithChildren) => {
   const streamRef = useRef(new MediaStream());
 
   const offScreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const offScreenCanvasContextRef =
-    useRef<CanvasRenderingContext2D | null>(null);
+  const offScreenCanvasContextRef = useRef<CanvasRenderingContext2D | null>(null);
 
   const segmenterRef = useRef<ImageSegmenter | null>(null);
   const blurRef = useRef(false);
@@ -220,7 +204,7 @@ export const CameraProvider = ({ children }: PropsWithChildren) => {
       }
       chrome.storage.local.set({ backgroundEffectsActive: active });
     },
-    [videoRef]
+    [videoRef],
   );
 
   const handleSetWidth = useCallback(
@@ -230,7 +214,7 @@ export const CameraProvider = ({ children }: PropsWithChildren) => {
         videoRef.current.style.width = newWidth;
       }
     },
-    [videoRef]
+    [videoRef],
   );
 
   const handleSetHeight = useCallback(
@@ -240,12 +224,10 @@ export const CameraProvider = ({ children }: PropsWithChildren) => {
         videoRef.current.style.height = newHeight;
       }
     },
-    [videoRef]
+    [videoRef],
   );
 
-  const loadCustomEffect = async (
-    effectUrl: string | null,
-  ): Promise<boolean | undefined> => {
+  const loadCustomEffect = async (effectUrl: string | null): Promise<boolean | undefined> => {
     try {
       if (!effectUrl) {
         effectRef.current = null;
@@ -328,21 +310,10 @@ export const CameraProvider = ({ children }: PropsWithChildren) => {
       setCustomEffect,
       clearEffect,
     }),
-    [
-      width,
-      height,
-      backgroundEffects,
-      isModelLoaded,
-      pipMode,
-      isCameraMode,
-    ],
+    [width, height, backgroundEffects, isModelLoaded, pipMode, isCameraMode],
   );
 
-  return (
-    <CameraContext.Provider value={contextValue}>
-      {children}
-    </CameraContext.Provider>
-  );
+  return <CameraContext.Provider value={contextValue}>{children}</CameraContext.Provider>;
 };
 
 export default CameraProvider;

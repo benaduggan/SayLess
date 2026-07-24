@@ -4,10 +4,7 @@ import localforage from "localforage";
 import { openExistingChunksStore } from "../Recorder/recorderStorage/chooseChunksStore";
 import { destroySessionDir } from "../Recorder/recorderStorage/opfsKvStore";
 import { assertLocalBlobUrl } from "../utils/localFileExport";
-import type {
-  ChunksBackend,
-  RecorderTrack,
-} from "../Recorder/recorderStorage/chooseChunksStore";
+import type { ChunksBackend, RecorderTrack } from "../Recorder/recorderStorage/chooseChunksStore";
 
 localforage.config({
   driver: localforage.INDEXEDDB,
@@ -27,9 +24,7 @@ interface StoredChunk {
 }
 
 interface RecoveryStore {
-  iterate(
-    callback: (value: StoredChunk, key: string, index: number) => void,
-  ): Promise<unknown>;
+  iterate(callback: (value: StoredChunk, key: string, index: number) => void): Promise<unknown>;
   clear(): Promise<void>;
 }
 
@@ -61,17 +56,12 @@ interface DownloadMessage {
 }
 
 const asRecorderSession = (value: unknown): RecorderSessionData | null =>
-  typeof value === "object" && value !== null
-    ? (value as RecorderSessionData)
-    : null;
+  typeof value === "object" && value !== null ? (value as RecorderSessionData) : null;
 
 const asRecord = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {};
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
 
-const asRecoveryStore = (value: unknown): RecoveryStore =>
-  value as RecoveryStore;
+const asRecoveryStore = (value: unknown): RecoveryStore => value as RecoveryStore;
 
 const Download = (): React.JSX.Element => {
   const base64ToUint8Array = (base64: string): Blob => {
@@ -100,7 +90,7 @@ const Download = (): React.JSX.Element => {
   // reserves), empty result, and MAX_PATH length cap.
   const sanitizeFilename = (raw: unknown): string => {
     let out = String(raw ?? "");
-    out = out.replace(/[\/\\:?~<>|*"]/g, "_");
+    out = out.replace(/[/\\:?~<>|*"]/g, "_");
     out = out.replace(/[\u0000-\u001f\u007f]/g, "_");
     out = out.replace(/\s+/g, " ").trim();
     out = out.replace(/[. ]+$/g, "");
@@ -128,10 +118,7 @@ const Download = (): React.JSX.Element => {
           URL.revokeObjectURL(assertLocalBlobUrl(url));
           window.close();
         });
-    } else if (
-      message.type === "recover-indexed-db" ||
-      message.type === "download-indexed-db"
-    ) {
+    } else if (message.type === "recover-indexed-db" || message.type === "download-indexed-db") {
       const chunkArray: Blob[] = [];
       chunksStore
         .iterate<StoredChunk, void>((value) => {
@@ -161,16 +148,16 @@ const Download = (): React.JSX.Element => {
 
         // Pick the right backend per track — sessions written before the
         // OPFS migration default to IDB across the board.
-        const { recorderSession: rawPrefetchedSession } =
-          await chrome.storage.local.get(["recorderSession"]);
+        const { recorderSession: rawPrefetchedSession } = await chrome.storage.local.get([
+          "recorderSession",
+        ]);
         const prefetchedSession = asRecorderSession(rawPrefetchedSession);
         const backends = prefetchedSession?.storageBackends || {
           screen: "idb",
           audio: "idb",
           camera: "idb",
         };
-        const opfsSessionId =
-          prefetchedSession?.opfsSessionId || prefetchedSession?.id || null;
+        const opfsSessionId = prefetchedSession?.opfsSessionId || prefetchedSession?.id || null;
         const usedOpfs = Object.values(backends).some((b) => b === "opfs");
 
         const screenStore = openExistingChunksStore({
@@ -224,7 +211,10 @@ const Download = (): React.JSX.Element => {
             return;
           }
           try {
-            const blob = new Blob(entries.map((e) => e.chunk), { type: mimeType });
+            const blob = new Blob(
+              entries.map((e) => e.chunk),
+              { type: mimeType },
+            );
             const url = assertLocalBlobUrl(URL.createObjectURL(blob));
             urlsToRevoke.push(url);
             await chrome.downloads.download({
@@ -240,18 +230,8 @@ const Download = (): React.JSX.Element => {
           }
         };
 
-        await downloadTrack(
-          screenStore,
-          "Screen",
-          containers.screen || "video/webm",
-          screenExt,
-        );
-        await downloadTrack(
-          cameraStore,
-          "Camera",
-          containers.camera || "video/webm",
-          cameraExt,
-        );
+        await downloadTrack(screenStore, "Screen", containers.screen || "video/webm", screenExt);
+        await downloadTrack(cameraStore, "Camera", containers.camera || "video/webm", cameraExt);
         await downloadTrack(audioStore, "Audio", "audio/webm", audioExt);
 
         // Let the download manager fetch the blob URLs first.
@@ -263,20 +243,13 @@ const Download = (): React.JSX.Element => {
         }
 
         // Failed tracks remain so the user can retry recovery for them.
-        await Promise.allSettled(
-          successfulStores.map((s) => s.clear())
-        );
+        await Promise.allSettled(successfulStores.map((s) => s.clear()));
 
         // If anything was on OPFS, drop the session directory once all
         // tracks downloaded successfully; failed tracks leave their files
         // behind for retry, and the startup orphan sweep reaps them
         // eventually.
-        if (
-          usedOpfs &&
-          opfsSessionId &&
-          successfulStores.length === 3 &&
-          !recoveryFailed
-        ) {
+        if (usedOpfs && opfsSessionId && successfulStores.length === 3 && !recoveryFailed) {
           destroySessionDir(opfsSessionId).catch(() => {});
         }
 
@@ -293,15 +266,12 @@ const Download = (): React.JSX.Element => {
           const upl = trackData?.uploader;
           if (!upl) continue;
           if (upl.journalKey) journalKeysToRemove.push(upl.journalKey);
-          if (upl.journalLookupKey)
-            journalKeysToRemove.push(upl.journalLookupKey);
+          if (upl.journalLookupKey) journalKeysToRemove.push(upl.journalLookupKey);
           const pid = upl.projectId || recorderSession?.projectId || null;
           const sid = upl.sceneId || null;
           const t = upl.type || upl.trackType || null;
           if (pid && t) {
-            journalKeysToRemove.push(
-              `bunnyVideoMap-${pid}-${sid || "none"}-${t || "none"}`,
-            );
+            journalKeysToRemove.push(`bunnyVideoMap-${pid}-${sid || "none"}-${t || "none"}`);
           }
         }
         try {
@@ -340,18 +310,13 @@ const Download = (): React.JSX.Element => {
           ) {
             try {
               const dir = await navigator.storage.getDirectory();
-              const handle = await dir.getFileHandle(
-                lastRecordingBackendRef.fileName,
-              );
+              const handle = await dir.getFileHandle(lastRecordingBackendRef.fileName);
               const file = await handle.getFile();
               if (file && file.size > 0) {
                 blob = new Blob([file], { type: "video/mp4" });
               }
             } catch (err) {
-              console.warn(
-                "[SayLess][Download] OPFS read failed, falling back to IDB",
-                err,
-              );
+              console.warn("[SayLess][Download] OPFS read failed, falling back to IDB", err);
             }
           }
           if (!blob) {

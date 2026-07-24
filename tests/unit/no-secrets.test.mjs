@@ -20,7 +20,7 @@ test("no-secrets scanner catches tokens embedded in SVG assets", () => {
     mkdirSync(join(buildDir, "assets", "icons"), { recursive: true });
     writeFileSync(
       join(buildDir, "assets", "icons", "leaky.svg"),
-      '<svg><!-- ghp_abcdefghijklmnopqrstuvwxyzABCDEFGHIJ --></svg>\n',
+      "<svg><!-- ghp_abcdefghijklmnopqrstuvwxyzABCDEFGHIJ --></svg>\n",
     );
 
     const result = runVerifier(buildDir);

@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import styles from "../../styles/edit/_EditorNav.module.scss";
+import styles from "../../styles/edit/_EditorNav.module.css";
 import { useEditorContent } from "../../context/ContentState";
 
 const URL = chrome.runtime.getURL("assets/");
@@ -26,17 +26,14 @@ const EditorNav = () => {
       start: 0,
       end: 1,
     }));
-    contentState.openToast?.(
-      chrome.i18n.getMessage("sandboxToastReverted"),
-      () => {
-        setContentState((prev) => ({
-          ...prev,
-          blob: prevBlob,
-          start: prevStart,
-          end: prevEnd,
-        }));
-      },
-    );
+    contentState.openToast?.(chrome.i18n.getMessage("sandboxToastReverted"), () => {
+      setContentState((prev) => ({
+        ...prev,
+        blob: prevBlob,
+        start: prevStart,
+        end: prevEnd,
+      }));
+    });
   };
 
   const saveChanges = async () => {
@@ -48,9 +45,8 @@ const EditorNav = () => {
       start: 0,
       end: 1,
     }));
-    contentState.openToast?.(
-      chrome.i18n.getMessage("sandboxToastSaved"),
-      () => contentState.undo?.(),
+    contentState.openToast?.(chrome.i18n.getMessage("sandboxToastSaved"), () =>
+      contentState.undo?.(),
     );
   };
 

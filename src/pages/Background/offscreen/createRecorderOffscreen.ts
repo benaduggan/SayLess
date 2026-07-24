@@ -11,9 +11,7 @@ export const createRecorderOffscreen = async (): Promise<void> => {
 
   try {
     const contexts = await chromeApi.runtime.getContexts({});
-    const hasOffscreen = (contexts || []).some(
-      (c) => c.contextType === "OFFSCREEN_DOCUMENT",
-    );
+    const hasOffscreen = (contexts || []).some((c) => c.contextType === "OFFSCREEN_DOCUMENT");
     if (hasOffscreen) {
       await chromeApi.offscreen.closeDocument();
     }

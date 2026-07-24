@@ -1,0 +1,55 @@
+@font-face {
+  font-family: "Satoshi-Light";
+  src: url("/assets/fonts/Satoshi-Light.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Satoshi-Medium";
+  src: url("/assets/fonts/Satoshi-Medium.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Satoshi-Bold";
+  src: url("/assets/fonts/Satoshi-Bold.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+/* Colors */
+/* Font */
+/* Spacing */
+/*
+$spacing-01: 0.125rem;
+$spacing-02: 0.25rem;
+$spacing-03: 0.5rem;
+$spacing-04: 0.75rem;
+$spacing-05: 1rem;
+*/
+/* Container */
+/* Gradients */
+/* Events */
+/* Z-index */
+.content {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  min-height: 300px;
+}
+
+.wrap {
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+  height: 100%;
+  min-height: 50vh;
+}
+
+@media (max-width: 900px) {
+  .content {
+    display: block !important;
+    height: auto !important;
+    overflow: unset !important;
+  }
+}

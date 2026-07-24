@@ -124,8 +124,5 @@ export function shouldRejectMicEnableWithoutMixer({
   hasAudioContext?: unknown;
   hasDestination?: unknown;
 }): boolean {
-  return (
-    Boolean(requestedActive) &&
-    !(Boolean(hasAudioContext) && Boolean(hasDestination))
-  );
+  return Boolean(requestedActive) && !(Boolean(hasAudioContext) && Boolean(hasDestination));
 }

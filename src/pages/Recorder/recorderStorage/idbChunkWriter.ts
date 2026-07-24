@@ -1,10 +1,6 @@
 // IDB-backed ChunkWriter. Fallback when OPFS unavailable.
 import localforage from "localforage";
-import type {
-  ChunkRecord,
-  ChunkWriter,
-  ChunkWriterCloseResult,
-} from "./chunkWriterInterface.ts";
+import type { ChunkRecord, ChunkWriter, ChunkWriterCloseResult } from "./chunkWriterInterface.ts";
 
 localforage.config({
   driver: localforage.INDEXEDDB,
@@ -29,9 +25,7 @@ export class IdbChunkWriter implements ChunkWriter {
     this._aborted = false;
   }
 
-  async open(
-    _recordingId: string,
-  ): Promise<{ backendRef: { backend: "idb" } }> {
+  async open(_recordingId: string): Promise<{ backendRef: { backend: "idb" } }> {
     // Clearing handled at recorder level (chunksStore is shared); no-op
     // here so OpfsChunkWriter's file-creation semantics don't leak in.
     return { backendRef: { backend: "idb" } };

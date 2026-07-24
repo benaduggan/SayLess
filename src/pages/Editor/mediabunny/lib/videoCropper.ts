@@ -38,16 +38,8 @@ export interface CropInfo {
 
 export class VideoCropper {
   async crop(sourceBlob: Blob, options: CropOptions): Promise<Blob> {
-    const {
-      left,
-      top,
-      width,
-      height,
-      outputFormat,
-      videoBitrate,
-      audioBitrate,
-      onProgress,
-    } = options;
+    const { left, top, width, height, outputFormat, videoBitrate, audioBitrate, onProgress } =
+      options;
 
     if (left < 0 || top < 0) throw new Error("Crop position cannot be negative");
     if (width <= 0 || height <= 0) throw new Error("Crop dimensions must be positive");
@@ -78,13 +70,10 @@ export class VideoCropper {
 
     let format: OutputFormat;
     const targetFormat =
-      outputFormat ||
-      (inputFormat.name.toLowerCase().includes("mp4") ? "mp4" : "webm");
+      outputFormat || (inputFormat.name.toLowerCase().includes("mp4") ? "mp4" : "webm");
 
     format =
-      targetFormat === "mp4"
-        ? new Mp4OutputFormat({ fastStart: false })
-        : new WebMOutputFormat();
+      targetFormat === "mp4" ? new Mp4OutputFormat({ fastStart: false }) : new WebMOutputFormat();
 
     const target = new BufferTarget();
     const output = new Output({ format, target });
@@ -150,7 +139,7 @@ export async function cropVideo(
   top: number,
   width: number,
   height: number,
-  options?: Omit<CropOptions, "left" | "top" | "width" | "height">
+  options?: Omit<CropOptions, "left" | "top" | "width" | "height">,
 ): Promise<Blob> {
   return videoCropper.crop(blob, { left, top, width, height, ...options });
 }

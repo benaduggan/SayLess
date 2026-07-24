@@ -29,12 +29,9 @@ export const ensureRemuxOffscreen = async (): Promise<void> => {
       await new Promise((r) => setTimeout(r, waitDelaysMs[i]));
     }
     const contexts = await chromeApi.runtime.getContexts({});
-    const existing = contexts.find(
-      (c) => c.contextType === "OFFSCREEN_DOCUMENT",
-    );
+    const existing = contexts.find((c) => c.contextType === "OFFSCREEN_DOCUMENT");
     if (!existing) break;
-    const existingUrl =
-      typeof existing.documentUrl === "string" ? existing.documentUrl : "";
+    const existingUrl = typeof existing.documentUrl === "string" ? existing.documentUrl : "";
     if (existingUrl.endsWith(REMUX_OFFSCREEN_URL)) return;
     if (existingUrl.includes("offscreenrecorder.html")) {
       // Recorder still closing; wait and retry. Give up only on the last try.

@@ -1,7 +1,4 @@
-import {
-  registerMessage,
-  messageRouter,
-} from "../../../messaging/messageRouter";
+import { registerMessage, messageRouter } from "../../../messaging/messageRouter";
 import { getContextRefs } from "../context/CameraContext";
 import type { MutableRefObject } from "react";
 import {
@@ -12,17 +9,9 @@ import {
   cameraToggledToolbar,
 } from "../utils/cameraUtils";
 import { loadEffect } from "../utils/backgroundUtils";
-import {
-  setWidth,
-  setHeight,
-  setPipMode,
-  setBackgroundEffects,
-} from "../utils/uiState";
+import { setWidth, setHeight, setPipMode, setBackgroundEffects } from "../utils/uiState";
 
-function waitForVideoRef(
-  callback: (video: HTMLVideoElement) => void,
-  attempts = 10,
-): void {
+function waitForVideoRef(callback: (video: HTMLVideoElement) => void, attempts = 10): void {
   const { videoRef } = getContextRefs();
 
   if (videoRef?.current) {
@@ -57,12 +46,8 @@ export const setupHandlers = ({
       stopCameraStream(refs.streamRef, refs.videoRef);
 
       cameraSwitchTimeout = setTimeout(() => {
-        const {
-          videoRef,
-          streamRef,
-          offScreenCanvasRef,
-          offScreenCanvasContextRef,
-        } = getContextRefs();
+        const { videoRef, streamRef, offScreenCanvasRef, offScreenCanvasContextRef } =
+          getContextRefs();
 
         getCameraStream(
           { video: { deviceId: { exact: cameraId } } },
@@ -79,12 +64,8 @@ export const setupHandlers = ({
     }
   });
 
-  registerMessage("background-effects-active", () =>
-    setBackgroundEffects(true),
-  );
-  registerMessage("background-effects-inactive", () =>
-    setBackgroundEffects(false),
-  );
+  registerMessage("background-effects-active", () => setBackgroundEffects(true));
+  registerMessage("background-effects-inactive", () => setBackgroundEffects(false));
   registerMessage("camera-only-update", handleCameraOnlyUpdate);
   registerMessage("screen-update", handleScreenUpdate);
   registerMessage("toggle-pip", () => togglePip(getContextRefs().videoRef));
@@ -168,9 +149,7 @@ const safelyApplyFilter = (
   }
 };
 
-const handleSetBackgroundEffect = async (
-  message: Record<string, unknown>,
-): Promise<void> => {
+const handleSetBackgroundEffect = async (message: Record<string, unknown>): Promise<void> => {
   const { blurRef, effectRef, offScreenCanvasContextRef } = getContextRefs();
   const effect = typeof message.effect === "string" ? message.effect : "";
 
@@ -197,12 +176,9 @@ const handleSetBackgroundEffect = async (
   }
 };
 
-const handleToggleBlur = async (
-  message: Record<string, unknown>,
-): Promise<void> => {
+const handleToggleBlur = async (message: Record<string, unknown>): Promise<void> => {
   const { blurRef, offScreenCanvasContextRef } = getContextRefs();
-  const enabled =
-    typeof message.enabled === "boolean" ? message.enabled : !blurRef.current;
+  const enabled = typeof message.enabled === "boolean" ? message.enabled : !blurRef.current;
 
   blurRef.current = enabled;
 
@@ -211,11 +187,8 @@ const handleToggleBlur = async (
   safelyApplyFilter(offScreenCanvasContextRef, enabled ? "blur(5px)" : "none");
 };
 
-const handleLoadCustomEffect = async (
-  message: Record<string, unknown>,
-): Promise<void> => {
-  const effectUrl =
-    typeof message.effectUrl === "string" ? message.effectUrl : "";
+const handleLoadCustomEffect = async (message: Record<string, unknown>): Promise<void> => {
+  const effectUrl = typeof message.effectUrl === "string" ? message.effectUrl : "";
   if (!effectUrl) {
     console.warn("⚠️ No effect URL provided");
     return;
@@ -237,8 +210,7 @@ const handleLoadCustomEffect = async (
 };
 
 const handleCameraOnlyUpdate = () => {
-  const { recordingTypeRef, setWidth, setHeight, setIsCameraMode } =
-    getContextRefs();
+  const { recordingTypeRef, setWidth, setHeight, setIsCameraMode } = getContextRefs();
 
   if (setWidth && setHeight) {
     setWidth("auto");
@@ -250,8 +222,7 @@ const handleCameraOnlyUpdate = () => {
 };
 
 const handleScreenUpdate = () => {
-  const { videoRef, recordingTypeRef, setWidth, setHeight, setIsCameraMode } =
-    getContextRefs();
+  const { videoRef, recordingTypeRef, setWidth, setHeight, setIsCameraMode } = getContextRefs();
 
   if (!videoRef.current || !setWidth || !setHeight) {
     console.warn("⚠️ Missing required refs for screen update");

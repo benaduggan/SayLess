@@ -27,9 +27,7 @@ const assetRoot = String(manifest.assetRoot || "assets/whisper/models/").replace
   "",
 );
 const modelRoot = path.join(whisperRoot, assetRoot);
-const requiredFiles = Array.isArray(manifest.requiredFiles)
-  ? manifest.requiredFiles
-  : [];
+const requiredFiles = Array.isArray(manifest.requiredFiles) ? manifest.requiredFiles : [];
 const fileIntegrity =
   manifest.fileIntegrity && typeof manifest.fileIntegrity === "object"
     ? manifest.fileIntegrity
@@ -69,9 +67,7 @@ for (const file of requiredFiles) {
   const stats = fs.statSync(absolutePath);
 
   if (Number.isFinite(expected.bytes) && stats.size !== expected.bytes) {
-    invalid.push(
-      `${file}: expected ${expected.bytes} bytes, found ${stats.size} bytes`,
-    );
+    invalid.push(`${file}: expected ${expected.bytes} bytes, found ${stats.size} bytes`);
   }
 
   if (expected.sha256) {
@@ -81,9 +77,7 @@ for (const file of requiredFiles) {
       .digest("hex");
 
     if (actualHash !== expected.sha256) {
-      invalid.push(
-        `${file}: expected sha256 ${expected.sha256}, found ${actualHash}`,
-      );
+      invalid.push(`${file}: expected sha256 ${expected.sha256}, found ${actualHash}`);
     }
   }
 }

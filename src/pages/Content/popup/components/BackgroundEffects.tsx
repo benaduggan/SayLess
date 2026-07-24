@@ -36,11 +36,7 @@ const BackgroundEffects = () => {
           }
         }}
       >
-        <ToggleGroup.Item
-          className="background-effect"
-          value="blur"
-          aria-label="Blur effect"
-        >
+        <ToggleGroup.Item className="background-effect" value="blur" aria-label="Blur effect">
           <span>{chrome.i18n.getMessage("blurTypeLabel")}</span>
           <img src={URL + "backgrounds/blur.webp"} alt="blur" />
         </ToggleGroup.Item>

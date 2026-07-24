@@ -22,10 +22,7 @@ const StrokeWeight = (props: { open: boolean }) => {
       >
         <span>
           <ToggleGroup.Item value="3" asChild>
-            <div
-              tabIndex={props.open ? 0 : -1}
-              className="radial-menu-item-child"
-            >
+            <div tabIndex={props.open ? 0 : -1} className="radial-menu-item-child">
               <Stroke3Icon className="stroke-icon" />
             </div>
           </ToggleGroup.Item>
@@ -34,16 +31,11 @@ const StrokeWeight = (props: { open: boolean }) => {
       <TooltipWrap
         name="radial-menu-item stroke-width-item"
         override="tooltip-small"
-        content={
-          props.open ? chrome.i18n.getMessage("mediumStrokeTooltip") : ""
-        }
+        content={props.open ? chrome.i18n.getMessage("mediumStrokeTooltip") : ""}
       >
         <span>
           <ToggleGroup.Item value="2" asChild>
-            <div
-              tabIndex={props.open ? 0 : -1}
-              className="radial-menu-item-child"
-            >
+            <div tabIndex={props.open ? 0 : -1} className="radial-menu-item-child">
               <Stroke2Icon className="stroke-icon" />
             </div>
           </ToggleGroup.Item>
@@ -56,10 +48,7 @@ const StrokeWeight = (props: { open: boolean }) => {
       >
         <span>
           <ToggleGroup.Item value="1" asChild>
-            <div
-              tabIndex={props.open ? 0 : -1}
-              className="radial-menu-item-child"
-            >
+            <div tabIndex={props.open ? 0 : -1} className="radial-menu-item-child">
               <Stroke1Icon className="stroke-icon" />
             </div>
           </ToggleGroup.Item>

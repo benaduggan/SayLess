@@ -2,13 +2,8 @@
 import { installChromeShims } from "./chromeShim";
 installChromeShims();
 
-const relayErrorToSW = (
-  source: string,
-  payload: Record<string, unknown>,
-): void => {
-  chrome.runtime
-    .sendMessage({ type: "offscreen-diag", source, payload })
-    .catch(() => {});
+const relayErrorToSW = (source: string, payload: Record<string, unknown>): void => {
+  chrome.runtime.sendMessage({ type: "offscreen-diag", source, payload }).catch(() => {});
 };
 
 window.addEventListener("error", (e) => {
@@ -32,9 +27,7 @@ window.addEventListener("unhandledrejection", (e) => {
 // the 30s idle timeout. A dead SW loses the stop/finalize handoff mid-recording.
 const SW_KEEPALIVE_MS = 20000;
 const swKeepaliveTimer = setInterval(() => {
-  chrome.runtime
-    .sendMessage({ type: "sw-keepalive" })
-    .catch(() => {});
+  chrome.runtime.sendMessage({ type: "sw-keepalive" }).catch(() => {});
 }, SW_KEEPALIVE_MS);
 window.addEventListener("pagehide", () => clearInterval(swKeepaliveTimer));
 
@@ -53,9 +46,7 @@ if (container) {
   }
 }
 
-const hotModule = (
-  module as NodeModule & { hot?: { accept: () => void } }
-).hot;
+const hotModule = (module as NodeModule & { hot?: { accept: () => void } }).hot;
 if (hotModule) {
   hotModule.accept();
 }

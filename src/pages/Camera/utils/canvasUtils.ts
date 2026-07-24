@@ -80,7 +80,7 @@ export const resizeCanvases = (
         0,
         0,
         windowWidth,
-        windowHeight
+        windowHeight,
       );
     }
   }
@@ -149,12 +149,7 @@ export const clearCanvases = (canvasRefs: {
   } = canvasRefs;
 
   if (canvasRef.current && canvasContextRef.current) {
-    canvasContextRef.current.clearRect(
-      0,
-      0,
-      canvasRef.current.width,
-      canvasRef.current.height
-    );
+    canvasContextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   }
 
   if (offScreenCanvasRef.current && offScreenCanvasContextRef.current) {
@@ -162,7 +157,7 @@ export const clearCanvases = (canvasRefs: {
       0,
       0,
       offScreenCanvasRef.current.width,
-      offScreenCanvasRef.current.height
+      offScreenCanvasRef.current.height,
     );
   }
 
@@ -171,7 +166,7 @@ export const clearCanvases = (canvasRefs: {
       0,
       0,
       bottomCanvasRef.current.width,
-      bottomCanvasRef.current.height
+      bottomCanvasRef.current.height,
     );
   }
 };

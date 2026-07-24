@@ -75,17 +75,11 @@ const bundleHarness = (work) =>
           }
         }
         if (stats.hasErrors()) {
-          reject(
-            new Error(
-              info.errors
-                .map((error) => error.message || String(error))
-                .join("\n")
-            )
-          );
+          reject(new Error(info.errors.map((error) => error.message || String(error)).join("\n")));
           return;
         }
         resolve();
-      }
+      },
     );
   });
 
@@ -120,9 +114,7 @@ const createServer = (work) =>
 const copyOrtFiles = (work) => {
   const ortDir = path.join(work, "ort");
   fs.mkdirSync(ortDir);
-  for (const fileName of fs
-    .readdirSync(ORT_SRC)
-    .filter((name) => /^ort-wasm-/.test(name))) {
+  for (const fileName of fs.readdirSync(ORT_SRC).filter((name) => name.startsWith("ort-wasm-"))) {
     fs.copyFileSync(path.join(ORT_SRC, fileName), path.join(ortDir, fileName));
   }
 };
@@ -133,7 +125,7 @@ const copyOrtFiles = (work) => {
   copyOrtFiles(work);
   fs.writeFileSync(
     path.join(work, "harness.html"),
-    "<!doctype html><meta charset=utf-8><title>Local ASR harness</title><pre id=o>loading</pre><script type=module src=./bundle.js></script>"
+    "<!doctype html><meta charset=utf-8><title>Local ASR harness</title><pre id=o>loading</pre><script type=module src=./bundle.js></script>",
   );
 
   const server = createServer(work);
@@ -149,9 +141,7 @@ const copyOrtFiles = (work) => {
     headless: process.env.SAYLESS_E2E_HEADLESS !== "0",
   });
   const page = await browser.newPage();
-  page.on("console", (message) =>
-    console.log("  [page]", message.type(), message.text())
-  );
+  page.on("console", (message) => console.log("  [page]", message.type(), message.text()));
   page.on("pageerror", (error) => console.log("  [pageerror]", error.message));
 
   let result;
@@ -186,11 +176,7 @@ const copyOrtFiles = (work) => {
           const t = i / sampleRate;
           const envelope = Math.sin(Math.PI * Math.min(1, t / seconds));
           const sample = Math.sin(2 * Math.PI * 440 * t) * envelope * 0.18;
-          view.setInt16(
-            44 + i * 2,
-            Math.max(-1, Math.min(1, sample)) * 32767,
-            true
-          );
+          view.setInt16(44 + i * 2, Math.max(-1, Math.min(1, sample)) * 32767, true);
         }
         return new Blob([buffer], { type: "audio/wav" });
       };
@@ -216,7 +202,7 @@ const copyOrtFiles = (work) => {
               device: "wasm",
             },
           },
-        }
+        },
       );
       const words = Array.isArray(transcript.words) ? transcript.words : [];
       return {
@@ -226,8 +212,7 @@ const copyOrtFiles = (work) => {
         textLength: String(transcript.text || "").length,
         wordCount: words.length,
         timestampsMonotonic: words.every(
-          (word, index) =>
-            index === 0 || word.start >= words[index - 1].start - 0.001
+          (word, index) => index === 0 || word.start >= words[index - 1].start - 0.001,
         ),
         maxProgress: progress.length ? Math.max(...progress) : 0,
       };

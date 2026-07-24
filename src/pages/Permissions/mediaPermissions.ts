@@ -47,13 +47,10 @@ export const queryMediaPermissionStates = async (
       } catch {
         return [type, null] as const;
       }
-    })
+    }),
   );
 
-  return Object.fromEntries(entries) as Record<
-    MediaPermissionType,
-    PermissionStatus | null
-  >;
+  return Object.fromEntries(entries) as Record<MediaPermissionType, PermissionStatus | null>;
 };
 
 export const collectMediaPermissionResult = async ({
@@ -75,7 +72,7 @@ export const collectMediaPermissionResult = async ({
     // Request each kind independently. A missing/blocked microphone must not
     // make an otherwise usable camera look denied (and vice versa).
     for (const type of requestedTypes.filter((candidate) =>
-      MEDIA_PERMISSION_TYPES.includes(candidate)
+      MEDIA_PERMISSION_TYPES.includes(candidate),
     )) {
       if (statuses[type]?.state === "granted") continue;
       try {
@@ -88,16 +85,12 @@ export const collectMediaPermissionResult = async ({
     }
   }
 
-  const refreshedStatuses = request
-    ? await queryMediaPermissionStates(permissions)
-    : statuses;
+  const refreshedStatuses = request ? await queryMediaPermissionStates(permissions) : statuses;
   const states = Object.fromEntries(
     MEDIA_PERMISSION_TYPES.map((type) => [
       type,
-      requestSucceeded.has(type)
-        ? "granted"
-        : refreshedStatuses[type]?.state || "unknown",
-    ])
+      requestSucceeded.has(type) ? "granted" : refreshedStatuses[type]?.state || "unknown",
+    ]),
   ) as Record<MediaPermissionType, MediaPermissionState>;
 
   let devices: MediaDeviceInfo[] = [];
@@ -133,8 +126,7 @@ export const collectMediaPermissionResult = async ({
       : [],
     ...(requestError
       ? {
-          error:
-            requestError instanceof Error ? requestError.name : "unknown",
+          error: requestError instanceof Error ? requestError.name : "unknown",
         }
       : {}),
   };

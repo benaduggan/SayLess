@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useContext,
-  useCallback,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 
 import {
   AudioIcon,
@@ -34,7 +28,7 @@ const Warning = () => {
       setDuration(duration);
       setOpen(true);
     },
-    []
+    [],
   );
 
   useEffect(() => {
@@ -82,9 +76,7 @@ const Warning = () => {
         </div>
         <div className="warning-content">
           <ToastEl.Title className="warning-title">{title}</ToastEl.Title>
-          <ToastEl.Description className="warning-description">
-            {description}
-          </ToastEl.Description>
+          <ToastEl.Description className="warning-description">{description}</ToastEl.Description>
         </div>
         <ToastEl.Close
           className="warning-close"

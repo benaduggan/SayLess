@@ -20,7 +20,7 @@ import Region from "./region/Region";
 import root from "react-shadow";
 
 // Import styles raw to add into the ShadowDOM
-import styles from "!raw-loader!./styles/app.css";
+import styles from "!!raw-loader!postcss-loader!./styles/app.css";
 
 import ZoomContainer from "./utils/ZoomContainer";
 import BlurTool from "./utils/BlurTool";
@@ -149,8 +149,7 @@ const Wrapper = () => {
   // (seen up to 9s in diag); without this gate the loader gets baked
   // into the recorded video.
   const inPostStopWait =
-    Boolean(contentState.finalizingRecording) &&
-    contentState.encoderActive === false;
+    Boolean(contentState.finalizingRecording) && contentState.encoderActive === false;
   // Restart wait: streams are reused, no picker pop, so the
   // visibility-hidden gate below never fires. Without this flag the
   // toolbar would just freeze.
@@ -167,8 +166,7 @@ const Wrapper = () => {
     !contentState.isCountdownVisible &&
     !contentState.recording &&
     contentState.useOffscreenRecorder !== false;
-  const waitActive =
-    inPreCountdownWait || inPostStopWait || inRestartWait || inPreparingWait;
+  const waitActive = inPreCountdownWait || inPostStopWait || inRestartWait || inPreparingWait;
   const [showLoader, setShowLoader] = useState(false);
   useEffect(() => {
     if (!waitActive) {
@@ -258,7 +256,7 @@ const Wrapper = () => {
       {
         type: "screenity-get-permissions",
       },
-      "*"
+      "*",
     );
 
     setContentState((prevContentState) => ({
@@ -270,10 +268,7 @@ const Wrapper = () => {
   useEffect(() => {
     if (contentState.showExtension) return;
     setContentState((prevContentState) => {
-      if (
-        !prevContentState.permissionsLoaded &&
-        !prevContentState.permissionsChecked
-      ) {
+      if (!prevContentState.permissionsLoaded && !prevContentState.permissionsChecked) {
         return prevContentState;
       }
       return {
@@ -293,7 +288,7 @@ const Wrapper = () => {
           type: "screenity-request-permissions",
           mediaTypes,
         },
-        "*"
+        "*",
       );
       return true;
     };
@@ -340,7 +335,7 @@ const Wrapper = () => {
         contentState.regionHeight,
         contentState.regionX,
         contentState.regionY,
-        contentStateRef
+        contentStateRef,
       );
     }
 
@@ -390,61 +385,47 @@ const Wrapper = () => {
       {(contentState.showExtension || contentState.recording) &&
       contentState.recordingUiAllowed !== false ? (
         <div>
-          {!contentState.recording &&
-            !contentState.drawingMode &&
-            !contentState.blurMode && (
-              <div
-                style={{
-                  // all: "unset",
-                  width: "100%",
-                  height: "100%",
-                  zIndex: 999999999,
-                  pointerEvents:
-                    contentState.pendingRecording ||
-                    contentState.preparingRecording
-                      ? "none"
-                      : "all",
-                  position: "fixed",
-                  background:
-                    window.location.href.indexOf(
-                      chrome.runtime.getURL("setup.html")
-                    ) === -1 &&
-                    window.location.href.indexOf(
-                      chrome.runtime.getURL("playground.html")
-                    ) === -1 &&
-                    !contentState.pendingRecording &&
-                    !contentState.preparingRecording
-                      ? "rgba(0,0,0,0.15)"
-                      : "rgba(0,0,0,0)",
-                  top: 0,
-                  left: 0,
-                }}
-                onClick={() => {
-                  const onboardingActive =
-                    document.documentElement.classList.contains(
-                      "screenity-driver-active"
-                    ) || Boolean(document.querySelector(".driver-overlay"));
-                  if (onboardingActive) return;
+          {!contentState.recording && !contentState.drawingMode && !contentState.blurMode && (
+            <div
+              style={{
+                // all: "unset",
+                width: "100%",
+                height: "100%",
+                zIndex: 999999999,
+                pointerEvents:
+                  contentState.pendingRecording || contentState.preparingRecording ? "none" : "all",
+                position: "fixed",
+                background:
+                  window.location.href.indexOf(chrome.runtime.getURL("setup.html")) === -1 &&
+                  window.location.href.indexOf(chrome.runtime.getURL("playground.html")) === -1 &&
+                  !contentState.pendingRecording &&
+                  !contentState.preparingRecording
+                    ? "rgba(0,0,0,0.15)"
+                    : "rgba(0,0,0,0)",
+                top: 0,
+                left: 0,
+              }}
+              onClick={() => {
+                const onboardingActive =
+                  document.documentElement.classList.contains("screenity-driver-active") ||
+                  Boolean(document.querySelector(".driver-overlay"));
+                if (onboardingActive) return;
 
-                  if (
-                    window.location.href.indexOf(
-                      chrome.runtime.getURL("setup.html")
-                    ) === -1 &&
-                    window.location.href.indexOf(
-                      chrome.runtime.getURL("playground.html")
-                    ) === -1 &&
-                    !contentState.pendingRecording &&
-                    !contentState.customRegion
-                  ) {
-                    setContentState((prevContentState) => ({
-                      ...prevContentState,
-                      showExtension: false,
-                      showPopup: false,
-                    }));
-                  }
-                }}
-              ></div>
-            )}
+                if (
+                  window.location.href.indexOf(chrome.runtime.getURL("setup.html")) === -1 &&
+                  window.location.href.indexOf(chrome.runtime.getURL("playground.html")) === -1 &&
+                  !contentState.pendingRecording &&
+                  !contentState.customRegion
+                ) {
+                  setContentState((prevContentState) => ({
+                    ...prevContentState,
+                    showExtension: false,
+                    showPopup: false,
+                  }));
+                }
+              }}
+            ></div>
+          )}
           {(contentState.drawingMode || contentState.blurMode) && (
             // Key on multiSceneCount only: fresh fabric per scene,
             // but drawings persist through the pre-record → record
@@ -485,8 +466,7 @@ const Wrapper = () => {
           >
             <div className="container">
               <Warning />
-              {contentState.recordingType === "region" &&
-                contentState.customRegion && <Region />}
+              {contentState.recordingType === "region" && contentState.customRegion && <Region />}
               {shadowRef.current && <Modal />}
               {/*
                 Render-time double-check: even if `showLoader` is true,
@@ -500,20 +480,16 @@ const Wrapper = () => {
                 showLoader still gets cleared by the useEffect cleanup
                 on the next tick, but the user never sees the overlap.
               */}
-              {showLoader &&
-                !contentState.countdownActive &&
-                !contentState.isCountdownVisible && <RecordingLoader />}
+              {showLoader && !contentState.countdownActive && !contentState.isCountdownVisible && (
+                <RecordingLoader />
+              )}
               <Countdown />
-              {contentState.recordingType != "camera" &&
-                !contentState.onboarding && <Camera shadowRef={shadowRef} />}
-              {contentState.recordingType === "camera" && (
-                <CameraOnly shadowRef={shadowRef} />
+              {contentState.recordingType != "camera" && !contentState.onboarding && (
+                <Camera shadowRef={shadowRef} />
               )}
-              {!isRecorderToolbarHidden(contentState) &&
-                !contentState.onboarding && <Toolbar />}
-              {contentState.showPopup && (
-                <PopupContainer shadowRef={shadowRef} />
-              )}
+              {contentState.recordingType === "camera" && <CameraOnly shadowRef={shadowRef} />}
+              {!isRecorderToolbarHidden(contentState) && !contentState.onboarding && <Toolbar />}
+              {contentState.showPopup && <PopupContainer shadowRef={shadowRef} />}
             </div>
             <style type="text/css">{styles}</style>
           </root.div>

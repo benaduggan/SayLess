@@ -5,16 +5,13 @@ import {
   type MediaPermissionType,
 } from "./mediaPermissions";
 
-type PublishOptions = NonNullable<
-  Parameters<typeof collectMediaPermissionResult>[0]
->;
+type PublishOptions = NonNullable<Parameters<typeof collectMediaPermissionResult>[0]>;
 
 const normalizeRequestedTypes = (value: unknown): MediaPermissionType[] =>
   Array.isArray(value)
     ? value.filter(
         (item): item is MediaPermissionType =>
-          typeof item === "string" &&
-          MEDIA_PERMISSION_TYPES.includes(item as MediaPermissionType),
+          typeof item === "string" && MEDIA_PERMISSION_TYPES.includes(item as MediaPermissionType),
       )
     : [];
 
@@ -42,10 +39,7 @@ const Recorder = (): React.JSX.Element => {
         cameraPermissionState: result.cameraPermissionState,
         microphonePermissionState: result.microphonePermissionState,
       });
-      window.parent.postMessage(
-        { type: "screenity-permissions", ...result },
-        "*"
-      );
+      window.parent.postMessage({ type: "screenity-permissions", ...result }, "*");
     } catch (error) {
       window.parent.postMessage(
         {
@@ -53,7 +47,7 @@ const Recorder = (): React.JSX.Element => {
           success: false,
           error: error instanceof Error ? error.name : "unknown",
         },
-        "*"
+        "*",
       );
     } finally {
       checkingRef.current = false;
@@ -70,7 +64,7 @@ const Recorder = (): React.JSX.Element => {
       {
         type: "screenity-permissions-loaded",
       },
-      "*"
+      "*",
     );
   }, []);
 
@@ -80,10 +74,7 @@ const Recorder = (): React.JSX.Element => {
     navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
 
     return () => {
-      navigator.mediaDevices.removeEventListener(
-        "devicechange",
-        handleDeviceChange
-      );
+      navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange);
     };
   }, [publishPermissions]);
 
@@ -99,7 +90,7 @@ const Recorder = (): React.JSX.Element => {
         } catch {
           return null;
         }
-      })
+      }),
     ).then((statuses) => {
       if (cancelled) return;
       permissionStatusesRef.current = statuses.filter(

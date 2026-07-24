@@ -24,12 +24,12 @@ type ExtendedAudioContext = Omit<AudioContext, "state"> & {
 
 const forwardDiag = (event: string, data: Record<string, unknown>): void => {
   try {
-    const chromeApi = (globalThis as typeof globalThis & {
-      chrome: { runtime: { sendMessage: (message: unknown) => Promise<unknown> } };
-    }).chrome;
-    chromeApi.runtime
-      .sendMessage({ type: "diag-forward", event, data })
-      .catch(() => {});
+    const chromeApi = (
+      globalThis as typeof globalThis & {
+        chrome: { runtime: { sendMessage: (message: unknown) => Promise<unknown> } };
+      }
+    ).chrome;
+    chromeApi.runtime.sendMessage({ type: "diag-forward", event, data }).catch(() => {});
   } catch {}
 };
 

@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import styles from "../../styles/edit/_EditorNav.module.scss";
+import styles from "../../styles/edit/_EditorNav.module.css";
 import { useEditorContent } from "../../context/ContentState";
 import { EdlContext } from "../../context/EdlContext";
 import { cropRegionFromPixels, cropRegionToPixels } from "../../../../edl/crop";
@@ -40,20 +40,17 @@ const CropNav = () => {
       top: 0,
       fromCropper: false,
     }));
-    contentState.openToast?.(
-      chrome.i18n.getMessage("sandboxToastReverted"),
-      () => {
-        edlCtx?.updateCrop(previousCrop);
-        const restored = cropRegionToPixels(previousCrop, sourceWidth, sourceHeight);
-        setContentState((p) => ({
-          ...p,
-          left: restored.x,
-          top: restored.y,
-          width: restored.width,
-          height: restored.height,
-        }));
-      },
-    );
+    contentState.openToast?.(chrome.i18n.getMessage("sandboxToastReverted"), () => {
+      edlCtx?.updateCrop(previousCrop);
+      const restored = cropRegionToPixels(previousCrop, sourceWidth, sourceHeight);
+      setContentState((p) => ({
+        ...p,
+        left: restored.x,
+        top: restored.y,
+        width: restored.width,
+        height: restored.height,
+      }));
+    });
   };
 
   const saveChanges = async () => {
@@ -87,9 +84,8 @@ const CropNav = () => {
         hasBeenEdited: true,
         isFfmpegRunning: false,
       }));
-      contentState.openToast?.(
-        chrome.i18n.getMessage("sandboxToastSaved"),
-        () => edlCtx?.updateCrop(previousCrop),
+      contentState.openToast?.(chrome.i18n.getMessage("sandboxToastSaved"), () =>
+        edlCtx?.updateCrop(previousCrop),
       );
     } catch (error) {
       console.warn("[SayLess] Failed to save project crop", error);
@@ -143,17 +139,14 @@ const CropNav = () => {
             {contentState.isFfmpegRunning ? (
               Number(contentState.processingProgress) > 0 ? (
                 <>
-                  {chrome.i18n.getMessage("sandboxEditorSaveProgressButton") ||
-                    "Saving"}{" "}
+                  {chrome.i18n.getMessage("sandboxEditorSaveProgressButton") || "Saving"}{" "}
                   {Math.round(Number(contentState.processingProgress) || 0)}%
                 </>
               ) : (
-                chrome.i18n.getMessage("sandboxEditorSaveProgressButton") ||
-                "Saving..."
+                chrome.i18n.getMessage("sandboxEditorSaveProgressButton") || "Saving..."
               )
             ) : (
-              chrome.i18n.getMessage("sandboxEditorSaveButton") ||
-              "Save changes"
+              chrome.i18n.getMessage("sandboxEditorSaveButton") || "Save changes"
             )}
           </button>
         </div>

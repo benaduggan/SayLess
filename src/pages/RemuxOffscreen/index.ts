@@ -31,9 +31,7 @@ interface RemuxWorkerMessage {
 }
 
 const asRecord = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {};
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error || "unknown-error");
@@ -119,24 +117,14 @@ chrome.runtime.onMessage.addListener((message: unknown) => {
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
   const messageRecord = asRecord(message);
-  if (
-    messageRecord.type !== "remux-start" &&
-    messageRecord.type !== "webm-start"
-  ) {
+  if (messageRecord.type !== "remux-start" && messageRecord.type !== "webm-start") {
     return undefined;
   }
-  const requestId =
-    typeof messageRecord.requestId === "string"
-      ? messageRecord.requestId
-      : "";
+  const requestId = typeof messageRecord.requestId === "string" ? messageRecord.requestId : "";
   const inputFileName =
-    typeof messageRecord.inputFileName === "string"
-      ? messageRecord.inputFileName
-      : "";
+    typeof messageRecord.inputFileName === "string" ? messageRecord.inputFileName : "";
   const outputFileName =
-    typeof messageRecord.outputFileName === "string"
-      ? messageRecord.outputFileName
-      : "";
+    typeof messageRecord.outputFileName === "string" ? messageRecord.outputFileName : "";
   if (!requestId || !inputFileName || !outputFileName) {
     sendResponse({ ok: false, error: "invalid-remux-start-payload" });
     return false;

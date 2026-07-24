@@ -88,15 +88,8 @@ test("finishExportJobState completes a running job and forces progress to 100", 
 });
 
 test("finishExportJobState marks failures retryable and preserves progress", () => {
-  const base = updateExportJobProgressState(
-    { exportJob: createExportJob({ kind: "mp4" }, 1) },
-    64,
-  );
-  const next = finishExportJobState(
-    base,
-    { status: "failed", error: "Export failed." },
-    404,
-  );
+  const base = updateExportJobProgressState({ exportJob: createExportJob({ kind: "mp4" }, 1) }, 64);
+  const next = finishExportJobState(base, { status: "failed", error: "Export failed." }, 404);
 
   assert.equal(next.exportJob.status, "failed");
   assert.equal(next.exportJob.progress, 64);
@@ -195,15 +188,8 @@ test("export job lifecycle clears stale reveal ids before a retryable cancellati
     lastExportDownloadId: 44,
   };
 
-  const retryStarted = beginExportJobState(
-    revealable,
-    { kind: "mp4", label: "MP4 export" },
-    300,
-  );
-  const cancelled = cancelExportJobState(
-    updateExportJobProgressState(retryStarted, 37),
-    400,
-  );
+  const retryStarted = beginExportJobState(revealable, { kind: "mp4", label: "MP4 export" }, 300);
+  const cancelled = cancelExportJobState(updateExportJobProgressState(retryStarted, 37), 400);
 
   assert.equal(completed.exportJob.status, "completed");
   assert.equal(retryStarted.lastExportDownloadId, null);

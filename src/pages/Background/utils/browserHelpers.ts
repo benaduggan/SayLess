@@ -3,10 +3,7 @@ interface BrowserHelperChromeApi {
   runtime: { getPlatformInfo: () => Promise<Record<string, unknown>> };
   windows: {
     getCurrent: (callback: (window: { id?: number }) => void) => void;
-    update: (
-      id: number,
-      options: { width: number; height: number },
-    ) => unknown;
+    update: (id: number, options: { width: number; height: number }) => unknown;
   };
 }
 

@@ -44,23 +44,22 @@ interface StorageChange {
 }
 
 export const initLifecycleObserver = (): void => {
-  const chromeApi = (globalThis as typeof globalThis & {
-    chrome: {
-      storage: {
-        onChanged: {
-          addListener: (
-            listener: (
-              changes: Record<string, StorageChange>,
-              area: string,
-            ) => void,
-          ) => void;
+  const chromeApi = (
+    globalThis as typeof globalThis & {
+      chrome: {
+        storage: {
+          onChanged: {
+            addListener: (
+              listener: (changes: Record<string, StorageChange>, area: string) => void,
+            ) => void;
+          };
+        };
+        action: {
+          setIcon: (options: { path: string }) => Promise<void>;
         };
       };
-      action: {
-        setIcon: (options: { path: string }) => Promise<void>;
-      };
-    };
-  }).chrome;
+    }
+  ).chrome;
   chromeApi.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
     for (const key of Object.keys(changes)) {
@@ -83,9 +82,7 @@ export const initLifecycleObserver = (): void => {
     if (changes.recording && changes.recording.oldValue !== changes.recording.newValue) {
       try {
         void chromeApi.action.setIcon({
-          path: changes.recording.newValue
-            ? "assets/recording-logo.png"
-            : "assets/icon-34.png",
+          path: changes.recording.newValue ? "assets/recording-logo.png" : "assets/icon-34.png",
         });
       } catch (err) {
         console.warn("[SayLess][BG] reactive setIcon failed:", err);

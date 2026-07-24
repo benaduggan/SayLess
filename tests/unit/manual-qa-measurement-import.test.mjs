@@ -1,12 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -57,9 +51,7 @@ const makeFixture = () => {
     ["export.gif", "gif", "e"],
     ["export.wav", "wav", "f"],
     ["export.m4a", "m4a", "1"],
-  ].map(([fileName, format, character]) =>
-    mediaFile(fileName, format, character)
-  );
+  ].map(([fileName, format, character]) => mediaFile(fileName, format, character));
   const audioInputs = [
     ["input.wav", "wav", "2", 2, 48000],
     ["input.m4a", "m4a", "3", 2, 48000],
@@ -92,7 +84,7 @@ const makeFixture = () => {
         byteSize: 1000 + character.charCodeAt(0),
         sha256: sha(character),
       },
-    })
+    }),
   );
   const evidence = {
     kind: "sayless.manualQaEvidence",
@@ -178,14 +170,8 @@ test("measurement import copies only exact probe fields and preserves observatio
   assert.equal(result.evidence.exports.files[0].sha256, sha("c"));
   assert.equal(result.evidence.exports.files[5].sha256, sha("5"));
   assert.equal(result.evidence.projectAudio.inputs[2].channels, 1);
-  assert.equal(
-    result.evidence.recordings[0].notes,
-    "Tester-owned source observation."
-  );
-  assert.equal(
-    result.evidence.projectAudio.syncNotes,
-    "Tester-owned synchronization observation."
-  );
+  assert.equal(result.evidence.recordings[0].notes, "Tester-owned source observation.");
+  assert.equal(result.evidence.projectAudio.syncNotes, "Tester-owned synchronization observation.");
   assert.equal(result.evidence.exports.workflow.captionBurnInVerified, false);
   assert.equal("testedAt" in result.evidence, false);
   assert.equal(result.evidence.status, "template");
@@ -213,7 +199,7 @@ test("measurement import fails closed on role, format, freshness, or status drif
           ],
         },
       }),
-    /must identify a measured MP4\/WebM source/
+    /must identify a measured MP4\/WebM source/,
   );
   assert.throws(
     () =>
@@ -224,7 +210,7 @@ test("measurement import fails closed on role, format, freshness, or status drif
           requireComplete: false,
         },
       }),
-    /strict, measurably complete/
+    /strict, measurably complete/,
   );
   assert.throws(
     () =>
@@ -235,7 +221,7 @@ test("measurement import fails closed on role, format, freshness, or status drif
           generatedAt: "2026-07-23T03:00:00.000Z",
         },
       }),
-    /sidecar report must be generated after automated QA evidence/
+    /sidecar report must be generated after automated QA evidence/,
   );
   assert.throws(
     () =>
@@ -243,7 +229,7 @@ test("measurement import fails closed on role, format, freshness, or status drif
         ...fixture,
         evidence: { ...fixture.evidence, status: "passed" },
       }),
-    /passed evidence is never rewritten/
+    /passed evidence is never rewritten/,
   );
   assert.throws(
     () =>
@@ -261,11 +247,11 @@ test("measurement import fails closed on role, format, freshness, or status drif
                     width: 0,
                   },
                 }
-              : file
+              : file,
           ),
         },
       }),
-    /fileCount must match files\.length[\s\S]*width and height must be positive/
+    /fileCount must match files\.length[\s\S]*width and height must be positive/,
   );
 });
 
@@ -278,11 +264,11 @@ test("measurement import CLI previews by default and writes atomically only with
   writeFileSync(evidencePath, `${JSON.stringify(fixture.evidence, null, 2)}\n`);
   writeFileSync(
     join(artifacts, "manual-qa-media-probe.json"),
-    `${JSON.stringify(fixture.mediaReport, null, 2)}\n`
+    `${JSON.stringify(fixture.mediaReport, null, 2)}\n`,
   );
   writeFileSync(
     join(artifacts, "manual-qa-sidecar-probe.json"),
-    `${JSON.stringify(fixture.sidecarReport, null, 2)}\n`
+    `${JSON.stringify(fixture.sidecarReport, null, 2)}\n`,
   );
   try {
     const before = readFileSync(evidencePath, "utf8");
@@ -296,7 +282,7 @@ test("measurement import CLI previews by default and writes atomically only with
           ...process.env,
           SAYLESS_MANUAL_QA_MEASUREMENTS_ROOT: root,
         },
-      }
+      },
     );
     assert.equal(preview.status, 0, preview.stderr);
     assert.equal(JSON.parse(preview.stdout).status, "preview");
@@ -312,14 +298,11 @@ test("measurement import CLI previews by default and writes atomically only with
           ...process.env,
           SAYLESS_MANUAL_QA_MEASUREMENTS_ROOT: root,
         },
-      }
+      },
     );
     assert.equal(applied.status, 0, applied.stderr);
     assert.equal(JSON.parse(applied.stdout).status, "applied");
-    assert.equal(
-      JSON.parse(readFileSync(evidencePath)).recordings[0].width,
-      1920
-    );
+    assert.equal(JSON.parse(readFileSync(evidencePath)).recordings[0].width, 1920);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

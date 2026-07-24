@@ -18,13 +18,7 @@ import { videoConverter } from "./videoConverter";
 export class VideoMuter {
   async mute(
     videoBlob,
-    {
-      muteStart = 0,
-      muteEnd = 0,
-      videoVolume = 1.0,
-      outputFormat = "mp4",
-      onProgress,
-    } = {}
+    { muteStart = 0, muteEnd = 0, videoVolume = 1.0, outputFormat = "mp4", onProgress } = {},
   ) {
     const videoDuration = await this._getDuration(videoBlob);
 
@@ -50,9 +44,7 @@ export class VideoMuter {
     output.addVideoTrack(videoSource);
 
     const audioTrack = await input.getPrimaryAudioTrack();
-    const audioDecodable = audioTrack
-      ? await audioTrack.canDecode().catch(() => false)
-      : false;
+    const audioDecodable = audioTrack ? await audioTrack.canDecode().catch(() => false) : false;
     let audioSink = null;
     let audioSource = null;
     if (audioTrack && audioDecodable) {

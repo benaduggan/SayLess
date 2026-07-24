@@ -4,10 +4,7 @@ interface DownloadTab {
   id?: number;
 }
 
-type TabUpdateListener = (
-  tabId: number,
-  changeInfo: { status?: string },
-) => void;
+type TabUpdateListener = (tabId: number, changeInfo: { status?: string }) => void;
 
 interface DownloadChromeApi {
   tabs: {
@@ -25,10 +22,7 @@ const chromeApi = (): DownloadChromeApi =>
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-export const requestDownload = async (
-  base64: string,
-  title?: string,
-): Promise<void> => {
+export const requestDownload = async (base64: string, title?: string): Promise<void> => {
   try {
     // Open a new tab with the download page
     const tab = await chromeApi().tabs.create({

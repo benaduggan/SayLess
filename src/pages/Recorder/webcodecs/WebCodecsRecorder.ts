@@ -99,9 +99,7 @@ export interface WebCodecsRecorderOptions {
 let _mp4MuxerWrapperPromise: Promise<typeof Mp4MuxerWrapper> | null = null;
 const loadMp4MuxerWrapper = () => {
   if (!_mp4MuxerWrapperPromise) {
-    _mp4MuxerWrapperPromise = import("./Mp4MuxerWrapper").then(
-      (m) => m.Mp4MuxerWrapper,
-    );
+    _mp4MuxerWrapperPromise = import("./Mp4MuxerWrapper").then((m) => m.Mp4MuxerWrapper);
   }
   return _mp4MuxerWrapperPromise;
 };
@@ -109,9 +107,7 @@ const loadMp4MuxerWrapper = () => {
 let _mkvMuxerWrapperPromise: Promise<typeof MkvMuxerWrapper> | null = null;
 const loadMkvMuxerWrapper = () => {
   if (!_mkvMuxerWrapperPromise) {
-    _mkvMuxerWrapperPromise = import("./MkvMuxerWrapper").then(
-      (m) => m.MkvMuxerWrapper,
-    );
+    _mkvMuxerWrapperPromise = import("./MkvMuxerWrapper").then((m) => m.MkvMuxerWrapper);
   }
   return _mkvMuxerWrapperPromise;
 };
@@ -328,12 +324,8 @@ export class WebCodecsRecorder {
     // Shorter values false-fired into the MediaRecorder fallback.
     this._firstChunkWatchdogMs = Number.isFinite(options.firstChunkWatchdogMs)
       ? options.firstChunkWatchdogMs!
-      : Number.isFinite(
-            /** @type {any} */ (globalThis)
-              .__screenityFirstChunkWatchdogMsForTests,
-          )
-        ? /** @type {any} */ (globalThis)
-            .__screenityFirstChunkWatchdogMsForTests!
+      : Number.isFinite(/** @type {any} */ (globalThis).__screenityFirstChunkWatchdogMsForTests)
+        ? /** @type {any} */ (globalThis).__screenityFirstChunkWatchdogMsForTests!
         : 12000;
 
     // Mid-stream watchdog: encoder goes silent after producing chunks
@@ -342,12 +334,8 @@ export class WebCodecsRecorder {
     this._midStreamWatchdog = null;
     this._midStreamWatchdogMs = Number.isFinite(options.midStreamWatchdogMs)
       ? options.midStreamWatchdogMs!
-      : Number.isFinite(
-            /** @type {any} */ (globalThis)
-              .__screenityMidStreamWatchdogMsForTests,
-          )
-        ? /** @type {any} */ (globalThis)
-            .__screenityMidStreamWatchdogMsForTests!
+      : Number.isFinite(/** @type {any} */ (globalThis).__screenityMidStreamWatchdogMsForTests)
+        ? /** @type {any} */ (globalThis).__screenityMidStreamWatchdogMsForTests!
         : 15000;
 
     // Last structured failure code that fired via _reportFailure; passed
@@ -383,16 +371,10 @@ export class WebCodecsRecorder {
       : 5;
     // Throttle so the encode loop can't burn the cap on every frame
     // while the HW slot is still held by another app.
-    this._reclaimRebuildThrottleMs = Number.isFinite(
-      options.reclaimRebuildThrottleMs,
-    )
+    this._reclaimRebuildThrottleMs = Number.isFinite(options.reclaimRebuildThrottleMs)
       ? options.reclaimRebuildThrottleMs!
-      : Number.isFinite(
-            /** @type {any} */ (globalThis)
-              .__screenityReclaimRebuildThrottleMsForTests,
-          )
-        ? /** @type {any} */ (globalThis)
-            .__screenityReclaimRebuildThrottleMsForTests!
+      : Number.isFinite(/** @type {any} */ (globalThis).__screenityReclaimRebuildThrottleMsForTests)
+        ? /** @type {any} */ (globalThis).__screenityReclaimRebuildThrottleMsForTests!
         : 2000;
     this._lastVideoReclaimRebuildAt = null;
     this._lastAudioReclaimRebuildAt = null;
@@ -404,10 +386,7 @@ export class WebCodecsRecorder {
     this._lastAudioReclaimAt = null;
     this._reclaimResetAfterMs = Number.isFinite(options.reclaimResetAfterMs)
       ? options.reclaimResetAfterMs!
-      : Number.isFinite(
-            /** @type {any} */ (globalThis)
-              .__screenityReclaimResetAfterMsForTests,
-          )
+      : Number.isFinite(/** @type {any} */ (globalThis).__screenityReclaimResetAfterMsForTests)
         ? /** @type {any} */ (globalThis).__screenityReclaimResetAfterMsForTests!
         : 30000;
     // Pause closes encoders to release the HW slot before Chrome's
@@ -419,18 +398,14 @@ export class WebCodecsRecorder {
     // recording (BT unplug, default device switch). Capped to catch flaps.
     this._audioDeviceChangePending = false;
     this._audioSampleRateMismatchRebuilds = 0;
-    this._maxAudioSampleRateRebuilds = Number.isFinite(
-      options.maxAudioSampleRateRebuilds,
-    )
+    this._maxAudioSampleRateRebuilds = Number.isFinite(options.maxAudioSampleRateRebuilds)
       ? options.maxAudioSampleRateRebuilds!
       : 3;
     // Sleep / wake: a long frame-arrival gap means lid-close or OS
     // preemption. Force a keyframe and reset the stall watchdog.
     this._lastFrameArrivalAt = null;
     this._postSleepRecoveries = 0;
-    this._sleepGapMs = Number.isFinite(options.sleepGapMs)
-      ? options.sleepGapMs!
-      : 5000;
+    this._sleepGapMs = Number.isFinite(options.sleepGapMs) ? options.sleepGapMs! : 5000;
     // Active configs preserved for rebuild after reclaim. Updated when
     // a SW fallback rebuilds the encoder so the next reclaim uses the
     // config that actually worked, not the originally-attempted HW one.
@@ -580,8 +555,7 @@ export class WebCodecsRecorder {
     this._activeAudioConfig = null;
     this._visibilityChangeCount = 0;
     this._lastVisibilityChangeAt = null;
-    this._lastVisibilityState =
-      typeof document !== "undefined" ? document.visibilityState : null;
+    this._lastVisibilityState = typeof document !== "undefined" ? document.visibilityState : null;
     this._deviceChangeCount = 0;
     this._lastDeviceChangeAt = null;
     this._attachVisibilityListener();
@@ -611,18 +585,8 @@ export class WebCodecsRecorder {
           | (MediaStreamTrack & MediaStreamAudioTrack)
           | undefined) || null;
 
-      this.log(
-        "[WCR] videoTrack",
-        this.videoTrack,
-        "state=",
-        this.videoTrack?.readyState
-      );
-      this.log(
-        "[WCR] audioTrack",
-        this.audioTrack,
-        "state=",
-        this.audioTrack?.readyState
-      );
+      this.log("[WCR] videoTrack", this.videoTrack, "state=", this.videoTrack?.readyState);
+      this.log("[WCR] audioTrack", this.audioTrack, "state=", this.audioTrack?.readyState);
 
       if (!this.videoTrack) {
         const err = new Error("WebCodecsRecorder: No video track");
@@ -689,8 +653,7 @@ export class WebCodecsRecorder {
           try {
             const support = await VideoEncoder.isConfigSupported(config);
             if (support?.supported) {
-              const effectiveCodec =
-                (support.config || config).codec || overrideConfig.codec || "";
+              const effectiveCodec = (support.config || config).codec || overrideConfig.codec || "";
               let cc;
               if (/^vp09|^vp9/i.test(effectiveCodec)) cc = "vp9";
               else if (/^vp08|^vp8/i.test(effectiveCodec)) cc = "vp8";
@@ -817,23 +780,15 @@ export class WebCodecsRecorder {
               this._startResolve = null;
             }
             setTimeout(() => {
-              this.options.onError?.(
-                new Error("e2e-forced-webcodecs-error"),
-              );
+              this.options.onError?.(new Error("e2e-forced-webcodecs-error"));
             }, 0);
             return;
           }
 
           // E2E hook: fire `ended` on the video track mid-recording
           // (simulates monitor unplug / Stop-sharing click).
-          const endAfterMs = Number(
-            (globalThis).__screenityForceTrackEndAfterMs,
-          );
-          if (
-            this.videoTrack &&
-            Number.isFinite(endAfterMs) &&
-            endAfterMs > 0
-          ) {
+          const endAfterMs = Number(globalThis.__screenityForceTrackEndAfterMs);
+          if (this.videoTrack && Number.isFinite(endAfterMs) && endAfterMs > 0) {
             this._forcedTrackEndTimer = setTimeout(() => {
               const videoTrack = this.videoTrack;
               if (!videoTrack) return;
@@ -953,10 +908,7 @@ export class WebCodecsRecorder {
         await Promise.race([
           encoder.flush(),
           new Promise((_, reject) => {
-            timed = setTimeout(
-              () => reject(new Error(`${kind}-flush-timeout`)),
-              15000,
-            );
+            timed = setTimeout(() => reject(new Error(`${kind}-flush-timeout`)), 15000);
           }),
         ]);
       } finally {
@@ -990,10 +942,7 @@ export class WebCodecsRecorder {
         const holdStartUs = this._videoFrameIndex * this._frameDurationUs;
         // Cushion for audio drain lag + muxer rounding; 150ms is imperceptible.
         const cushionUs = 150_000;
-        const targetEndUs = Math.max(
-          holdStartUs + this._frameDurationUs,
-          audioEndUs + cushionUs,
-        );
+        const targetEndUs = Math.max(holdStartUs + this._frameDurationUs, audioEndUs + cushionUs);
         const framesNeeded = Math.max(
           1,
           Math.ceil((targetEndUs - holdStartUs) / this._frameDurationUs),
@@ -1021,10 +970,7 @@ export class WebCodecsRecorder {
           await Promise.race([
             this.videoEncoder.flush(),
             new Promise((_, reject) => {
-              holdTimed = setTimeout(
-                () => reject(new Error("trailing-hold-flush-timeout")),
-                5000,
-              );
+              holdTimed = setTimeout(() => reject(new Error("trailing-hold-flush-timeout")), 5000);
             }),
           ]);
         } finally {
@@ -1055,8 +1001,7 @@ export class WebCodecsRecorder {
         frameCount: this.frameCount,
       });
       if (!this._failureReported) {
-        const zeroChunkErr = (
-          this._videoLoopError ||
+        const zeroChunkErr = (this._videoLoopError ||
           new Error(
             "WebCodecs encoder produced zero chunks before stop; flush succeeded without output",
           )) as RecorderError;
@@ -1078,10 +1023,7 @@ export class WebCodecsRecorder {
             muxerFinalizeOk = true;
           }),
           new Promise((_, reject) =>
-            setTimeout(
-              () => reject(new Error("muxer-finalize-timeout")),
-              5000,
-            ),
+            setTimeout(() => reject(new Error("muxer-finalize-timeout")), 5000),
           ),
         ]);
         endFinalize({ ok: true });
@@ -1120,9 +1062,7 @@ export class WebCodecsRecorder {
             video: this._videoFlushMs ?? null,
             audio: this._audioFlushMs ?? null,
           },
-          swRetry: this._didSwRetry
-            ? { reason: this._swRetryReason || null }
-            : null,
+          swRetry: this._didSwRetry ? { reason: this._swRetryReason || null } : null,
           lastFailureCode: this._lastFailureCode,
           diag: this.getDiagSnapshot(),
         });
@@ -1183,14 +1123,11 @@ export class WebCodecsRecorder {
   getDiagSnapshot() {
     let firstChunkLatencyMs = null;
     if (this._firstChunkAt != null && this._videoStartUs != null) {
-      firstChunkLatencyMs = Math.round(
-        this._firstChunkAt - this._videoStartUs / 1000,
-      );
+      firstChunkLatencyMs = Math.round(this._firstChunkAt - this._videoStartUs / 1000);
     }
     return {
       videoCodecString: this.actualVideoCodec || null,
-      hardwareAccelerationActual:
-        this._activeVideoConfig?.hardwareAcceleration || "no-preference",
+      hardwareAccelerationActual: this._activeVideoConfig?.hardwareAcceleration || "no-preference",
       videoCodecConfigsTried: this._videoCodecConfigsTried.slice(0, 8),
       displaySurface: this._displaySurface,
       frameRateRequested: this._frameRateRequested,
@@ -1216,16 +1153,12 @@ export class WebCodecsRecorder {
   }
 
   pause() {
-    this._pauseResumeChain = this._pauseResumeChain
-      .catch(() => {})
-      .then(() => this._pauseImpl());
+    this._pauseResumeChain = this._pauseResumeChain.catch(() => {}).then(() => this._pauseImpl());
     return this._pauseResumeChain;
   }
 
   resume() {
-    this._pauseResumeChain = this._pauseResumeChain
-      .catch(() => {})
-      .then(() => this._resumeImpl());
+    this._pauseResumeChain = this._pauseResumeChain.catch(() => {}).then(() => this._resumeImpl());
     return this._pauseResumeChain;
   }
 
@@ -1295,17 +1228,13 @@ export class WebCodecsRecorder {
     ) => {
       if (!reader) return;
       try {
-        await Promise.race([
-          reader.cancel(),
-          new Promise((resolve) => setTimeout(resolve, 500)),
-        ]);
+        await Promise.race([reader.cancel(), new Promise((resolve) => setTimeout(resolve, 500))]);
       } catch {}
-      try { reader.releaseLock(); } catch {}
+      try {
+        reader.releaseLock();
+      } catch {}
     };
-    await Promise.all([
-      cancelWithTimeout(this.videoReader),
-      cancelWithTimeout(this.audioReader),
-    ]);
+    await Promise.all([cancelWithTimeout(this.videoReader), cancelWithTimeout(this.audioReader)]);
 
     try {
       this.videoEncoder?.close();
@@ -1317,7 +1246,9 @@ export class WebCodecsRecorder {
     // Release pre-encoder-ready AudioData; if encoder init failed,
     // readAudioLoop never drains the buffer and these would leak.
     for (const item of this._prebufferedAudio) {
-      try { item.close?.(); } catch {}
+      try {
+        item.close?.();
+      } catch {}
     }
     this._prebufferedAudio = [];
 
@@ -1403,20 +1334,15 @@ export class WebCodecsRecorder {
           firstFrameSampleRate: this._firstAudioFrameSampleRate,
           sampleRateMismatchRebuilds: this._audioSampleRateMismatchRebuilds,
         },
-        swRetry: this._didSwRetry
-          ? { reason: this._swRetryReason || null }
-          : null,
-        videoLoopError: this._videoLoopError
-          ? this._videoLoopError.message
-          : null,
+        swRetry: this._didSwRetry ? { reason: this._swRetryReason || null } : null,
+        videoLoopError: this._videoLoopError ? this._videoLoopError.message : null,
         // Visibility transitions during the recording. Reclaim errors
         // Failures often correlate with the tab being backgrounded.
         visibility: {
           changes: this._visibilityChangeCount,
           lastChangeAt: this._lastVisibilityChangeAt,
           lastState: this._lastVisibilityState,
-          stateNow:
-            typeof document !== "undefined" ? document.visibilityState : null,
+          stateNow: typeof document !== "undefined" ? document.visibilityState : null,
         },
         reclaims: {
           video: this._encoderReclaimCount,
@@ -1466,10 +1392,7 @@ export class WebCodecsRecorder {
       }
     };
     try {
-      document.addEventListener(
-        "visibilitychange",
-        this._visibilityChangeListener,
-      );
+      document.addEventListener("visibilitychange", this._visibilityChangeListener);
     } catch {
       this._visibilityChangeListener = null;
     }
@@ -1480,10 +1403,7 @@ export class WebCodecsRecorder {
       return;
     }
     try {
-      document.removeEventListener(
-        "visibilitychange",
-        this._visibilityChangeListener,
-      );
+      document.removeEventListener("visibilitychange", this._visibilityChangeListener);
     } catch {}
     this._visibilityChangeListener = null;
   }
@@ -1505,10 +1425,7 @@ export class WebCodecsRecorder {
       this.log("[WCR] devicechange", { count: this._deviceChangeCount });
     };
     try {
-      navigator.mediaDevices.addEventListener(
-        "devicechange",
-        this._deviceChangeListener,
-      );
+      navigator.mediaDevices.addEventListener("devicechange", this._deviceChangeListener);
     } catch {
       this._deviceChangeListener = null;
     }
@@ -1523,10 +1440,7 @@ export class WebCodecsRecorder {
       return;
     }
     try {
-      navigator.mediaDevices.removeEventListener(
-        "devicechange",
-        this._deviceChangeListener,
-      );
+      navigator.mediaDevices.removeEventListener("devicechange", this._deviceChangeListener);
     } catch {}
     this._deviceChangeListener = null;
   }
@@ -1539,21 +1453,14 @@ export class WebCodecsRecorder {
       if (!this.running || this._stopping || this._firstChunkSeen) return;
       // tab is hidden so the encoder may be throttled; re-arm and let the
       // visibilitychange handler restart the clock on return.
-      if (
-        typeof document !== "undefined" &&
-        document.visibilityState === "hidden"
-      ) {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
         this._armFirstChunkWatchdog();
         return;
       }
-      this.warn(
-        `[WCR] no encoded video chunk within ${this._firstChunkWatchdogMs}ms`,
-      );
+      this.warn(`[WCR] no encoded video chunk within ${this._firstChunkWatchdogMs}ms`);
       this._reportFailure(
         "webcodecs-no-first-chunk",
-        new Error(
-          `WebCodecs produced no encoded video within ${this._firstChunkWatchdogMs}ms`,
-        ),
+        new Error(`WebCodecs produced no encoded video within ${this._firstChunkWatchdogMs}ms`),
       );
     }, this._firstChunkWatchdogMs);
   }
@@ -1663,114 +1570,106 @@ export class WebCodecsRecorder {
     // Extract output/error callbacks so the prefer-software retry below
     // can rebuild the VideoEncoder with the same handlers.
     const videoEncoderOutput: EncodedVideoChunkOutputCallback = (chunk, meta) => {
-        // E2E hook: drop the first N chunks to drive the no-first-chunk
-        // watchdog in tests.
-        const _g = /** @type {any} */ (globalThis);
-        if (
-          typeof _g.__screenitySuppressFirstChunks === "number" &&
-          _g.__screenitySuppressFirstChunks > 0
-        ) {
-          _g.__screenitySuppressFirstChunks -= 1;
-          return;
-        }
-        // E2E hook: drop chunks mid-stream (after the first) to simulate a
-        // silent encoder stall and drive the mid-stream rebuild path.
-        if (_g.__screenitySuppressChunks === true && this._firstChunkSeen) {
-          return;
-        }
-        // First encoded video chunk: the recording is producing real
-        // bytes, so disarm the no-first-chunk watchdog and arm the
-        // mid-stream stall watchdog instead.
-        this._chunksOut += 1;
-        if (!this._firstChunkSeen) {
-          this._firstChunkSeen = true;
-          this._firstChunkAt = performance.now();
-          this._clearFirstChunkWatchdog();
-          this._armMidStreamStallWatchdog();
-        }
-        // Refresh the mid-stream watchdog's timestamp on every chunk so
-        // it only fires when output genuinely stops.
-        this._lastChunkAt = performance.now();
-        // Reset the reclaim counter after a healthy stretch.
-        if (
-          shouldResetReclaimCounter(
-            this._lastChunkAt,
-            this._lastVideoReclaimAt,
-            this._reclaimResetAfterMs,
-            this._encoderReclaimCount,
-          )
-        ) {
-          this._encoderReclaimCount = 0;
-          this._lastVideoReclaimAt = null;
-        }
-        // decoderConfig.codec can overstate level vs SPS; parse from
-        // avcC ([1]=profile, [2]=compat, [3]=level) when possible.
-        if (!this.actualVideoCodec) {
-          const desc = meta?.decoderConfig?.description;
-          const reported = meta?.decoderConfig?.codec;
-          let parsed = null;
-          if (desc instanceof Uint8Array || desc instanceof ArrayBuffer) {
-            const view = new Uint8Array(
-              desc instanceof ArrayBuffer ? desc : desc.buffer,
-              desc instanceof ArrayBuffer ? 0 : desc.byteOffset,
-              desc instanceof ArrayBuffer ? desc.byteLength : desc.byteLength,
-            );
-            if (view[0] === 1 && view.length >= 4) {
-              const hex = (n: number) =>
-                n.toString(16).padStart(2, "0").toUpperCase();
-              parsed = `avc1.${hex(view[1])}${hex(view[2])}${hex(view[3])}`;
-            }
-          }
-          if (parsed) {
-            this.actualVideoCodec = parsed;
-          } else if (typeof reported === "string" && reported.length > 0) {
-            this.actualVideoCodec = reported;
+      // E2E hook: drop the first N chunks to drive the no-first-chunk
+      // watchdog in tests.
+      const _g = /** @type {any} */ (globalThis);
+      if (
+        typeof _g.__screenitySuppressFirstChunks === "number" &&
+        _g.__screenitySuppressFirstChunks > 0
+      ) {
+        _g.__screenitySuppressFirstChunks -= 1;
+        return;
+      }
+      // E2E hook: drop chunks mid-stream (after the first) to simulate a
+      // silent encoder stall and drive the mid-stream rebuild path.
+      if (_g.__screenitySuppressChunks === true && this._firstChunkSeen) {
+        return;
+      }
+      // First encoded video chunk: the recording is producing real
+      // bytes, so disarm the no-first-chunk watchdog and arm the
+      // mid-stream stall watchdog instead.
+      this._chunksOut += 1;
+      if (!this._firstChunkSeen) {
+        this._firstChunkSeen = true;
+        this._firstChunkAt = performance.now();
+        this._clearFirstChunkWatchdog();
+        this._armMidStreamStallWatchdog();
+      }
+      // Refresh the mid-stream watchdog's timestamp on every chunk so
+      // it only fires when output genuinely stops.
+      this._lastChunkAt = performance.now();
+      // Reset the reclaim counter after a healthy stretch.
+      if (
+        shouldResetReclaimCounter(
+          this._lastChunkAt,
+          this._lastVideoReclaimAt,
+          this._reclaimResetAfterMs,
+          this._encoderReclaimCount,
+        )
+      ) {
+        this._encoderReclaimCount = 0;
+        this._lastVideoReclaimAt = null;
+      }
+      // decoderConfig.codec can overstate level vs SPS; parse from
+      // avcC ([1]=profile, [2]=compat, [3]=level) when possible.
+      if (!this.actualVideoCodec) {
+        const desc = meta?.decoderConfig?.description;
+        const reported = meta?.decoderConfig?.codec;
+        let parsed = null;
+        if (desc instanceof Uint8Array || desc instanceof ArrayBuffer) {
+          const view = new Uint8Array(
+            desc instanceof ArrayBuffer ? desc : desc.buffer,
+            desc instanceof ArrayBuffer ? 0 : desc.byteOffset,
+            desc instanceof ArrayBuffer ? desc.byteLength : desc.byteLength,
+          );
+          if (view[0] === 1 && view.length >= 4) {
+            const hex = (n: number) => n.toString(16).padStart(2, "0").toUpperCase();
+            parsed = `avc1.${hex(view[1])}${hex(view[2])}${hex(view[3])}`;
           }
         }
+        if (parsed) {
+          this.actualVideoCodec = parsed;
+        } else if (typeof reported === "string" && reported.length > 0) {
+          this.actualVideoCodec = reported;
+        }
+      }
 
-        // Chrome WebCodecs bug: AVCDecoderConfigurationRecord can have
-        // bit 0/1 set in constraint_set_flags, which some decoders
-        // reject. Zero the byte in place (AVC only).
-        // ref: github.com/WebAV-Tech/WebAV/issues/203
-        const codecForFix = this.actualVideoCodec || meta?.decoderConfig?.codec;
-        const descForFix = meta?.decoderConfig?.description;
-        if (
-          descForFix &&
-          typeof codecForFix === "string" &&
-          codecForFix.startsWith("avc")
-        ) {
-          const u8 = toUint8Array(descForFix);
-          if (u8.length >= 3 && (u8[2] & 0x03) !== 0) {
-            u8[2] = 0;
+      // Chrome WebCodecs bug: AVCDecoderConfigurationRecord can have
+      // bit 0/1 set in constraint_set_flags, which some decoders
+      // reject. Zero the byte in place (AVC only).
+      // ref: github.com/WebAV-Tech/WebAV/issues/203
+      const codecForFix = this.actualVideoCodec || meta?.decoderConfig?.codec;
+      const descForFix = meta?.decoderConfig?.description;
+      if (descForFix && typeof codecForFix === "string" && codecForFix.startsWith("avc")) {
+        const u8 = toUint8Array(descForFix);
+        if (u8.length >= 3 && (u8[2] & 0x03) !== 0) {
+          u8[2] = 0;
+        }
+      }
+
+      // Surface the decoder config once. Persisting it alongside
+      // OPFS chunks unlocks chunks-only recovery when the muxer
+      // never finalizes (tab killed mid-recording).
+      if (!this._decoderConfigEmitted && typeof this.options.onDecoderConfig === "function") {
+        const desc = meta?.decoderConfig?.description;
+        const codec = this.actualVideoCodec || meta?.decoderConfig?.codec;
+        if (desc && codec) {
+          this._decoderConfigEmitted = true;
+          try {
+            this.options.onDecoderConfig({
+              description: desc,
+              codec,
+              container: this.containerKind,
+              width: this.targetWidth,
+              height: this.targetHeight,
+            });
+          } catch (cbErr) {
+            this.warn("[WCR] onDecoderConfig callback threw:", cbErr);
           }
         }
+      }
 
-        // Surface the decoder config once. Persisting it alongside
-        // OPFS chunks unlocks chunks-only recovery when the muxer
-        // never finalizes (tab killed mid-recording).
-        if (
-          !this._decoderConfigEmitted &&
-          typeof this.options.onDecoderConfig === "function"
-        ) {
-          const desc = meta?.decoderConfig?.description;
-          const codec = this.actualVideoCodec || meta?.decoderConfig?.codec;
-          if (desc && codec) {
-            this._decoderConfigEmitted = true;
-            try {
-              this.options.onDecoderConfig({
-                description: desc,
-                codec,
-                container: this.containerKind,
-                width: this.targetWidth,
-                height: this.targetHeight,
-              });
-            } catch (cbErr) {
-              this.warn("[WCR] onDecoderConfig callback threw:", cbErr);
-            }
-          }
-        }
-
-        this.muxer!.addVideoChunk(chunk, meta);
+      this.muxer!.addVideoChunk(chunk, meta);
     };
     const videoEncoderError: WebCodecsErrorCallback = (err) => {
       this._handleVideoEncoderError(err);
@@ -1806,8 +1705,7 @@ export class WebCodecsRecorder {
         paused: this.paused,
         stopping: this._stopping,
         audioSampleRate: this.audioSampleRate,
-        audioSampleRateMismatchRebuilds:
-          this._audioSampleRateMismatchRebuilds,
+        audioSampleRateMismatchRebuilds: this._audioSampleRateMismatchRebuilds,
         audioDeviceChangePending: this._audioDeviceChangePending,
         postSleepRecoveries: this._postSleepRecoveries,
         midStreamStallRebuilds: this._midStreamStallRebuilds,
@@ -1835,9 +1733,7 @@ export class WebCodecsRecorder {
     const tryConfigureWith = (cfg: VideoEncoderConfig) => {
       // E2E hook: force one HW configure() to throw QuotaExceededError so
       // tests can exercise the prefer-software retry path. One-shot.
-      const hwPref =
-        cfg.hardwareAcceleration === "prefer-hardware" ||
-        !cfg.hardwareAcceleration;
+      const hwPref = cfg.hardwareAcceleration === "prefer-hardware" || !cfg.hardwareAcceleration;
       const swPref = cfg.hardwareAcceleration === "prefer-software";
       const g = /** @type {any} */ (globalThis);
       if (
@@ -1846,9 +1742,7 @@ export class WebCodecsRecorder {
         !g.__screenityForceConfigureHwQuotaError_fired
       ) {
         g.__screenityForceConfigureHwQuotaError_fired = true;
-        const forced = new Error(
-          "Forced HW configure quota error for testing",
-        );
+        const forced = new Error("Forced HW configure quota error for testing");
         forced.name = "QuotaExceededError";
         throw forced;
       }
@@ -1860,9 +1754,7 @@ export class WebCodecsRecorder {
         !g.__screenityForceConfigureSwQuotaError_fired
       ) {
         g.__screenityForceConfigureSwQuotaError_fired = true;
-        const forced = new Error(
-          "Forced SW configure quota error for testing",
-        );
+        const forced = new Error("Forced SW configure quota error for testing");
         forced.name = "QuotaExceededError";
         throw forced;
       }
@@ -1902,19 +1794,17 @@ export class WebCodecsRecorder {
       tryConfigureWith(config);
     } catch (err) {
       const isHwPreferred =
-        config.hardwareAcceleration === "prefer-hardware" ||
-        !config.hardwareAcceleration;
+        config.hardwareAcceleration === "prefer-hardware" || !config.hardwareAcceleration;
       const errMsg = errorMessage(err);
       const isContentionError = isContention(err);
       if (isHwPreferred && !this._didSwRetry) {
         this._didSwRetry = true;
-        this._swRetryReason = isContentionError
-          ? "encoder-quota"
-          : "configure-failed";
-        this.warn(
-          "[WCR] HW VideoEncoder.configure failed, retrying prefer-software",
-          { reason: this._swRetryReason, codec: codecLabel, message: errMsg },
-        );
+        this._swRetryReason = isContentionError ? "encoder-quota" : "configure-failed";
+        this.warn("[WCR] HW VideoEncoder.configure failed, retrying prefer-software", {
+          reason: this._swRetryReason,
+          codec: codecLabel,
+          message: errMsg,
+        });
         rebuildEncoder();
         const swConfig: VideoEncoderConfig = {
           ...config,
@@ -1928,15 +1818,9 @@ export class WebCodecsRecorder {
         } catch (swErr) {
           // both HW and SW threw contention: the OS slot is likely held
           // transiently, so one pause + retry recovers on the Windows traces.
-          if (
-            isContention(swErr) &&
-            isContentionError &&
-            !this._didCooldownRetry
-          ) {
+          if (isContention(swErr) && isContentionError && !this._didCooldownRetry) {
             this._didCooldownRetry = true;
-            const cooldownMs = Number.isFinite(
-              this.options.encoderConfigureCooldownMs,
-            )
+            const cooldownMs = Number.isFinite(this.options.encoderConfigureCooldownMs)
               ? this.options.encoderConfigureCooldownMs!
               : 1500;
             this.warn(
@@ -1952,27 +1836,20 @@ export class WebCodecsRecorder {
             rebuildEncoder();
             try {
               tryConfigureWith(config);
-              this.log(
-                "[WCR] VideoEncoder configured after cooldown retry",
-                { codec: codecLabel },
-              );
+              this.log("[WCR] VideoEncoder configured after cooldown retry", { codec: codecLabel });
               this._activeVideoConfig = config;
               return;
             } catch (retryErr) {
-              this.warn(
-                "[WCR] cooldown HW retry failed; trying SW once more",
-                {
-                  codec: codecLabel,
-                  message: errorMessage(retryErr),
-                },
-              );
+              this.warn("[WCR] cooldown HW retry failed; trying SW once more", {
+                codec: codecLabel,
+                message: errorMessage(retryErr),
+              });
               rebuildEncoder();
               try {
                 tryConfigureWith(swConfig);
-                this.log(
-                  "[WCR] VideoEncoder configured (SW after cooldown)",
-                  { codec: codecLabel },
-                );
+                this.log("[WCR] VideoEncoder configured (SW after cooldown)", {
+                  codec: codecLabel,
+                });
                 this._activeVideoConfig = swConfig;
                 return;
               } catch (finalErr) {
@@ -2056,7 +1933,7 @@ export class WebCodecsRecorder {
     const dc = meta?.decoderConfig;
     if (!dc) return null;
     const codec = dc.codec || this._activeAudioConfig?.codec || "";
-    if (typeof codec !== "string" || !/^mp4a\.40\./.test(codec)) return null;
+    if (typeof codec !== "string" || !codec.startsWith("mp4a.40.")) return null;
     const desc = dc.description;
     let invalid = false;
     let u8 = null;
@@ -2075,19 +1952,14 @@ export class WebCodecsRecorder {
 
     const objectTypeFromCodec = Number(codec.split(".")[2]);
     const sampleRate =
-      dc.sampleRate ||
-      this._activeAudioConfig?.sampleRate ||
-      this.audioSampleRate ||
-      48000;
+      dc.sampleRate || this._activeAudioConfig?.sampleRate || this.audioSampleRate || 48000;
     const channels =
       dc.numberOfChannels ||
       this._activeAudioConfig?.numberOfChannels ||
       this.audioChannelCount ||
       2;
     const synthesized = this._synthesizeAacDescription(
-      Number.isFinite(objectTypeFromCodec) && objectTypeFromCodec > 0
-        ? objectTypeFromCodec
-        : 2,
+      Number.isFinite(objectTypeFromCodec) && objectTypeFromCodec > 0 ? objectTypeFromCodec : 2,
       sampleRate,
       channels,
     );
@@ -2107,14 +1979,12 @@ export class WebCodecsRecorder {
     numberOfChannels: number,
   ): Uint8Array {
     const AAC_SAMPLE_RATES = [
-      96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000,
-      11025, 8000, 7350,
+      96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350,
     ];
     let freqIndex = AAC_SAMPLE_RATES.indexOf(sampleRate);
     if (freqIndex === -1) freqIndex = 3; // 48000
     const channelConfig = numberOfChannels === 8 ? 7 : numberOfChannels;
-    const byte0 =
-      ((objectType & 0x1f) << 3) | ((freqIndex >> 1) & 0x07);
+    const byte0 = ((objectType & 0x1f) << 3) | ((freqIndex >> 1) & 0x07);
     const byte1 = ((freqIndex & 0x01) << 7) | ((channelConfig & 0x0f) << 3);
     return new Uint8Array([byte0, byte1]);
   }
@@ -2147,11 +2017,7 @@ export class WebCodecsRecorder {
       this._videoEncoderOutputHandler &&
       this._videoEncoderErrorHandler;
 
-    if (
-      isReclaim &&
-      canRecover &&
-      this._encoderReclaimCount < this._maxEncoderReclaims
-    ) {
+    if (isReclaim && canRecover && this._encoderReclaimCount < this._maxEncoderReclaims) {
       // Throttle: while the HW slot is held, encoder.error fires every
       // frame and would burn the cap in ms.
       const nowMs = performance.now();
@@ -2187,10 +2053,10 @@ export class WebCodecsRecorder {
     if (preFirstChunk && canRecover && isHwPreferred && !this._didSwRetry) {
       this._didSwRetry = true;
       this._swRetryReason = "encoder-error-pre-first-chunk";
-      this.warn(
-        "[WCR] VideoEncoder errored before first chunk, retrying prefer-software",
-        { codec: this._activeVideoCodecLabel, message: msg },
-      );
+      this.warn("[WCR] VideoEncoder errored before first chunk, retrying prefer-software", {
+        codec: this._activeVideoCodecLabel,
+        message: msg,
+      });
       const activeVideoConfig = this._activeVideoConfig;
       if (!activeVideoConfig) return;
       const swConfig: VideoEncoderConfig = {
@@ -2207,12 +2073,7 @@ export class WebCodecsRecorder {
 
     // Fatal mid-recording with chunks on disk. Run stop() so the muxer
     // writes moov, then surface the error tagged finalized for salvage.
-    if (
-      this._firstChunkSeen &&
-      this.running &&
-      !this._stopping &&
-      !this._finalizeOnFatalRan
-    ) {
+    if (this._firstChunkSeen && this.running && !this._stopping && !this._finalizeOnFatalRan) {
       this._finalizeOnFatalRan = true;
       try {
         (err as RecorderError).finalized = true;
@@ -2358,10 +2219,7 @@ export class WebCodecsRecorder {
           this.audioEncoder = restoreEncoder;
           this._activeAudioConfig = priorConfig;
         } catch (restoreErr) {
-          this.err(
-            "[WCR] AudioEncoder restore after failed rebuild also failed:",
-            restoreErr,
-          );
+          this.err("[WCR] AudioEncoder restore after failed rebuild also failed:", restoreErr);
         }
       }
       return false;
@@ -2370,32 +2228,21 @@ export class WebCodecsRecorder {
 
   _retimeAudioData(audioData: AudioData, timestampUs: number): AudioData {
     if (!audioData || typeof AudioData === "undefined") return audioData;
-    const frames =
-      typeof audioData.numberOfFrames === "number"
-        ? audioData.numberOfFrames
-        : 0;
+    const frames = typeof audioData.numberOfFrames === "number" ? audioData.numberOfFrames : 0;
     const channels =
-      typeof audioData.numberOfChannels === "number"
-        ? audioData.numberOfChannels
-        : 0;
+      typeof audioData.numberOfChannels === "number" ? audioData.numberOfChannels : 0;
     const sampleRate = audioData.sampleRate || this.audioSampleRate || 48000;
     if (frames <= 0 || channels <= 0 || !Number.isFinite(sampleRate)) {
       return audioData;
     }
-    if (
-      Math.round(audioData.timestamp || 0) === Math.round(timestampUs || 0) &&
-      audioData.format
-    ) {
+    if (Math.round(audioData.timestamp || 0) === Math.round(timestampUs || 0) && audioData.format) {
       return audioData;
     }
 
     try {
       const samples = new Float32Array(frames * channels);
       for (let planeIndex = 0; planeIndex < channels; planeIndex += 1) {
-        const plane = samples.subarray(
-          planeIndex * frames,
-          (planeIndex + 1) * frames,
-        );
+        const plane = samples.subarray(planeIndex * frames, (planeIndex + 1) * frames);
         audioData.copyTo(plane, {
           planeIndex,
           format: "f32-planar",
@@ -2541,8 +2388,7 @@ export class WebCodecsRecorder {
       try {
         supported = await VideoEncoder.isConfigSupported(config);
       } catch {}
-      const resolvedConfig =
-        supported?.supported && supported.config ? supported.config : config;
+      const resolvedConfig = supported?.supported && supported.config ? supported.config : config;
       const test = new VideoEncoder({ output() {}, error() {} });
       try {
         test.configure(resolvedConfig);
@@ -2578,7 +2424,9 @@ export class WebCodecsRecorder {
           succeeded: false,
         });
       } finally {
-        try { test.close(); } catch {}
+        try {
+          test.close();
+        } catch {}
       }
     }
     throw new Error("WebCodecsRecorder: No supported H.264 encoder");
@@ -2616,9 +2464,7 @@ export class WebCodecsRecorder {
         const _nowLoopTick = performance.now();
         const g = /** @type {any} */ (globalThis);
         const forcedGap =
-          typeof g.__screenityForceSleepGapMs === "number"
-            ? g.__screenityForceSleepGapMs
-            : 0;
+          typeof g.__screenityForceSleepGapMs === "number" ? g.__screenityForceSleepGapMs : 0;
         if (forcedGap > 0) {
           g.__screenityForceSleepGapMs = 0;
           this._lastFrameArrivalAt = _nowLoopTick - forcedGap;
@@ -2730,13 +2576,7 @@ export class WebCodecsRecorder {
 
           ensureResizeCanvas();
 
-          this.resizeCtx!.drawImage(
-            frame,
-            0,
-            0,
-            this.targetWidth,
-            this.targetHeight,
-          );
+          this.resizeCtx!.drawImage(frame, 0, 0, this.targetWidth, this.targetHeight);
 
           if (!this._videoStartUs) {
             this._videoStartUs = performance.now() * 1000;
@@ -2750,7 +2590,7 @@ export class WebCodecsRecorder {
         const nowUs = performance.now() * 1000;
         const elapsedUs = Math.max(
           0,
-          nowUs - (this._videoStartUs ?? nowUs) - (this.totalPausedDurationUs || 0)
+          nowUs - (this._videoStartUs ?? nowUs) - (this.totalPausedDurationUs || 0),
         );
         const frameDurationUs = this._frameDurationUs || Math.round(1_000_000 / 30);
         const targetIndex = Math.max(0, Math.floor(elapsedUs / frameDurationUs));
@@ -2820,11 +2660,7 @@ export class WebCodecsRecorder {
 
           // pause() can close the encoder between the top-of-loop check
           // and here. Drop the frame instead of bubbling a sync throw.
-          if (
-            this.paused ||
-            !this.videoEncoder ||
-            this.videoEncoder.state === "closed"
-          ) {
+          if (this.paused || !this.videoEncoder || this.videoEncoder.state === "closed") {
             resized.close();
             this._videoFrameIndex = i + 1;
             this._forceNextKeyframe = true;
@@ -2839,10 +2675,7 @@ export class WebCodecsRecorder {
             } catch (encErr) {
               // Same race after the check. Only swallow when paused
               // so real encoder errors still surface.
-              if (
-                this.paused ||
-                !this.videoEncoder
-              ) {
+              if (this.paused || !this.videoEncoder) {
                 this.warn("[WCR] encode() race during pause; dropping frame");
                 this._videoFrameIndex = i + 1;
                 this._forceNextKeyframe = true;
@@ -2867,17 +2700,12 @@ export class WebCodecsRecorder {
                 this._droppedForBackpressureCount += 1;
                 this._forceNextKeyframe = true;
                 this._videoFrameIndex = i + 1;
-                this.warn(
-                  "[WCR] encode() QuotaExceededError; dropping frame as backpressure",
-                );
+                this.warn("[WCR] encode() QuotaExceededError; dropping frame as backpressure");
                 continue;
               }
               throw encErr;
             }
-            if (
-              this.debug &&
-              (this.frameCount < 5 || this.frameCount % 300 === 0)
-            ) {
+            if (this.debug && (this.frameCount < 5 || this.frameCount % 300 === 0)) {
               this.log("[WCR] video pts", {
                 frame: this.frameCount,
                 tsUs,
@@ -2909,8 +2737,7 @@ export class WebCodecsRecorder {
       this.err("[WCR] video loop error:", err);
       // Keep the error so the zero-frame branch below can attach the
       // real cause (e.g. a synchronous encode() throw) to onError.
-      this._videoLoopError =
-        err instanceof Error ? (err as RecorderError) : new Error(String(err));
+      this._videoLoopError = err instanceof Error ? (err as RecorderError) : new Error(String(err));
     }
 
     this.log("[WCR] video loop exit", this.frameCount, "running=", this.running);
@@ -2925,15 +2752,12 @@ export class WebCodecsRecorder {
         this.warn("[WCR] video loop exited with zero frames encoded");
         this._reportFailure(
           "webcodecs-zero-frames",
-          this._videoLoopError ||
-            new Error("WebCodecs video loop produced zero frames"),
+          this._videoLoopError || new Error("WebCodecs video loop produced zero frames"),
         );
       } else {
         // Some frames encoded: a real, if short, partial recording
         // exists. Keep it; finalize() ships what we have.
-        this.warn(
-          "[WCR] video loop exited early while running; partial recording kept",
-        );
+        this.warn("[WCR] video loop exited early while running; partial recording kept");
       }
     }
   }
@@ -2956,16 +2780,16 @@ export class WebCodecsRecorder {
       const realSampleRate = audioData.sampleRate || null;
       const incomingSampleRate = overrideRate || realSampleRate;
       const sampleRate = realSampleRate || this.audioSampleRate || 48000;
-      const frames =
-        typeof audioData.numberOfFrames === "number"
-          ? audioData.numberOfFrames
-          : 0;
-      const { timestampUs: tsUs, durationUs: durUs, nextElapsedUs } =
-        advanceAudioClock({
-          elapsedUs: this.audioElapsedUs,
-          frames,
-          sampleRate,
-        });
+      const frames = typeof audioData.numberOfFrames === "number" ? audioData.numberOfFrames : 0;
+      const {
+        timestampUs: tsUs,
+        durationUs: durUs,
+        nextElapsedUs,
+      } = advanceAudioClock({
+        elapsedUs: this.audioElapsedUs,
+        frames,
+        sampleRate,
+      });
 
       // Mic switched mid-recording: rebuild at the new rate. Pre-check
       // AAC's allowed rates so configure() can't brick the encoder.
@@ -3002,8 +2826,7 @@ export class WebCodecsRecorder {
         this.audioSampleRate &&
         incomingSampleRate !== this.audioSampleRate &&
         !rateUnsupported &&
-        this._audioSampleRateMismatchRebuilds <
-          this._maxAudioSampleRateRebuilds
+        this._audioSampleRateMismatchRebuilds < this._maxAudioSampleRateRebuilds
       ) {
         const oldRate = this.audioSampleRate;
         this.warn("[WCR] audio sample rate changed mid-recording", {
@@ -3043,9 +2866,7 @@ export class WebCodecsRecorder {
           diagForward("recorder-audio-rebuild-unsupported", {
             rate: incomingSampleRate,
             keptRate: this.audioSampleRate,
-            codec:
-              (this._activeAudioConfig && this._activeAudioConfig.codec) ||
-              null,
+            codec: (this._activeAudioConfig && this._activeAudioConfig.codec) || null,
           });
         } catch {}
       }
@@ -3061,12 +2882,7 @@ export class WebCodecsRecorder {
       // Backpressure mirror of the video path. Advance the sample
       // counter even on a drop so subsequent timestamps stay aligned
       // (brief silence gap, beats audio drifting out of sync).
-      if (
-        shouldDropAudioForBackpressure(
-          aQueueSize,
-          this._audioEncoderMaxQueueSize,
-        )
-      ) {
+      if (shouldDropAudioForBackpressure(aQueueSize, this._audioEncoderMaxQueueSize)) {
         this._droppedAudioForBackpressureCount += 1;
         this.audioSamplesWritten += frames;
         this.audioElapsedUs = nextElapsedUs;
@@ -3084,9 +2900,7 @@ export class WebCodecsRecorder {
           this._droppedAudioForBackpressureCount += 1;
           this.audioSamplesWritten += frames;
           this.audioElapsedUs = nextElapsedUs;
-          this.warn(
-            "[WCR] audio encode() QuotaExceededError; dropping audio data",
-          );
+          this.warn("[WCR] audio encode() QuotaExceededError; dropping audio data");
           return;
         }
         throw encErr;
@@ -3103,7 +2917,11 @@ export class WebCodecsRecorder {
       this.audioSamplesWritten += frames;
       this.audioElapsedUs = nextElapsedUs;
 
-      if (this.debug && (this.audioSamplesWritten === frames || this.audioSamplesWritten % (sampleRate * 10) < frames)) {
+      if (
+        this.debug &&
+        (this.audioSamplesWritten === frames ||
+          this.audioSamplesWritten % (sampleRate * 10) < frames)
+      ) {
         this.log("[WCR] audio pts", {
           samples: this.audioSamplesWritten,
           tsUs,
@@ -3122,10 +2940,7 @@ export class WebCodecsRecorder {
     const makeSilentAudioData = (durationMs: number): AudioData => {
       const sampleRate = this.audioSampleRate || 48000;
       const channels = this.audioChannelCount || 2;
-      const frames = Math.max(
-        1,
-        Math.round((sampleRate * durationMs) / 1000),
-      );
+      const frames = Math.max(1, Math.round((sampleRate * durationMs) / 1000));
       const data = new Float32Array(frames * channels);
       return new AudioData({
         format: "f32-planar",
@@ -3145,16 +2960,12 @@ export class WebCodecsRecorder {
             .then((v) => ({ ...v, timedOut: false }))
             .catch(() => ({ done: true, timedOut: false })),
           new Promise<TimedReadResult<AudioData>>((r) =>
-            setTimeout(
-              () => r({ value: null, done: false, timedOut: true }),
-              SILENCE_TIMEOUT_MS,
-            ),
+            setTimeout(() => r({ value: null, done: false, timedOut: true }), SILENCE_TIMEOUT_MS),
           ),
         ]);
 
         if (readResult.timedOut) {
-          const trackEnded =
-            !this.audioTrack || this.audioTrack.readyState === "ended";
+          const trackEnded = !this.audioTrack || this.audioTrack.readyState === "ended";
           if (
             !this._audioReady ||
             this.paused ||
@@ -3173,10 +2984,7 @@ export class WebCodecsRecorder {
             }
             paddedSilenceCount += 1;
             if (paddedSilenceCount === 1 || paddedSilenceCount % 20 === 0) {
-              this.log(
-                "[WCR] audio source quiet, padding silence",
-                paddedSilenceCount,
-              );
+              this.log("[WCR] audio source quiet, padding silence", paddedSilenceCount);
             }
           } catch (err) {
             // Encoder unhealthy; break to avoid spinning on every timeout.
@@ -3194,28 +3002,21 @@ export class WebCodecsRecorder {
           break;
         }
 
-        if (
-          this._firstAudioFrameSampleRate == null &&
-          typeof audioData.sampleRate === "number"
-        ) {
+        if (this._firstAudioFrameSampleRate == null && typeof audioData.sampleRate === "number") {
           this._firstAudioFrameSampleRate = audioData.sampleRate;
           try {
-            chrome.storage.local.get(
-              ["lastRecordingAudioSnapshot"],
-              (res) => {
-                const prev = res?.lastRecordingAudioSnapshot || {};
-                chrome.storage.local.set({
-                  lastRecordingAudioSnapshot: {
-                    ...prev,
-                    firstFrameSampleRate: audioData.sampleRate,
-                    firstFrameChannels:
-                      audioData.numberOfChannels ?? null,
-                    firstFrameFormat: audioData.format ?? null,
-                    firstFrameAt: Date.now(),
-                  },
-                });
-              },
-            );
+            chrome.storage.local.get(["lastRecordingAudioSnapshot"], (res) => {
+              const prev = res?.lastRecordingAudioSnapshot || {};
+              chrome.storage.local.set({
+                lastRecordingAudioSnapshot: {
+                  ...prev,
+                  firstFrameSampleRate: audioData.sampleRate,
+                  firstFrameChannels: audioData.numberOfChannels ?? null,
+                  firstFrameFormat: audioData.format ?? null,
+                  firstFrameAt: Date.now(),
+                },
+              });
+            });
           } catch {}
         }
 
@@ -3257,10 +3058,7 @@ export class WebCodecsRecorder {
     }
 
     if (paddedSilenceCount > 0) {
-      this.log(
-        "[WCR] audio loop exit, total silence chunks padded:",
-        paddedSilenceCount,
-      );
+      this.log("[WCR] audio loop exit, total silence chunks padded:", paddedSilenceCount);
       try {
         chrome.storage.local.get(["lastRecordingAudioSnapshot"], (res) => {
           const prev = res?.lastRecordingAudioSnapshot || {};

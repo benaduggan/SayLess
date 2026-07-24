@@ -4,16 +4,12 @@ interface GradientBackgroundProps {
   subtle?: boolean;
 }
 
-const GradientBackground: React.FC<GradientBackgroundProps> = ({
-  subtle = false,
-}) => {
+const GradientBackground: React.FC<GradientBackgroundProps> = ({ subtle = false }) => {
   const waveMask =
     "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><path d='M 0 0 L 100 0 L 100 84 C 92 77 68 77 50 84 C 32 91 8 91 0 84 Z' fill='black'/></svg>\")";
   return (
     <div
-      className={
-        "sayless-wave-bg" + (subtle ? " sayless-wave-bg--subtle" : "")
-      }
+      className={"sayless-wave-bg" + (subtle ? " sayless-wave-bg--subtle" : "")}
       aria-hidden="true"
     >
       <style>

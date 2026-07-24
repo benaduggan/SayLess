@@ -2,7 +2,7 @@ import { useContext, useState, useEffect, useRef } from "react";
 import type { ChangeEvent } from "react";
 
 // Styles
-import styles from "../../styles/player/_Title.module.scss";
+import styles from "../../styles/player/_Title.module.css";
 const URL = chrome.runtime.getURL("assets/");
 
 // Icon

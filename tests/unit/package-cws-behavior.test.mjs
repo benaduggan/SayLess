@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -85,7 +93,10 @@ test("CWS packager writes zip and traceable evidence from verified release packa
     assert.deepEqual(cwsEvidence.manualEvidence, packageEvidence.manualEvidence);
     assert.equal(cwsEvidence.sourceZip.path, "extension.zip");
     assert.equal(cwsEvidence.sourceZip.bytes, statSync(extensionZipPath).size);
-    assert.equal(cwsEvidence.sourceZip.formattedBytes, formatBytes(statSync(extensionZipPath).size));
+    assert.equal(
+      cwsEvidence.sourceZip.formattedBytes,
+      formatBytes(statSync(extensionZipPath).size),
+    );
     assert.equal(cwsEvidence.sourceZip.sha256, sha256File(extensionZipPath));
     assert.equal(cwsEvidence.cwsZip.path, "build-cws.zip");
     assert.equal(cwsEvidence.cwsZip.bytes, statSync(cwsZipPath).size);
@@ -104,7 +115,9 @@ test("CWS packager rejects failed release package evidence gate before writing C
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /tester\.name still contains template or fixture placeholder text/);
     assert.ok(!existsSync(join(fixture.dir, "build-cws.zip")));
-    const cwsEvidence = JSON.parse(readFileSync(join(fixture.artifactsDir, "cws-package.json"), "utf8"));
+    const cwsEvidence = JSON.parse(
+      readFileSync(join(fixture.artifactsDir, "cws-package.json"), "utf8"),
+    );
     assert.equal(cwsEvidence.kind, "sayless.cwsPackageFailed");
     assert.equal(cwsEvidence.status, "failed");
     assert.match(cwsEvidence.failedStep.script, /package-release\.mjs$/);

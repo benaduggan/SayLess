@@ -1,18 +1,13 @@
 const MEDIA_REPORT_KIND = "sayless.manualQaMediaProbe";
 const SIDECAR_REPORT_KIND = "sayless.manualQaSidecarProbe";
-const SIDECAR_EXPORT_FORMATS = new Set([
-  "vtt",
-  "transcript-json",
-  "sayless-project-json",
-]);
+const SIDECAR_EXPORT_FORMATS = new Set(["vtt", "transcript-json", "sayless-project-json"]);
 
 const isIsoDate = (value) =>
   typeof value === "string" &&
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value) &&
   !Number.isNaN(Date.parse(value));
 
-const isSha256 = (value) =>
-  typeof value === "string" && /^[0-9a-f]{64}$/i.test(value);
+const isSha256 = (value) => typeof value === "string" && /^[0-9a-f]{64}$/i.test(value);
 
 const isPositiveNumber = (value) =>
   typeof value === "number" && Number.isFinite(value) && value > 0;
@@ -68,17 +63,13 @@ const requireRecordingFields = (file, label, errors) => {
     fields.sha256 !== file.sha256 ||
     fields.byteSize !== file.byteSize
   ) {
-    errors.push(
-      `${label} recordingFields must match the measured file identity.`
-    );
+    errors.push(`${label} recordingFields must match the measured file identity.`);
   }
   if (!isPositiveNumber(fields.durationSeconds)) {
     errors.push(`${label} measured durationSeconds must be positive.`);
   }
   if (!isPositiveInteger(fields.width) || !isPositiveInteger(fields.height)) {
-    errors.push(
-      `${label} measured width and height must be positive integers.`
-    );
+    errors.push(`${label} measured width and height must be positive integers.`);
   }
   if (!["mp4", "webm"].includes(fields.container)) {
     errors.push(`${label} measured container must be mp4 or webm.`);
@@ -92,9 +83,7 @@ const requireProjectAudioFields = (file, label, errors) => {
     fields.sha256 !== file.sha256 ||
     fields.byteSize !== file.byteSize
   ) {
-    errors.push(
-      `${label} projectAudioInputFields must match the measured file identity.`
-    );
+    errors.push(`${label} projectAudioInputFields must match the measured file identity.`);
   }
   if (!isPositiveNumber(fields.durationSeconds)) {
     errors.push(`${label} measured durationSeconds must be positive.`);
@@ -107,34 +96,24 @@ const requireProjectAudioFields = (file, label, errors) => {
   }
 };
 
-export const buildManualQaMeasurementImport = ({
-  evidence,
-  mediaReport,
-  sidecarReport,
-}) => {
+export const buildManualQaMeasurementImport = ({ evidence, mediaReport, sidecarReport }) => {
   const errors = [];
   if (evidence?.kind !== "sayless.manualQaEvidence") {
     errors.push("manual QA evidence kind must be sayless.manualQaEvidence.");
   }
   if (evidence?.status !== "template") {
     errors.push(
-      'manual QA evidence status must be "template"; passed evidence is never rewritten.'
+      'manual QA evidence status must be "template"; passed evidence is never rewritten.',
     );
   }
   if (!isIsoDate(evidence?.automatedEvidenceGeneratedAt)) {
-    errors.push(
-      "manual QA evidence automatedEvidenceGeneratedAt must be an ISO UTC timestamp."
-    );
+    errors.push("manual QA evidence automatedEvidenceGeneratedAt must be an ISO UTC timestamp.");
   }
   if (
-    evidence?.probeReports?.media !==
-      "release-artifacts/manual-qa-media-probe.json" ||
-    evidence?.probeReports?.sidecars !==
-      "release-artifacts/manual-qa-sidecar-probe.json"
+    evidence?.probeReports?.media !== "release-artifacts/manual-qa-media-probe.json" ||
+    evidence?.probeReports?.sidecars !== "release-artifacts/manual-qa-sidecar-probe.json"
   ) {
-    errors.push(
-      "manual QA evidence must reference both canonical probe reports."
-    );
+    errors.push("manual QA evidence must reference both canonical probe reports.");
   }
   if (mediaReport?.kind !== MEDIA_REPORT_KIND) {
     errors.push(`media report kind must be ${MEDIA_REPORT_KIND}.`);
@@ -146,9 +125,7 @@ export const buildManualQaMeasurementImport = ({
   ) {
     errors.push("media report must be a strict, measurably complete report.");
   }
-  if (
-    mediaReport?.reportPath !== "release-artifacts/manual-qa-media-probe.json"
-  ) {
+  if (mediaReport?.reportPath !== "release-artifacts/manual-qa-media-probe.json") {
     errors.push("media report must name its canonical report path.");
   }
   if (sidecarReport?.kind !== SIDECAR_REPORT_KIND) {
@@ -159,14 +136,9 @@ export const buildManualQaMeasurementImport = ({
     sidecarReport?.requireComplete !== true ||
     sidecarReport?.coverage?.status !== "structurally-complete"
   ) {
-    errors.push(
-      "sidecar report must be a strict, structurally complete report."
-    );
+    errors.push("sidecar report must be a strict, structurally complete report.");
   }
-  if (
-    sidecarReport?.reportPath !==
-    "release-artifacts/manual-qa-sidecar-probe.json"
-  ) {
+  if (sidecarReport?.reportPath !== "release-artifacts/manual-qa-sidecar-probe.json") {
     errors.push("sidecar report must name its canonical report path.");
   }
   for (const [label, report] of [
@@ -177,8 +149,7 @@ export const buildManualQaMeasurementImport = ({
       errors.push(`${label} generatedAt must be an ISO UTC timestamp.`);
     } else if (
       isIsoDate(evidence?.automatedEvidenceGeneratedAt) &&
-      Date.parse(report.generatedAt) <
-        Date.parse(evidence.automatedEvidenceGeneratedAt)
+      Date.parse(report.generatedAt) < Date.parse(evidence.automatedEvidenceGeneratedAt)
     ) {
       errors.push(`${label} must be generated after automated QA evidence.`);
     }
@@ -189,22 +160,16 @@ export const buildManualQaMeasurementImport = ({
   const updated = JSON.parse(JSON.stringify(evidence));
   const changes = [];
 
-  const recordings = Array.isArray(updated.recordings)
-    ? updated.recordings
-    : [];
+  const recordings = Array.isArray(updated.recordings) ? updated.recordings : [];
   for (const [index, recording] of recordings.entries()) {
     const label = `recordings[${index}]`;
     const measured = mediaFiles.get(recording?.fileName);
     if (!measured) {
-      errors.push(
-        `${label}.fileName must exactly match a file in the media report.`
-      );
+      errors.push(`${label}.fileName must exactly match a file in the media report.`);
       continue;
     }
     if (!measured.recordingFields) {
-      errors.push(
-        `${label}.fileName must identify a measured MP4/WebM source.`
-      );
+      errors.push(`${label}.fileName must identify a measured MP4/WebM source.`);
       continue;
     }
     requireMeasuredIdentity(measured, label, errors);
@@ -214,30 +179,26 @@ export const buildManualQaMeasurementImport = ({
       measured.recordingFields,
       ["sha256", "durationSeconds", "byteSize", "width", "height", "container"],
       label,
-      changes
+      changes,
     );
   }
 
-  const exports = Array.isArray(updated?.exports?.files)
-    ? updated.exports.files
-    : [];
+  const exports = Array.isArray(updated?.exports?.files) ? updated.exports.files : [];
   for (const [index, exported] of exports.entries()) {
     const label = `exports.files[${index}]`;
-    const reportFiles = SIDECAR_EXPORT_FORMATS.has(exported?.format)
-      ? sidecarFiles
-      : mediaFiles;
+    const reportFiles = SIDECAR_EXPORT_FORMATS.has(exported?.format) ? sidecarFiles : mediaFiles;
     const measured = reportFiles.get(exported?.fileName);
     if (!measured) {
       errors.push(
         `${label}.fileName must exactly match its file in the ${
           SIDECAR_EXPORT_FORMATS.has(exported?.format) ? "sidecar" : "media"
-        } report.`
+        } report.`,
       );
       continue;
     }
     if (measured.format !== exported.format) {
       errors.push(
-        `${label}.format ${exported.format} does not match measured format ${measured.format}.`
+        `${label}.format ${exported.format} does not match measured format ${measured.format}.`,
       );
       continue;
     }
@@ -252,20 +213,16 @@ export const buildManualQaMeasurementImport = ({
     const label = `projectAudio.inputs[${index}]`;
     const measured = mediaFiles.get(input?.fileName);
     if (!measured) {
-      errors.push(
-        `${label}.fileName must exactly match a file in the media report.`
-      );
+      errors.push(`${label}.fileName must exactly match a file in the media report.`);
       continue;
     }
     if (!measured.projectAudioInputFields) {
-      errors.push(
-        `${label}.fileName must identify a measured WAV, M4A, or MP3 input.`
-      );
+      errors.push(`${label}.fileName must identify a measured WAV, M4A, or MP3 input.`);
       continue;
     }
     if (measured.projectAudioInputFields.format !== input.format) {
       errors.push(
-        `${label}.format ${input.format} does not match measured format ${measured.projectAudioInputFields.format}.`
+        `${label}.format ${input.format} does not match measured format ${measured.projectAudioInputFields.format}.`,
       );
       continue;
     }
@@ -276,13 +233,13 @@ export const buildManualQaMeasurementImport = ({
       measured.projectAudioInputFields,
       ["sha256", "byteSize", "durationSeconds", "channels", "sampleRate"],
       label,
-      changes
+      changes,
     );
   }
 
   if (!recordings.length || !exports.length || !projectAudioInputs.length) {
     errors.push(
-      "manual QA evidence must contain recordings, exports.files, and projectAudio.inputs."
+      "manual QA evidence must contain recordings, exports.files, and projectAudio.inputs.",
     );
   }
   if (errors.length) {

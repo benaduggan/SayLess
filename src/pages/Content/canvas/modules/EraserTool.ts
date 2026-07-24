@@ -37,10 +37,9 @@ interface EraserToolState extends CanvasHistoryState {
 const EraserTool = (
   canvas: EraserCanvas,
   contentStateRef: { current?: EraserToolState | null },
-  setContentState: (state: CanvasHistoryState) => void
+  setContentState: (state: CanvasHistoryState) => void,
 ): { removeEventListeners(): void } => {
-  const getState = (): EraserToolState | null | undefined =>
-    contentStateRef.current;
+  const getState = (): EraserToolState | null | undefined => contentStateRef.current;
 
   let objectsToDelete: EraserCanvasObject[] = [];
   let isDown = false;

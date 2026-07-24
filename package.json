@@ -12,7 +12,11 @@
     "dev": "npm run hot-reload",
     "watch": "cross-env NODE_ENV=development webpack --config webpack.config.cts --watch",
     "hot-reload": "cross-env NODE_ENV=development webpack serve --config webpack.config.cts --hot",
-    "prettier": "prettier --write '**/*.{js,jsx,ts,tsx,json,css,scss,md}'",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint --deny-warnings .",
+    "lint:fix": "oxlint --fix .",
+    "check": "npm run lint && npm run format:check && npm run typecheck",
     "typecheck": "node scripts/typecheck.mjs",
     "typecheck:legacy": "tsc --noEmit --pretty false",
     "postinstall": "patch-package && node scripts/patch-radix.cts",
@@ -28,8 +32,6 @@
     "release:cws:publish:10": "npm run preflight:cws && npm run verify:cws-package && dotenv -e .env.local -- chrome-webstore-upload publish --deploy-percentage 10",
     "release:cws:publish:50": "npm run preflight:cws && npm run verify:cws-package && dotenv -e .env.local -- chrome-webstore-upload publish --deploy-percentage 50",
     "clean": "rm -rf build && mkdir build",
-    "lint": "npm run typecheck",
-    "build:content-css": "sass src/pages/Content/styles/app.scss src/pages/Content/styles/app.css --no-source-map",
     "verify:zip": "node scripts/verify-no-secrets.mjs",
     "verify:whisper-assets": "node scripts/verify-local-whisper-assets.mjs",
     "verify:whisper-assets:build": "node scripts/verify-local-whisper-assets.mjs --build",
@@ -103,6 +105,7 @@
     "@babel/preset-env": "^7.20.2",
     "@babel/preset-react": "^7.27.1",
     "@playwright/test": "^1.59.1",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/chrome": "^0.2.2",
     "@types/react": "^18.3.21",
     "@types/react-dom": "^18.3.7",
@@ -116,13 +119,13 @@
     "fs-extra": "^10.1.0",
     "html-loader": "^3.1.0",
     "html-webpack-plugin": "^5.5.0",
-    "prettier": "^2.7.1",
-    "sass": "^1.97.3",
-    "sass-loader": "^16.0.7",
+    "oxfmt": "^0.60.0",
+    "oxlint": "^1.75.0",
+    "postcss": "^8.5.22",
+    "postcss-loader": "^8.2.1",
     "source-map-loader": "^3.0.1",
     "style-loader": "^3.3.1",
-    "stylelint": "^17.8.0",
-    "stylelint-config-standard-scss": "^17.0.0",
+    "tailwindcss": "^4.3.3",
     "terser-webpack-plugin": "^5.3.6",
     "ts-loader": "^9.4.1",
     "typescript": "^5.9.3",
@@ -130,7 +133,7 @@
     "webpack-dev-server": "^4.11.1"
   },
   "overrides": {
-    "tar": "7.5.9",
-    "minimatch": "10.2.2"
+    "minimatch": "10.2.2",
+    "tar": "7.5.9"
   }
 }

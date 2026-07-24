@@ -48,10 +48,9 @@ const PenTool = (
   canvas: PenCanvas,
   contentStateRef: { current?: PenToolState | null },
   setContentState: SetPenToolState,
-  saveCanvas: (state: PenToolState, setter: SetPenToolState) => void
+  saveCanvas: (state: PenToolState, setter: SetPenToolState) => void,
 ): { removeEventListeners(): void } => {
-  const getState = (): PenToolState | null | undefined =>
-    contentStateRef.current;
+  const getState = (): PenToolState | null | undefined => contentStateRef.current;
 
   const resetBrushStroke = (): void => {
     const brush = canvas.freeDrawingBrush;
@@ -62,14 +61,14 @@ const PenTool = (
     if (Array.isArray(brush.points)) brush.points.length = 0;
 
     // Some brushes keep a "latest" pointer
-    brush._reset && brush._reset();
+    brush._reset?.();
   };
 
   const ensureBrush = (): PencilBrushCompat => {
     // fabric creates freeDrawingBrush lazily; make sure it's there
     if (!canvas.freeDrawingBrush) {
       canvas.freeDrawingBrush = new fabric.PencilBrush(
-        canvas as unknown as ConstructorParameters<typeof fabric.PencilBrush>[0]
+        canvas as unknown as ConstructorParameters<typeof fabric.PencilBrush>[0],
       ) as PencilBrushCompat;
     }
     return canvas.freeDrawingBrush;

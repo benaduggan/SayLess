@@ -13,10 +13,7 @@ import {
   LOCAL_PLAYBACK_EVENT_KEY,
   LOCAL_PLAYBACK_ALARM,
 } from "../recording/localPlaybackConstants";
-import {
-  FIRST_CHUNK_WATCHDOG_ALARM,
-  RECORDER_KEEPALIVE_ALARM,
-} from "./alarmConstants";
+import { FIRST_CHUNK_WATCHDOG_ALARM, RECORDER_KEEPALIVE_ALARM } from "./alarmConstants";
 
 export { FIRST_CHUNK_WATCHDOG_ALARM, RECORDER_KEEPALIVE_ALARM };
 
@@ -66,9 +63,7 @@ const attemptStallRecovery = (recordingTabId: number): Promise<boolean> => {
 
 // `tab` fallback used when stored activeTab is stale (e.g. action-button click).
 // Alarms pass null since no current tab is available.
-const handleTabMessaging = async (
-  tab: chrome.tabs.Tab | null,
-): Promise<void> => {
+const handleTabMessaging = async (tab: chrome.tabs.Tab | null): Promise<void> => {
   const { activeTab } = await chrome.storage.local.get(["activeTab"]);
 
   try {
@@ -119,12 +114,9 @@ export const handleAlarm = async (alarm: chrome.alarms.Alarm): Promise<void> => 
       // listener and the teardown sweep somehow missed it. Gated on no
       // active or in-flight recording so a fresh start is never killed.
       if (!snap.recording && !snap.pendingRecording) {
-        const { recordingStartingAt } = await chrome.storage.local.get([
-          "recordingStartingAt",
-        ]);
+        const { recordingStartingAt } = await chrome.storage.local.get(["recordingStartingAt"]);
         const startInFlight =
-          typeof recordingStartingAt === "number" &&
-          Date.now() - recordingStartingAt < 30_000;
+          typeof recordingStartingAt === "number" && Date.now() - recordingStartingAt < 30_000;
         if (!startInFlight) {
           await sweepRecorderTabs();
         }
@@ -252,9 +244,7 @@ export const handleAlarm = async (alarm: chrome.alarms.Alarm): Promise<void> => 
       try {
         snapshot = await Promise.race([
           sendMessageRecord({ type: "recorder-state-snapshot" }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("snapshot-timeout")), 1500),
-          ),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("snapshot-timeout")), 1500)),
         ]);
       } catch (err) {
         snapshotError = errorMessage(err);
@@ -274,12 +264,8 @@ export const handleAlarm = async (alarm: chrome.alarms.Alarm): Promise<void> => 
       } catch {}
 
       const snapshotRecord = isRecord(snapshot) ? snapshot : null;
-      const streamRecord = isRecord(snapshotRecord?.stream)
-        ? snapshotRecord.stream
-        : null;
-      const vt = isRecord(streamRecord?.videoTrack)
-        ? streamRecord.videoTrack
-        : null;
+      const streamRecord = isRecord(snapshotRecord?.stream) ? snapshotRecord.stream : null;
+      const vt = isRecord(streamRecord?.videoTrack) ? streamRecord.videoTrack : null;
       if (vt && vt.readyState === "live" && vt.muted === true) {
         // Capture track is live but muted: the recorded tab is backgrounded,
         // focus was lost, or the display slept, so no frames are arriving. That
@@ -293,11 +279,8 @@ export const handleAlarm = async (alarm: chrome.alarms.Alarm): Promise<void> => 
         // ftyp" silent-encoder defect). An ended track or no snapshot is
         // ambiguous: fail the recording but leave the fast path enabled.
         try {
-          const { fastRecorderInUse } = await chrome.storage.local.get([
-            "fastRecorderInUse",
-          ]);
-          const realEncoderDefect =
-            vt !== null && vt.readyState === "live" && vt.muted === false;
+          const { fastRecorderInUse } = await chrome.storage.local.get(["fastRecorderInUse"]);
+          const realEncoderDefect = vt !== null && vt.readyState === "live" && vt.muted === false;
           if (fastRecorderInUse && realEncoderDefect) {
             await markFastRecorderFailure("webcodecs-no-first-chunk", {
               error: "WebCodecs produced no first chunk within 8s (watchdog)",
@@ -344,9 +327,7 @@ export const handleAlarm = async (alarm: chrome.alarms.Alarm): Promise<void> => 
     if (hasActiveRecording) {
       // never clear chunks during an active recording
       const retryAt = Date.now() + 5 * 60 * 1000;
-      await chrome.alarms
-        .create(LOCAL_PLAYBACK_ALARM, { when: retryAt })
-        .catch(() => {});
+      await chrome.alarms.create(LOCAL_PLAYBACK_ALARM, { when: retryAt }).catch(() => {});
       return;
     }
 
@@ -361,10 +342,7 @@ export const handleAlarm = async (alarm: chrome.alarms.Alarm): Promise<void> => 
     }
 
     await chunksStore.clear().catch((err) => {
-      console.warn(
-        "[SayLess][BG] Failed to clear chunksStore for local playback expiry",
-        err,
-      );
+      console.warn("[SayLess][BG] Failed to clear chunksStore for local playback expiry", err);
     });
     await chrome.storage.local.remove([LOCAL_PLAYBACK_KEY]);
     await chrome.storage.local.set({

@@ -60,7 +60,8 @@ const TimelineStrip = () => {
 
   // current playhead as a % of the output timeline
   const playheadOut = sourceToOutput(timeline, contentState.time || 0);
-  const playheadPct = playheadOut == null ? null : Math.max(0, Math.min(100, (playheadOut / outDur) * 100));
+  const playheadPct =
+    playheadOut == null ? null : Math.max(0, Math.min(100, (playheadOut / outDur) * 100));
 
   // map an x within the track to an output time, then seek the source
   const seekAtClientX = (clientX: number) => {
@@ -87,16 +88,10 @@ const TimelineStrip = () => {
   };
 
   // click within a clip -> seek to that exact position (and select)
-  const onClipClick = (
-    event: ReactMouseEvent<HTMLDivElement>,
-    seg: ResolvedSegment,
-  ) => {
+  const onClipClick = (event: ReactMouseEvent<HTMLDivElement>, seg: ResolvedSegment) => {
     setSelectedClipId(seg.clipId);
     const rect = event.currentTarget.getBoundingClientRect();
-    const frac = Math.max(
-      0,
-      Math.min(1, (event.clientX - rect.left) / rect.width),
-    );
+    const frac = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
     seekSource(seg.sourceStart + frac * (seg.sourceEnd - seg.sourceStart));
   };
 
@@ -111,10 +106,22 @@ const TimelineStrip = () => {
   return (
     <div style={wrap} data-testid="timeline-editor">
       <div style={toolbar} data-testid="timeline-toolbar">
-        <button style={btn} onClick={undoTimeline} disabled={!canUndoTimeline} title="Undo timeline edit" data-testid="timeline-undo">
+        <button
+          style={btn}
+          onClick={undoTimeline}
+          disabled={!canUndoTimeline}
+          title="Undo timeline edit"
+          data-testid="timeline-undo"
+        >
           Undo
         </button>
-        <button style={btn} onClick={redoTimeline} disabled={!canRedoTimeline} title="Redo timeline edit" data-testid="timeline-redo">
+        <button
+          style={btn}
+          onClick={redoTimeline}
+          disabled={!canRedoTimeline}
+          title="Redo timeline edit"
+          data-testid="timeline-redo"
+        >
           Redo
         </button>
         <button
@@ -127,17 +134,50 @@ const TimelineStrip = () => {
         </button>
         {selIndex >= 0 && (
           <>
-            <button style={btn} disabled={selIndex <= 0} onClick={() => moveClip(selIndex, selIndex - 1)} title="Move left" data-testid="timeline-move-left">◀</button>
-            <button style={btn} disabled={selIndex >= segs.length - 1} onClick={() => moveClip(selIndex, selIndex + 1)} title="Move right" data-testid="timeline-move-right">▶</button>
-            <button style={btn} onClick={() => selectedClipId && toggleMuteClip(selectedClipId)} data-testid="timeline-mute">{segs[selIndex].muted ? "Unmute" : "Mute"}</button>
-            <button style={btnDanger} onClick={() => selectedClipId && deleteClip(selectedClipId)} data-testid="timeline-delete">Delete clip</button>
+            <button
+              style={btn}
+              disabled={selIndex <= 0}
+              onClick={() => moveClip(selIndex, selIndex - 1)}
+              title="Move left"
+              data-testid="timeline-move-left"
+            >
+              ◀
+            </button>
+            <button
+              style={btn}
+              disabled={selIndex >= segs.length - 1}
+              onClick={() => moveClip(selIndex, selIndex + 1)}
+              title="Move right"
+              data-testid="timeline-move-right"
+            >
+              ▶
+            </button>
+            <button
+              style={btn}
+              onClick={() => selectedClipId && toggleMuteClip(selectedClipId)}
+              data-testid="timeline-mute"
+            >
+              {segs[selIndex].muted ? "Unmute" : "Mute"}
+            </button>
+            <button
+              style={btnDanger}
+              onClick={() => selectedClipId && deleteClip(selectedClipId)}
+              data-testid="timeline-delete"
+            >
+              Delete clip
+            </button>
           </>
         )}
       </div>
 
       <div ref={trackRef} style={track} data-testid="timeline-track">
         {/* scrub ruler */}
-        <div style={ruler} onMouseDown={onRulerDown} title="Click or drag to scrub" data-testid="timeline-ruler" />
+        <div
+          style={ruler}
+          onMouseDown={onRulerDown}
+          title="Click or drag to scrub"
+          data-testid="timeline-ruler"
+        />
         {/* clip blocks */}
         <div style={strip}>
           {segs.map((seg, i) => {
@@ -171,7 +211,10 @@ const TimelineStrip = () => {
                 title={`clip ${i + 1}: source ${fmt(seg.sourceStart)}–${fmt(seg.sourceEnd)}`}
               >
                 <span style={clipLabel}>{i + 1}</span>
-                <span style={clipDur}>{fmt(len)}{seg.muted ? " 🔇" : ""}</span>
+                <span style={clipDur}>
+                  {fmt(len)}
+                  {seg.muted ? " 🔇" : ""}
+                </span>
               </div>
             );
           })}
@@ -179,15 +222,27 @@ const TimelineStrip = () => {
         {/* playhead */}
         {playheadPct != null && <div style={{ ...playhead, left: `${playheadPct}%` }} />}
       </div>
-      <div style={hint}>click a clip to seek there · drag the ruler to scrub · drag clips to reorder</div>
+      <div style={hint}>
+        click a clip to seek there · drag the ruler to scrub · drag clips to reorder
+      </div>
     </div>
   );
 };
 
 const wrap: CSSProperties = { marginBottom: 8 };
 const toolbar: CSSProperties = { display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 };
-const track: CSSProperties = { position: "relative", borderRadius: 8, overflow: "hidden", background: "#f4f6f8" };
-const ruler: CSSProperties = { height: 16, background: "#e7ebf0", cursor: "pointer", borderBottom: "1px solid #dde3ea" };
+const track: CSSProperties = {
+  position: "relative",
+  borderRadius: 8,
+  overflow: "hidden",
+  background: "#f4f6f8",
+};
+const ruler: CSSProperties = {
+  height: 16,
+  background: "#e7ebf0",
+  cursor: "pointer",
+  borderBottom: "1px solid #dde3ea",
+};
 const strip: CSSProperties = { display: "flex", alignItems: "stretch", height: 52 };
 const clip: CSSProperties = {
   boxSizing: "border-box",
@@ -215,8 +270,20 @@ const playhead: CSSProperties = {
   pointerEvents: "none",
   boxShadow: "0 0 0 1px rgba(255,255,255,0.6)",
 };
-const btn: CSSProperties = { padding: "4px 8px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12 };
-const btnDanger: CSSProperties = { ...btn, background: "#ffe2e2", color: "#b00020", border: "1px solid #f3c2c2" };
+const btn: CSSProperties = {
+  padding: "4px 8px",
+  borderRadius: 6,
+  border: "1px solid #ddd",
+  background: "#fff",
+  cursor: "pointer",
+  fontSize: 12,
+};
+const btnDanger: CSSProperties = {
+  ...btn,
+  background: "#ffe2e2",
+  color: "#b00020",
+  border: "1px solid #f3c2c2",
+};
 const hint: CSSProperties = { color: "#888", fontSize: 11, marginTop: 4 };
 
 export default TimelineStrip;

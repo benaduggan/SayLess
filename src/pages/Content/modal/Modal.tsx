@@ -123,9 +123,7 @@ const Modal = () => {
   const [learnMoreLink, setLearnMoreLink] = useState<string | undefined>();
   const [colorSafe, setColorSafe] = useState(false);
   const [sideButton, setSideButton] = useState(false);
-  const [sideButtonAction, setSideButtonAction] = useState<() => void>(
-    () => () => {}
-  );
+  const [sideButtonAction, setSideButtonAction] = useState<() => void>(() => () => {});
 
   const openModal = useCallback(
     (
@@ -140,7 +138,7 @@ const Modal = () => {
       learnMoreLink: string | undefined = undefined,
       colorSafe = false,
       sideButton = false,
-      sideButtonAction = () => {}
+      sideButtonAction = () => {},
     ) => {
       setTitle(title);
       setDescription(description);
@@ -156,7 +154,7 @@ const Modal = () => {
       setSideButton(sideButton);
       setSideButtonAction(() => sideButtonAction);
     },
-    []
+    [],
   );
 
   useEffect(() => {
@@ -193,9 +191,7 @@ const Modal = () => {
             trigger2();
           }}
         >
-          <AlertDialog.Title className="AlertDialogTitle">
-            {title}
-          </AlertDialog.Title>
+          <AlertDialog.Title className="AlertDialogTitle">{title}</AlertDialog.Title>
           <AlertDialog.Description className="AlertDialogDescription">
             {description.split("\n").map((line, idx) => (
               <React.Fragment key={idx}>

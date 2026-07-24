@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useContext,
-  useCallback,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 
 import * as ToastEl from "@radix-ui/react-toast";
 
@@ -33,22 +27,16 @@ const Toast = () => {
   }, [contentState.hideUI, contentState.hideUIAlerts]);
 
   const openToast = useCallback(
-    (
-      title: string,
-      actionOrDuration?: (() => void) | number,
-      durationMs = 2000
-    ) => {
+    (title: string, actionOrDuration?: (() => void) | number, durationMs = 2000) => {
       if (!shouldShowRecorderToast(contentStateRef.current)) return;
-      const action =
-        typeof actionOrDuration === "function" ? actionOrDuration : () => {};
-      const resolvedDuration =
-        typeof actionOrDuration === "number" ? actionOrDuration : durationMs;
+      const action = typeof actionOrDuration === "function" ? actionOrDuration : () => {};
+      const resolvedDuration = typeof actionOrDuration === "number" ? actionOrDuration : durationMs;
       setTitle(title);
       setOpen(true);
       setTrigger(() => action);
       setToastDuration(resolvedDuration);
     },
-    []
+    [],
   );
 
   useEffect(() => {

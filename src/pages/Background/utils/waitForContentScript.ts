@@ -10,17 +10,19 @@ export const waitForContentScript = async (
   interval = 500,
   timeout = 10000,
 ): Promise<void> => {
-  const chromeApi = (globalThis as typeof globalThis & {
-    chrome: {
-      tabs: {
-        sendMessage: (
-          tabId: number,
-          message: unknown,
-          callback: (response: unknown) => void,
-        ) => void;
+  const chromeApi = (
+    globalThis as typeof globalThis & {
+      chrome: {
+        tabs: {
+          sendMessage: (
+            tabId: number,
+            message: unknown,
+            callback: (response: unknown) => void,
+          ) => void;
+        };
       };
-    };
-  }).chrome;
+    }
+  ).chrome;
   return new Promise<void>((resolve, reject) => {
     const maxAttempts = Math.floor(timeout / interval);
     let attempts = 0;

@@ -43,21 +43,12 @@ const ColorWheel = (props: ColorWheelProps) => {
             : "radial-menu-item-child"
         }
         onClick={handleClick}
-        style={
-          contentState.swatch === 5
-            ? { backgroundColor: contentState.color }
-            : {}
-        }
+        style={contentState.swatch === 5 ? { backgroundColor: contentState.color } : {}}
         ref={wheelRef}
         tabIndex={props.open ? 0 : -1}
       >
-        <div className="color-wheel-input">
-          {contentState.color.toUpperCase()}
-        </div>
-        <div
-          className="color-preview"
-          style={{ backgroundColor: contentState.color }}
-        ></div>
+        <div className="color-wheel-input">{contentState.color.toUpperCase()}</div>
+        <div className="color-preview" style={{ backgroundColor: contentState.color }}></div>
         <Wheel
           color={hsva}
           width={100}

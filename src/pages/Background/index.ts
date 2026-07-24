@@ -1,16 +1,10 @@
 import { initializeListeners } from "./listeners";
 import { setupHandlers } from "./messaging/handlers";
-import {
-  messageRouter,
-  messageDispatcher,
-} from "../../messaging/messageRouter";
+import { messageRouter, messageDispatcher } from "../../messaging/messageRouter";
 import { hydrateDiagnosticLog, diagEvent } from "../utils/diagnosticLog";
 import { initCountdownFallback } from "./recording/countdownFallback";
 import { initLifecycleObserver } from "./lifecycleObserver";
-import {
-  listSessionDirs,
-  destroySessionDir,
-} from "../Recorder/recorderStorage/opfsKvStore";
+import { listSessionDirs, destroySessionDir } from "../Recorder/recorderStorage/opfsKvStore";
 import { handleGetStreamingData } from "./recording/recordingHelpers";
 
 // Don't tear down an in-flight start on SW restart: a fresh start is
@@ -84,9 +78,7 @@ const clearStaleLocks = async (): Promise<void> => {
       if (!recorderAlive && offscreen) {
         try {
           const contexts = await chrome.runtime.getContexts({});
-          recorderAlive = (contexts || []).some(
-            (c) => c.contextType === "OFFSCREEN_DOCUMENT",
-          );
+          recorderAlive = (contexts || []).some((c) => c.contextType === "OFFSCREEN_DOCUMENT");
         } catch {}
       }
       // A start younger than START_GRACE_MS is mid-setup, not dead: the SW
@@ -149,21 +141,14 @@ const clearStaleLocks = async (): Promise<void> => {
 
     if (Object.keys(stale).length > 0) {
       await chrome.storage.local.set(stale);
-      console.info(
-        "[SayLess][BG] Startup stale locks cleared:",
-        Object.keys(stale).join(", "),
-      );
+      console.info("[SayLess][BG] Startup stale locks cleared:", Object.keys(stale).join(", "));
     }
 
     // setIcon persists across SW restarts; reconcile so a stuck red icon clears
     try {
-      const { recording: finalRecording } = await chrome.storage.local.get([
-        "recording",
-      ]);
+      const { recording: finalRecording } = await chrome.storage.local.get(["recording"]);
       chrome.action.setIcon({
-        path: finalRecording
-          ? "assets/recording-logo.png"
-          : "assets/icon-34.png",
+        path: finalRecording ? "assets/recording-logo.png" : "assets/icon-34.png",
       });
     } catch (err) {
       console.warn("[SayLess][BG] icon reconciliation failed:", err);
@@ -178,19 +163,14 @@ const clearStaleLocks = async (): Promise<void> => {
 // `loaded` + streaming-data on next SW boot so it can complete the handshake.
 const recoverInFlightRecording = async (): Promise<void> => {
   try {
-    const { pendingRecording, recording, recordingTab } =
-      await chrome.storage.local.get([
-        "pendingRecording",
-        "recording",
-        "recordingTab",
-      ]);
+    const { pendingRecording, recording, recordingTab } = await chrome.storage.local.get([
+      "pendingRecording",
+      "recording",
+      "recordingTab",
+    ]);
     // Only the pre-active window needs recovery. Once recording=true the
     // streaming-data handshake already landed.
-    if (
-      !pendingRecording ||
-      recording ||
-      typeof recordingTab !== "number"
-    ) return;
+    if (!pendingRecording || recording || typeof recordingTab !== "number") return;
     let tab: chrome.tabs.Tab | null = null;
     try {
       tab = await chrome.tabs.get(recordingTab);
@@ -205,30 +185,26 @@ const recoverInFlightRecording = async (): Promise<void> => {
     const extOrigin = chrome.runtime.getURL("").replace(/\/$/, "");
     const recoveryPath = recoveryTabUrl?.pathname;
     const isRecoverableRecorder =
-      recoveryTabUrl?.origin === extOrigin &&
-      recoveryPath === "/recorder.html";
+      recoveryTabUrl?.origin === extOrigin && recoveryPath === "/recorder.html";
     if (!isRecoverableRecorder) return;
     diagEvent("sw-restart-recovery-redeliver-streaming-data", {
       recordingTab,
       tabUrl: tab?.url,
       status: tab?.status,
     });
-    const { region, customRegion, tabRecordedID, recordingType } =
-      await chrome.storage.local.get([
-        "region",
-        "customRegion",
-        "tabRecordedID",
-        "recordingType",
-      ]);
+    const { region, customRegion, tabRecordedID, recordingType } = await chrome.storage.local.get([
+      "region",
+      "customRegion",
+      "tabRecordedID",
+      "recordingType",
+    ]);
     const isRegion = Boolean(region) && !customRegion;
     try {
       await chrome.tabs.sendMessage(recordingTab, {
         type: "loaded",
         request: { recordingType, region, customRegion },
         tabPreferred: false,
-        ...(isRegion && tabRecordedID
-          ? { isTab: true, tabID: tabRecordedID }
-          : {}),
+        ...(isRegion && tabRecordedID ? { isTab: true, tabID: tabRecordedID } : {}),
       });
     } catch (err) {
       console.warn("[SayLess][BG] redeliver loaded failed:", err);
@@ -271,15 +247,9 @@ const cleanupOrphanOpfsSessions = async (): Promise<void> => {
     if (!orphans.length) return;
 
     await Promise.allSettled(orphans.map((id) => destroySessionDir(id)));
-    console.info(
-      "[SayLess][BG] Reaped orphan OPFS recorder sessions:",
-      orphans.length,
-    );
+    console.info("[SayLess][BG] Reaped orphan OPFS recorder sessions:", orphans.length);
   } catch (err) {
-    console.warn(
-      "[SayLess][BG] cleanupOrphanOpfsSessions failed:",
-      err,
-    );
+    console.warn("[SayLess][BG] cleanupOrphanOpfsSessions failed:", err);
   }
 };
 
@@ -324,9 +294,7 @@ const runUpgradeMigrations = async () => {
     await chrome.storage.local.set({
       screenityMigratedForVersion: CURRENT_MIGRATION_VERSION,
     });
-    console.info(
-      "[SayLess][BG] Cleared stale 4.3.7 sticky-disable flags on upgrade",
-    );
+    console.info("[SayLess][BG] Cleared stale 4.3.7 sticky-disable flags on upgrade");
   } catch (err) {
     console.error("[SayLess][BG] Upgrade migration failed:", err);
   }
@@ -349,13 +317,9 @@ hydrateDiagnosticLog().then(async () => {
       pendingRecording: !!snap.pendingRecording,
       hadRecordingTab: snap.recordingTab != null,
       msSinceLastBeat:
-        typeof snap.swLastSeenAt === "number"
-          ? Date.now() - snap.swLastSeenAt
-          : null,
+        typeof snap.swLastSeenAt === "number" ? Date.now() - snap.swLastSeenAt : null,
       msSinceRecordingStart:
-        typeof snap.recordingStartTime === "number"
-          ? Date.now() - snap.recordingStartTime
-          : null,
+        typeof snap.recordingStartTime === "number" ? Date.now() - snap.recordingStartTime : null,
     };
   } catch {}
   diagEvent("sw-init", { ts: Date.now(), priorState });

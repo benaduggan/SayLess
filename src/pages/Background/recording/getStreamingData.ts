@@ -9,13 +9,15 @@ export interface StreamingData {
 
 export const getStreamingData = async (): Promise<StreamingData | null> => {
   try {
-    const chromeApi = (globalThis as typeof globalThis & {
-      chrome: {
-        storage: {
-          local: { get: (keys: string[]) => Promise<Record<string, unknown>> };
+    const chromeApi = (
+      globalThis as typeof globalThis & {
+        chrome: {
+          storage: {
+            local: { get: (keys: string[]) => Promise<Record<string, unknown>> };
+          };
         };
-      };
-    }).chrome;
+      }
+    ).chrome;
     const {
       micActive,
       defaultAudioInput,

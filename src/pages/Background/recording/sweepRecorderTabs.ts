@@ -17,18 +17,22 @@ export const sweepRecorderTabs = async ({
 }: { exceptTabId?: number | null } = {}): Promise<number[]> => {
   const removed: number[] = [];
   try {
-    const chromeApi = (globalThis as typeof globalThis & {
-      chrome: {
-        runtime: { getURL: (path: string) => string };
-        tabs: {
-          query: (options: Record<string, unknown>) => Promise<Array<{
-            id?: number;
-            url?: string;
-            pendingUrl?: string;
-          }>>;
+    const chromeApi = (
+      globalThis as typeof globalThis & {
+        chrome: {
+          runtime: { getURL: (path: string) => string };
+          tabs: {
+            query: (options: Record<string, unknown>) => Promise<
+              Array<{
+                id?: number;
+                url?: string;
+                pendingUrl?: string;
+              }>
+            >;
+          };
         };
-      };
-    }).chrome;
+      }
+    ).chrome;
     const recorderUrl = chromeApi.runtime.getURL("recorder.html");
     const tabs = await chromeApi.tabs.query({});
     for (const tab of tabs) {

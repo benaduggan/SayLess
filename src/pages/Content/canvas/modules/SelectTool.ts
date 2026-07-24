@@ -4,10 +4,7 @@ interface SelectCanvasObject {
   canvas?: SelectCanvas;
   _objects?: SelectCanvasObject[];
   set(properties: Record<string, unknown>): void;
-  _renderControls(
-    context: CanvasRenderingContext2D,
-    options: { hasControls: boolean }
-  ): void;
+  _renderControls(context: CanvasRenderingContext2D, options: { hasControls: boolean }): void;
 }
 
 interface SelectCanvas {
@@ -31,10 +28,9 @@ interface SelectToolState {
 const SelectTool = (
   canvas: SelectCanvas,
   contentStateRef: { current?: SelectToolState | null },
-  _setContentState: unknown
+  _setContentState: unknown,
 ): { removeEventListeners(): void } => {
-  const getState = (): SelectToolState | null | undefined =>
-    contentStateRef.current;
+  const getState = (): SelectToolState | null | undefined => contentStateRef.current;
 
   // On mouse over object
   const onMouseOver = (o: SelectCanvasEvent): void => {
@@ -46,9 +42,7 @@ const SelectTool = (
 
     if (o.target !== canvas.getActiveObject()) {
       if (o.target.type === "group" && o.target.id === "select-group") {
-        const selectStroke = o.target._objects?.find(
-          (object) => object.id === "select-stroke"
-        );
+        const selectStroke = o.target._objects?.find((object) => object.id === "select-stroke");
         if (selectStroke) selectStroke.set({ opacity: 1 });
       } else if (o.target.type === "group" && o.target.id === "arrowGroup") {
         o.target._objects?.forEach((obj) => {
@@ -74,9 +68,7 @@ const SelectTool = (
 
     if (o.target !== canvas.getActiveObject()) {
       if (o.target.type === "group" && o.target.id === "select-group") {
-        const selectStroke = o.target._objects?.find(
-          (object) => object.id === "select-stroke"
-        );
+        const selectStroke = o.target._objects?.find((object) => object.id === "select-stroke");
         if (selectStroke) selectStroke.set({ opacity: 0 });
       } else if (o.target.type === "group" && o.target.id === "arrowGroup") {
         o.target._objects?.forEach((obj) => {

@@ -46,25 +46,17 @@ export class VideoConverter {
   private cachedMP4Codec: VideoCodec | null = null;
   private cachedWebMCodec: VideoCodec | null = null;
 
-  async convertToMP4(
-    sourceBlob: Blob,
-    options: ConversionOptions = {}
-  ): Promise<Blob> {
+  async convertToMP4(sourceBlob: Blob, options: ConversionOptions = {}): Promise<Blob> {
     return this.convert(sourceBlob, "mp4", options);
   }
 
-  async convertToWebM(
-    sourceBlob: Blob,
-    options: ConversionOptions = {}
-  ): Promise<Blob> {
+  async convertToWebM(sourceBlob: Blob, options: ConversionOptions = {}): Promise<Blob> {
     return this.convert(sourceBlob, "webm", options);
   }
 
   async detectBestCodec(format: SupportedFormat): Promise<CodecInfo | null> {
     const outputFormat =
-      format === "mp4"
-        ? new Mp4OutputFormat({ fastStart: false })
-        : new WebMOutputFormat();
+      format === "mp4" ? new Mp4OutputFormat({ fastStart: false }) : new WebMOutputFormat();
     const supportedCodecs = outputFormat.getSupportedVideoCodecs();
 
     for (const codec of supportedCodecs) {
@@ -72,8 +64,7 @@ export class VideoConverter {
         return {
           codec,
           displayName:
-            CODEC_DISPLAY_NAMES[codec as keyof typeof CODEC_DISPLAY_NAMES] ||
-            codec.toUpperCase(),
+            CODEC_DISPLAY_NAMES[codec as keyof typeof CODEC_DISPLAY_NAMES] || codec.toUpperCase(),
           isPreferred: codec === "avc" || codec === "vp9",
         };
       }
@@ -100,7 +91,7 @@ export class VideoConverter {
   private async convert(
     sourceBlob: Blob,
     targetFormat: SupportedFormat,
-    options: ConversionOptions
+    options: ConversionOptions,
   ): Promise<Blob> {
     const {
       videoBitrate = 5_000_000,
@@ -112,21 +103,17 @@ export class VideoConverter {
     } = options;
     throwIfAborted(signal);
 
-    const cache =
-      targetFormat === "mp4" ? this.cachedMP4Codec : this.cachedWebMCodec;
+    const cache = targetFormat === "mp4" ? this.cachedMP4Codec : this.cachedWebMCodec;
     let videoCodec: VideoCodec | null = cache;
 
     if (!videoCodec) {
-      if (
-        preferredVideoCodec &&
-        (await this.canEncodeCodec(preferredVideoCodec))
-      ) {
+      if (preferredVideoCodec && (await this.canEncodeCodec(preferredVideoCodec))) {
         videoCodec = preferredVideoCodec;
       } else {
         const codecInfo = await this.detectBestCodec(targetFormat);
         if (!codecInfo) {
           throw new Error(
-            `Cannot convert to ${targetFormat.toUpperCase()}: no supported video codec.`
+            `Cannot convert to ${targetFormat.toUpperCase()}: no supported video codec.`,
           );
         }
         videoCodec = codecInfo.codec;
@@ -136,8 +123,7 @@ export class VideoConverter {
     }
     throwIfAborted(signal);
 
-    const finalAudioCodec =
-      audioCodec || (targetFormat === "mp4" ? "aac" : "opus");
+    const finalAudioCodec = audioCodec || (targetFormat === "mp4" ? "aac" : "opus");
 
     const input = new Input({
       formats: ALL_FORMATS,
@@ -154,9 +140,7 @@ export class VideoConverter {
 
     try {
       const outputFormat =
-        targetFormat === "mp4"
-          ? new Mp4OutputFormat({ fastStart: false })
-          : new WebMOutputFormat();
+        targetFormat === "mp4" ? new Mp4OutputFormat({ fastStart: false }) : new WebMOutputFormat();
 
       const target = options.target || new BufferTarget();
       const output = new Output({ format: outputFormat, target });
@@ -185,8 +169,7 @@ export class VideoConverter {
       // output file, so there's no in-memory buffer to wrap.
       if (options.target) return null;
 
-      if (!target.buffer)
-        throw new Error("Conversion failed - no output buffer");
+      if (!target.buffer) throw new Error("Conversion failed - no output buffer");
 
       return new Blob([target.buffer], {
         type: targetFormat === "mp4" ? "video/mp4" : "video/webm",
@@ -234,16 +217,10 @@ function throwIfAborted(signal?: AbortSignal): void {
 
 export const videoConverter = new VideoConverter();
 
-export async function convertToMP4(
-  blob: Blob,
-  options?: ConversionOptions
-): Promise<Blob> {
+export async function convertToMP4(blob: Blob, options?: ConversionOptions): Promise<Blob> {
   return videoConverter.convertToMP4(blob, options);
 }
 
-export async function convertToWebM(
-  blob: Blob,
-  options?: ConversionOptions
-): Promise<Blob> {
+export async function convertToWebM(blob: Blob, options?: ConversionOptions): Promise<Blob> {
   return videoConverter.convertToWebM(blob, options);
 }

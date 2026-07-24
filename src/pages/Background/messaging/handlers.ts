@@ -17,10 +17,7 @@ import {
 
 import { startAfterCountdown, startRecording } from "../recording/startRecording";
 import { noteCountdownStarted } from "../recording/countdownFallback";
-import {
-  handleStopRecordingTab,
-  clearInMemoryEditorLock,
-} from "../recording/stopRecording";
+import { handleStopRecordingTab, clearInMemoryEditorLock } from "../recording/stopRecording";
 import { chunksStore } from "../recording/chunkHandler";
 import { openExistingChunksStore } from "../../Recorder/recorderStorage/chooseChunksStore";
 import { destroySessionDir } from "../../Recorder/recorderStorage/opfsKvStore";
@@ -32,14 +29,8 @@ import { acquireStreamForOffscreen } from "../offscreen/acquireStream";
 import { registerProxyStorageHandlers } from "../offscreen/proxyStorageHandlers";
 import { ensureRemuxOffscreen } from "../offscreen/ensureRemuxOffscreen";
 import { forceProcessing } from "../recording/forceProcessing";
-import {
-  restartActiveTab,
-  getCurrentTab,
-  sendMessageTab,
-} from "../tabManagement";
-import {
-  handleRestart,
-} from "../recording/restartRecording";
+import { restartActiveTab, getCurrentTab, sendMessageTab } from "../tabManagement";
+import { handleRestart } from "../recording/restartRecording";
 import { checkRecording } from "../recording/checkRecording";
 import {
   isPinned,
@@ -101,8 +92,7 @@ const MAX_CAPTURED_CLICK_EVENTS = 500;
 type LooseRecord = Record<string, unknown>;
 const isLooseRecord = (value: unknown): value is LooseRecord =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
-const asLooseRecord = (value: unknown): LooseRecord =>
-  isLooseRecord(value) ? value : {};
+const asLooseRecord = (value: unknown): LooseRecord => (isLooseRecord(value) ? value : {});
 const asNullableLooseRecord = (value: unknown): LooseRecord | null =>
   isLooseRecord(value) ? value : null;
 const errorMessage = (error: unknown): string =>
@@ -122,10 +112,7 @@ const optionalStringArray = (value: unknown): string[] | undefined =>
 
 function finiteNumber(value: unknown): number | null;
 function finiteNumber(value: unknown, fallback: number): number;
-function finiteNumber(
-  value: unknown,
-  fallback: number | null = null,
-): number | null {
+function finiteNumber(value: unknown, fallback: number | null = null): number | null {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
 }
@@ -149,12 +136,9 @@ const normalizeClickActivityEvent = ({
   const startTime = finiteNumber(recordingStartTime, 0);
   const basePaused = finiteNumber(totalPausedMs, 0) || 0;
   const pausedAtMs = finiteNumber(pausedAt, 0) || 0;
-  const extraPaused =
-    paused && pausedAtMs > 0 ? Math.max(0, timestamp - pausedAtMs) : 0;
+  const extraPaused = paused && pausedAtMs > 0 ? Math.max(0, timestamp - pausedAtMs) : 0;
   const elapsedSeconds =
-    startTime > 0
-      ? Math.max(0, (timestamp - startTime - basePaused - extraPaused) / 1000)
-      : null;
+    startTime > 0 ? Math.max(0, (timestamp - startTime - basePaused - extraPaused) / 1000) : null;
   const x = finiteNumber(payload.x);
   const y = finiteNumber(payload.y);
   const viewportWidth = finiteNumber(payload.viewportWidth);
@@ -167,14 +151,8 @@ const normalizeClickActivityEvent = ({
     timestamp,
     x,
     y,
-    xRatio:
-      viewportWidth !== null && viewportWidth > 0
-        ? clamp01(x / viewportWidth)
-        : null,
-    yRatio:
-      viewportHeight !== null && viewportHeight > 0
-        ? clamp01(y / viewportHeight)
-        : null,
+    xRatio: viewportWidth !== null && viewportWidth > 0 ? clamp01(x / viewportWidth) : null,
+    yRatio: viewportHeight !== null && viewportHeight > 0 ? clamp01(y / viewportHeight) : null,
     viewportWidth: viewportWidth || null,
     viewportHeight: viewportHeight || null,
     relativeToRegion: Boolean(payload.relativeToRegion),
@@ -224,8 +202,7 @@ const shouldShowReviewPrompt = async () => {
 
     // Established install. Existing users were backfilled to 0 so they pass
     // immediately; updates never reset this.
-    const installedAt =
-      typeof s.extensionInstalledAt === "number" ? s.extensionInstalledAt : now;
+    const installedAt = typeof s.extensionInstalledAt === "number" ? s.extensionInstalledAt : now;
     const isExisting = installedAt === 0;
     if (now - installedAt < REVIEW_GATE.minInstallDays * DAY_MS) return false;
 
@@ -293,9 +270,7 @@ const offerScreenStore = (offer: LocalPlaybackOffer | null) => {
 const isLocalPlaybackOfferExpired = (offer: LocalPlaybackOffer | null): boolean =>
   !offer || Number(offer.expiresAt || 0) <= Date.now();
 
-const scheduleLocalPlaybackAlarm = async (
-  offer: LocalPlaybackOffer,
-): Promise<void> => {
+const scheduleLocalPlaybackAlarm = async (offer: LocalPlaybackOffer): Promise<void> => {
   if (!offer?.expiresAt || !chrome.alarms?.create) return;
   try {
     await chrome.alarms.clear(LOCAL_PLAYBACK_ALARM);
@@ -339,10 +314,7 @@ const clearStoredLocalPlaybackOffer = async ({
         err,
       );
     });
-    if (
-      existing?.storageBackend === "opfs" &&
-      existing?.opfsSessionId
-    ) {
+    if (existing?.storageBackend === "opfs" && existing?.opfsSessionId) {
       await destroySessionDir(existing.opfsSessionId).catch(() => {});
     }
   }
@@ -490,10 +462,7 @@ const registerRecordingTabListener = (ownerTabId: number | null): void => {
           tabId: closedTabId,
         }),
       ).catch((err) => {
-        console.error(
-          "[SayLess][BG] handleStopRecordingTab failed in tab-removed",
-          err,
-        );
+        console.error("[SayLess][BG] handleStopRecordingTab failed in tab-removed", err);
       });
       clearRecordingSessionSafe("owner-tab-removed", { closedTabId });
     }
@@ -545,8 +514,7 @@ const isActiveSessionAlive = async (session: LooseRecord): Promise<boolean> => {
   ]);
   const flagsActive = Boolean(recording || pendingRecording || restarting);
   const storedRecord = asNullableLooseRecord(storedSession);
-  const storedMatches =
-    storedRecord?.id === session.id && isSessionRecording(storedRecord);
+  const storedMatches = storedRecord?.id === session.id && isSessionRecording(storedRecord);
   return ownerTabAlive && (storedMatches || flagsActive);
 };
 
@@ -556,16 +524,13 @@ const resolveActiveSessionConflict = async (incomingSession: LooseRecord) => {
   }
 
   if (!activeRecordingSession?.id) {
-    const { recorderSession: storedSession } = await chrome.storage.local.get([
-      "recorderSession",
-    ]);
+    const { recorderSession: storedSession } = await chrome.storage.local.get(["recorderSession"]);
     const storedRecord = asNullableLooseRecord(storedSession);
     if (storedRecord?.id && isSessionRecording(storedRecord)) {
       activeRecordingSession = {
         ...storedRecord,
         recorderTabId: storedRecord.recorderTabId || storedRecord.tabId || null,
-        capturedTabId:
-          storedRecord.capturedTabId || storedRecord.tabId || null,
+        capturedTabId: storedRecord.capturedTabId || storedRecord.tabId || null,
         tabId: storedRecord.capturedTabId || storedRecord.tabId || null,
       };
     }
@@ -586,8 +551,7 @@ const resolveActiveSessionConflict = async (incomingSession: LooseRecord) => {
     console.warn("[SayLess][BG] session_conflict_rejected", {
       activeId: activeRecordingSession.id,
       incomingId: incomingSession.id,
-      activeRecorderTabId:
-        activeRecordingSession.recorderTabId || activeRecordingSession.tabId,
+      activeRecorderTabId: activeRecordingSession.recorderTabId || activeRecordingSession.tabId,
     });
     return { allow: false, staleRecovered: false };
   }
@@ -611,10 +575,7 @@ export const copyToClipboard = (text: string): void => {
       target: { tabId },
       func: (content) => {
         navigator.clipboard.writeText(content).catch((err) => {
-          console.warn(
-            "❌ Failed to copy to clipboard in content script:",
-            err,
-          );
+          console.warn("❌ Failed to copy to clipboard in content script:", err);
         });
       },
       args: [text],
@@ -755,9 +716,7 @@ export const setupHandlers = () => {
     return { ok: true };
   });
   registerMessage("offscreen-ready", async () => {
-    const { pendingOffscreenLoad } = await chrome.storage.local.get([
-      "pendingOffscreenLoad",
-    ]);
+    const { pendingOffscreenLoad } = await chrome.storage.local.get(["pendingOffscreenLoad"]);
     if (!pendingOffscreenLoad) return { ok: true, delivered: false };
     await chrome.storage.local.set({ pendingOffscreenLoad: null });
     chrome.runtime.sendMessage(pendingOffscreenLoad).catch(() => {});
@@ -794,9 +753,7 @@ export const setupHandlers = () => {
       // anchor picker to user's tab, not the offscreen doc
       let initiatingTabId = asTabId(message.initiatingTabId);
       if (!initiatingTabId) {
-        const { recordingUiTabId } = await chrome.storage.local.get([
-          "recordingUiTabId",
-        ]);
+        const { recordingUiTabId } = await chrome.storage.local.get(["recordingUiTabId"]);
         initiatingTabId = asTabId(recordingUiTabId);
       }
       const result = await acquireStreamForOffscreen({
@@ -810,14 +767,10 @@ export const setupHandlers = () => {
       return { ok: false, error: errorMessage(err) };
     }
   });
-  registerMessage("handle-restart", (message, sender) =>
-    handleRestart(message, sender),
-  );
+  registerMessage("handle-restart", (message, sender) => handleRestart(message, sender));
   registerMessage("handle-dismiss", () => handleDismiss());
   registerMessage("reset-active-tab", () => resetActiveTab(false));
-  registerMessage("reset-active-tab-restart", (message) =>
-    resetActiveTabRestart(message),
-  );
+  registerMessage("reset-active-tab-restart", (message) => resetActiveTabRestart(message));
   registerMessage("video-ready", async (message) => {
     perfMark("BG.handlers video-ready.received");
     await videoReady();
@@ -829,10 +782,7 @@ export const setupHandlers = () => {
       const { successfulRecordingCount } = await chrome.storage.local.get(
         "successfulRecordingCount",
       );
-      const prev =
-        typeof successfulRecordingCount === "number"
-          ? successfulRecordingCount
-          : 0;
+      const prev = typeof successfulRecordingCount === "number" ? successfulRecordingCount : 0;
       await chrome.storage.local.set({
         successfulRecordingCount: prev + 1,
         lastSuccessfulRecordingAt: Date.now(),
@@ -842,11 +792,7 @@ export const setupHandlers = () => {
 
   // download-path remux request from sandbox; falls back to in-sandbox BufferTarget on failure
   registerMessage("remux-request", async (message) => {
-    if (
-      !message?.requestId ||
-      !message?.inputFileName ||
-      !message?.outputFileName
-    ) {
+    if (!message?.requestId || !message?.inputFileName || !message?.outputFileName) {
       return { ok: false, error: "invalid-remux-request-payload" };
     }
     try {
@@ -874,10 +820,7 @@ export const setupHandlers = () => {
             outputFileName: message.outputFileName,
           }),
           new Promise((_, reject) => {
-            timeoutId = setTimeout(
-              () => reject(new Error("remux-offscreen-timeout")),
-              TIMEOUT_MS,
-            );
+            timeoutId = setTimeout(() => reject(new Error("remux-offscreen-timeout")), TIMEOUT_MS);
           }),
         ]);
         return response || { ok: false, error: "no-offscreen-response" };
@@ -894,16 +837,14 @@ export const setupHandlers = () => {
 
   // pagehide from Region/Recorder.jsx; user navigated away from the recorded tab
   registerMessage("region-iframe-destroyed", async () => {
-    const { recording, recorderSession, customRegion } =
-      await chrome.storage.local.get([
-        "recording",
-        "recorderSession",
-        "customRegion",
-      ]);
-    const recorderSessionRecord: LooseRecord | null =
-      (recorderSession || null) as LooseRecord | null;
-    const isActivelyRecording =
-      recording || recorderSessionRecord?.status === "recording";
+    const { recording, recorderSession, customRegion } = await chrome.storage.local.get([
+      "recording",
+      "recorderSession",
+      "customRegion",
+    ]);
+    const recorderSessionRecord: LooseRecord | null = (recorderSession ||
+      null) as LooseRecord | null;
+    const isActivelyRecording = recording || recorderSessionRecord?.status === "recording";
     if (!isActivelyRecording) return;
     // only customRegion hosts MediaRecorder in the iframe; plain tab capture lives
     // in the pinned recorder tab and must not be torn down by recorded-page navigation
@@ -920,19 +861,14 @@ export const setupHandlers = () => {
       recordingTab: null,
       postStopEditorOpening: false,
       postStopEditorOpened: false,
-      recorderSession: recorderSession
-        ? { ...recorderSession, status: "stopped" }
-        : null,
+      recorderSession: recorderSession ? { ...recorderSession, status: "stopped" } : null,
     });
 
     // user navigated before any chunks persisted; toast instead of empty editor
     const chunkCount = await chunksStore.length().catch(() => 0);
     if (chunkCount === 0) {
       diagEvent("region-nav-no-chunks");
-      const { activeTab, sandboxTab } = await chrome.storage.local.get([
-        "activeTab",
-        "sandboxTab",
-      ]);
+      const { activeTab, sandboxTab } = await chrome.storage.local.get(["activeTab", "sandboxTab"]);
       const activeTabId = asTabId(activeTab);
       if (activeTabId !== null) {
         sendMessageTab(activeTabId, {
@@ -964,17 +900,12 @@ export const setupHandlers = () => {
 
   registerMessage("start-recording", (message) => startRecording("start-recording-message"));
   registerMessage("countdown-finished", async (message) => {
-    const { recording, restarting, pendingRecording } =
-      await chrome.storage.local.get([
+    const { recording, restarting, pendingRecording } = await chrome.storage.local.get([
       "recording",
       "restarting",
       "pendingRecording",
     ]);
-    const writeDecision = (
-      reason: string,
-      started: boolean,
-      extra: LooseRecord = {},
-    ) => {
+    const writeDecision = (reason: string, started: boolean, extra: LooseRecord = {}) => {
       const decisionAt = Date.now();
       return chrome.storage.local.set({
         lastCountdownFinishedDecision: {
@@ -1035,10 +966,7 @@ export const setupHandlers = () => {
   });
   registerMessage("restarted", (message) => restartActiveTab(message));
 
-  registerMessage(
-    "get-streaming-data",
-    async () => await handleGetStreamingData(),
-  );
+  registerMessage("get-streaming-data", async () => await handleGetStreamingData());
   registerMessage("cancel-recording", () => cancelRecording());
   registerMessage("stop-recording-tab", (message, sender, sendResponse) => {
     perfMark("BG.handlers stop-recording-tab.received", {
@@ -1047,19 +975,13 @@ export const setupHandlers = () => {
     });
     logStopRecordingTabEvent(message, sender);
     const now = Date.now();
-    if (
-      stopRecordingTabInFlight ||
-      now - stopRecordingTabLastAt < STOP_RECORDING_TAB_DEBOUNCE_MS
-    ) {
+    if (stopRecordingTabInFlight || now - stopRecordingTabLastAt < STOP_RECORDING_TAB_DEBOUNCE_MS) {
       if (DEBUG_POSTSTOP) {
-        console.warn(
-          "[SayLess][BG] Suppressed duplicate stop-recording-tab message",
-          {
-            inFlight: stopRecordingTabInFlight,
-            deltaMs: now - stopRecordingTabLastAt,
-            reason: message?.reason || null,
-          },
-        );
+        console.warn("[SayLess][BG] Suppressed duplicate stop-recording-tab message", {
+          inFlight: stopRecordingTabInFlight,
+          deltaMs: now - stopRecordingTabLastAt,
+          reason: message?.reason || null,
+        });
       }
       sendResponse({ ok: true, deduped: true });
       return true;
@@ -1078,9 +1000,7 @@ export const setupHandlers = () => {
     sendResponse({ ok: true });
     return true;
   });
-  registerMessage("dismiss-recording-tab", (message) =>
-    handleDismissRecordingTab(message),
-  );
+  registerMessage("dismiss-recording-tab", (message) => handleDismissRecordingTab(message));
   registerMessage("pause-recording-tab", () => {
     diagEvent("pause");
     return sendMessageRecord({ type: "pause-recording-tab" });
@@ -1099,9 +1019,7 @@ export const setupHandlers = () => {
     setMicActiveTab({
       active: Boolean(message.active),
       defaultAudioInput:
-        typeof message.defaultAudioInput === "string"
-          ? message.defaultAudioInput
-          : null,
+        typeof message.defaultAudioInput === "string" ? message.defaultAudioInput : null,
     }),
   );
 
@@ -1169,16 +1087,11 @@ export const setupHandlers = () => {
       }
     } catch {}
   });
-  registerMessage("on-get-permissions", (message) =>
-    handleOnGetPermissions(message),
-  );
-  registerMessage(
-    "recording-complete",
-    async (message, sender) => {
-      perfMark("BG.handlers recording-complete.received");
-      return await handleRecordingComplete();
-    },
-  );
+  registerMessage("on-get-permissions", (message) => handleOnGetPermissions(message));
+  registerMessage("recording-complete", async (message, sender) => {
+    perfMark("BG.handlers recording-complete.received");
+    return await handleRecordingComplete();
+  });
   registerMessage("check-recording", () => checkRecording());
   registerMessage("open-download-mp4", async () => {
     const tab = await createTab("download.html", true);
@@ -1192,10 +1105,7 @@ export const setupHandlers = () => {
   });
 
   const openLocalHelp = () => createTab("setup.html", true);
-  const openLocalDiagnostics = async (
-    message: LooseRecord = {},
-    source = "support",
-  ) => {
+  const openLocalDiagnostics = async (message: LooseRecord = {}, source = "support") => {
     const request = {
       source,
       errorCode: message?.errorCode || null,
@@ -1205,12 +1115,11 @@ export const setupHandlers = () => {
     };
     await chrome.storage.local.set({ lastLocalSupportRequest: request });
     try {
-      const { activeTab, tabRecordedID, recordingUiTabId } =
-        await chrome.storage.local.get([
-          "activeTab",
-          "tabRecordedID",
-          "recordingUiTabId",
-        ]);
+      const { activeTab, tabRecordedID, recordingUiTabId } = await chrome.storage.local.get([
+        "activeTab",
+        "tabRecordedID",
+        "recordingUiTabId",
+      ]);
       const target = tabRecordedID || recordingUiTabId || activeTab;
       const targetTabId = asTabId(target);
       if (targetTabId !== null) {
@@ -1247,9 +1156,7 @@ export const setupHandlers = () => {
   );
   registerMessage("clear-recordings", () => clearAllRecordings());
   registerMessage("force-processing", () => forceProcessing());
-  registerMessage("focus-this-tab", (message, sender) =>
-    focusTab(sender.tab?.id ?? null),
-  );
+  registerMessage("focus-this-tab", (message, sender) => focusTab(sender.tab?.id ?? null));
   registerMessage("indexed-db-download", () => downloadIndexedDB());
   registerMessage("get-platform-info", async () => {
     // Include the manifest version so contexts that ask BG for platform info
@@ -1262,31 +1169,25 @@ export const setupHandlers = () => {
     } catch {}
     return { ...info, extVersion };
   });
-  registerMessage(
-    "get-diagnostic-log",
-    async (_message, _sender, sendResponse) => {
-      const log = await getDiagnosticLog();
-      const errors = await getErrorSnapshot();
-      const flags = await getStorageFlags();
-      sendResponse({ log, errors, flags });
-      return true;
-    },
-  );
+  registerMessage("get-diagnostic-log", async (_message, _sender, sendResponse) => {
+    const log = await getDiagnosticLog();
+    const errors = await getErrorSnapshot();
+    const flags = await getStorageFlags();
+    sendResponse({ log, errors, flags });
+    return true;
+  });
   registerMessage("restore-recording", () => restoreRecording());
   registerMessage("check-restore", async (message, sender, sendResponse) => {
     const response = await checkRestore();
     sendResponse(response);
     return true;
   });
-  registerMessage(
-    "check-capture-permissions",
-    async (message, sender, sendResponse) => {
-      const response = await checkCapturePermissions();
+  registerMessage("check-capture-permissions", async (message, sender, sendResponse) => {
+    const response = await checkCapturePermissions();
 
-      sendResponse(response);
-      return true;
-    },
-  );
+    sendResponse(response);
+    return true;
+  });
   registerMessage("is-pinned", async () => await isPinned());
 
   // prevent Chrome from discarding the recorder tab while recording
@@ -1318,10 +1219,7 @@ export const setupHandlers = () => {
     chrome.system.display.getInfo((displays) => {
       chrome.windows.getCurrent((win) => {
         if (!win || chrome.runtime.lastError) {
-          console.warn(
-            "[get-monitor-for-window] No window found",
-            chrome.runtime.lastError,
-          );
+          console.warn("[get-monitor-for-window] No window found", chrome.runtime.lastError);
           sendResponse({ error: "No window found" });
           return;
         }
@@ -1386,9 +1284,7 @@ export const setupHandlers = () => {
     if (tabId !== null) {
       await sendMessageTab(tabId, {
         type: "preparing-recording",
-      }).catch((e) =>
-        console.warn("Failed to send preparing-recording to tab:", e),
-      );
+      }).catch((e) => console.warn("Failed to send preparing-recording to tab:", e));
     }
   });
   registerMessage("local-playback-register", async (message) => {
@@ -1487,19 +1383,14 @@ export const setupHandlers = () => {
       blob = new Blob([rawChunk], { type: containerMime });
     } else if (ArrayBuffer.isView(rawChunk)) {
       const copy = new Uint8Array(rawChunk.byteLength);
-      copy.set(
-        new Uint8Array(rawChunk.buffer, rawChunk.byteOffset, rawChunk.byteLength),
-      );
+      copy.set(new Uint8Array(rawChunk.buffer, rawChunk.byteOffset, rawChunk.byteLength));
       blob = new Blob([copy.buffer], { type: containerMime });
     } else {
       return { ok: false, error: "chunk-invalid", index };
     }
     const arrayBuffer = await blob.arrayBuffer();
     const base64 = btoa(
-      new Uint8Array(arrayBuffer).reduce(
-        (data, byte) => data + String.fromCharCode(byte),
-        "",
-      ),
+      new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ""),
     );
 
     return {
@@ -1597,9 +1488,7 @@ export const setupHandlers = () => {
   });
   registerMessage("review-prompt-action", async (message) => {
     const action = message?.action;
-    const { reviewPromptState } = await chrome.storage.local.get([
-      "reviewPromptState",
-    ]);
+    const { reviewPromptState } = await chrome.storage.local.get(["reviewPromptState"]);
     const next: LooseRecord = { ...((reviewPromptState || {}) as LooseRecord) };
     if (action === "shown") {
       next.lastShownAt = Date.now();
@@ -1607,11 +1496,7 @@ export const setupHandlers = () => {
     } else if (action === "later") {
       // Thumbs-up but not now, so snooze for a long while.
       next.snoozedUntil = Date.now() + REVIEW_GATE.snoozeDays * DAY_MS;
-    } else if (
-      action === "reviewed" ||
-      action === "dismiss" ||
-      action === "feedback"
-    ) {
+    } else if (action === "reviewed" || action === "dismiss" || action === "feedback") {
       // Reviewed, opted out, or routed to feedback (unhappy): don't ask again.
       next.done = true;
     }
@@ -1678,21 +1563,15 @@ export const setupHandlers = () => {
     return true;
   });
   registerMessage("sync-recording-state", async (_message, _sender, sendResponse) => {
-    const {
-      recording,
-      paused,
-      recordingStartTime,
-      pausedAt,
-      totalPausedMs,
-      pendingRecording,
-    } = await chrome.storage.local.get([
-      "recording",
-      "paused",
-      "recordingStartTime",
-      "pausedAt",
-      "totalPausedMs",
-      "pendingRecording",
-    ]);
+    const { recording, paused, recordingStartTime, pausedAt, totalPausedMs, pendingRecording } =
+      await chrome.storage.local.get([
+        "recording",
+        "paused",
+        "recordingStartTime",
+        "pausedAt",
+        "totalPausedMs",
+        "pendingRecording",
+      ]);
     sendResponse({
       recording: Boolean(recording),
       paused: Boolean(paused),
@@ -1703,69 +1582,47 @@ export const setupHandlers = () => {
     });
     return true;
   });
-  registerMessage(
-    "register-recording-session",
-    async (message, sender, sendResponse) => {
-      const incoming = normalizeIncomingSession(
-        asLooseRecord(message.session),
-        sender,
-      );
-      const resolution = await resolveActiveSessionConflict(incoming);
-      if (!resolution.allow) {
-        sendResponse({
-          ok: false,
-          error: "Another recording session is already active",
-          activeRecordingSession,
-        });
-        return true;
-      }
-
-      activeRecordingSession = incoming;
-      registerRecordingTabListener(asTabId(incoming.recorderTabId));
+  registerMessage("register-recording-session", async (message, sender, sendResponse) => {
+    const incoming = normalizeIncomingSession(asLooseRecord(message.session), sender);
+    const resolution = await resolveActiveSessionConflict(incoming);
+    if (!resolution.allow) {
       sendResponse({
-        ok: true,
-        session: activeRecordingSession,
-        staleRecovered: resolution.staleRecovered,
+        ok: false,
+        error: "Another recording session is already active",
+        activeRecordingSession,
       });
       return true;
-    },
-  );
+    }
 
-  registerMessage(
-    "clear-recording-session",
-    async (message, sender, sendResponse) => {
-      await clearRecordingSessionSafe(
-        stringOr(message.reason, "clear-recording-session"),
-      );
-      sendResponse({ ok: true });
-      return true;
-    },
-  );
+    activeRecordingSession = incoming;
+    registerRecordingTabListener(asTabId(incoming.recorderTabId));
+    sendResponse({
+      ok: true,
+      session: activeRecordingSession,
+      staleRecovered: resolution.staleRecovered,
+    });
+    return true;
+  });
 
-  registerMessage(
-    "clear-recording-session-safe",
-    async (message, sender, sendResponse) => {
-      await clearRecordingSessionSafe(
-        stringOr(message.reason, "clear-recording-session-safe"),
-        {
-          sourceTabId: sender?.tab?.id || null,
-        },
-      );
-      sendResponse({ ok: true });
-      return true;
-    },
-  );
+  registerMessage("clear-recording-session", async (message, sender, sendResponse) => {
+    await clearRecordingSessionSafe(stringOr(message.reason, "clear-recording-session"));
+    sendResponse({ ok: true });
+    return true;
+  });
 
-  registerMessage(
-    "restore-recording-session",
-    async (message, sender, sendResponse) => {
-      const { recorderSession } = await chrome.storage.local.get([
-        "recorderSession",
-      ]);
-      sendResponse({ recorderSession: recorderSession || null });
-      return true;
-    },
-  );
+  registerMessage("clear-recording-session-safe", async (message, sender, sendResponse) => {
+    await clearRecordingSessionSafe(stringOr(message.reason, "clear-recording-session-safe"), {
+      sourceTabId: sender?.tab?.id || null,
+    });
+    sendResponse({ ok: true });
+    return true;
+  });
+
+  registerMessage("restore-recording-session", async (message, sender, sendResponse) => {
+    const { recorderSession } = await chrome.storage.local.get(["recorderSession"]);
+    sendResponse({ recorderSession: recorderSession || null });
+    return true;
+  });
 
   registerMessage("activate-recorder-tab", async (message, sender) => {
     const tabId = sender?.tab?.id;
@@ -1794,9 +1651,8 @@ export const setupHandlers = () => {
     try {
       const files = (message && message.files) || {};
       const filename =
-        (message && typeof message.filename === "string"
-          ? message.filename
-          : null) || "sayless-bundle.zip";
+        (message && typeof message.filename === "string" ? message.filename : null) ||
+        "sayless-bundle.zip";
       const zip = new JSZip();
       for (const [name, content] of Object.entries(files)) {
         if (typeof content === "string") {

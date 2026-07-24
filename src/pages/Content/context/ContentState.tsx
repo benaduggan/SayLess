@@ -1,11 +1,4 @@
-import React, {
-  createContext,
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
+import React, { createContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 import { updateFromStorage } from "./utils/updateFromStorage";
 import { lifecycle } from "../../utils/lifecycleLog";
@@ -16,22 +9,16 @@ import DevHUD from "../DevHUD";
 
 import { setupHandlers } from "./messaging/handlers";
 
-import {
-  initStartFlowTrace,
-  traceStep,
-  setStartFlowOutcome,
-} from "../../utils/startFlowTrace";
+import { initStartFlowTrace, traceStep, setStartFlowOutcome } from "../../utils/startFlowTrace";
 import { triggerSupportDownload } from "../../utils/triggerSupportDownload";
 
 export type ContentStateValue = Record<string, any>;
-export type ContentStateSetter = React.Dispatch<
-  React.SetStateAction<ContentStateValue>
->;
+export type ContentStateSetter = React.Dispatch<React.SetStateAction<ContentStateValue>>;
 export type ContentStateContextValue = [
   ContentStateValue,
   ContentStateSetter,
   number,
-  React.Dispatch<React.SetStateAction<number>>
+  React.Dispatch<React.SetStateAction<number>>,
 ];
 
 const initialSetContentState: ContentStateSetter = () => {};
@@ -44,8 +31,7 @@ export const contentStateContext = createContext<ContentStateContextValue>([
 ]);
 export const contentStateRef: { current: ContentStateValue } = { current: {} };
 export let setContentState: ContentStateSetter = initialSetContentState;
-export let setTimer: React.Dispatch<React.SetStateAction<number>> =
-  initialSetTimer;
+export let setTimer: React.Dispatch<React.SetStateAction<number>> = initialSetTimer;
 
 const CURSOR_EFFECTS = ["target", "highlight", "spotlight"];
 
@@ -124,10 +110,10 @@ const ContentState = (props: React.PropsWithChildren) => {
         (type === "tab" || type === "region") &&
         Boolean(
           s?.recording ||
-            s?.countdownActive ||
-            s?.isCountdownVisible ||
-            s?.preparingRecording ||
-            s?.pendingRecording
+          s?.countdownActive ||
+          s?.isCountdownVisible ||
+          s?.preparingRecording ||
+          s?.pendingRecording,
         );
       let allowed = true;
       if (ENABLE_TAB_SCOPED_UI && tabBoundFlow && tabIdRef.current != null) {
@@ -146,7 +132,7 @@ const ContentState = (props: React.PropsWithChildren) => {
         setContentState((prev) => ({ ...prev, recordingUiAllowed: allowed }));
       }
     },
-    [isTargetTab]
+    [isTargetTab],
   );
 
   useEffect(() => {
@@ -173,7 +159,7 @@ const ContentState = (props: React.PropsWithChildren) => {
         recordingStartTimeRef.current = result.recordingStartTime ?? null;
         recordingBeepTabIdRef.current = result.recordingBeepTabId ?? null;
         recomputeRecordingUiAllowed("storage-mount");
-      }
+      },
     );
   }, [recomputeRecordingUiAllowed]);
 
@@ -203,8 +189,7 @@ const ContentState = (props: React.PropsWithChildren) => {
         permissionsPolicy?: { allowsFeature?: (feature: string) => boolean };
         featurePolicy?: { allowsFeature?: (feature: string) => boolean };
       };
-      const pp =
-        policyDocument.permissionsPolicy || policyDocument.featurePolicy;
+      const pp = policyDocument.permissionsPolicy || policyDocument.featurePolicy;
       if (!pp || typeof pp.allowsFeature !== "function") return;
       const cameraBlocked = !pp.allowsFeature("camera");
       const microphoneBlocked = !pp.allowsFeature("microphone");
@@ -219,8 +204,7 @@ const ContentState = (props: React.PropsWithChildren) => {
 
   const startRecording = useCallback(() => {
     const shouldClearCountdown =
-      !contentStateRef.current?.isCountdownVisible &&
-      !contentStateRef.current?.countdownActive;
+      !contentStateRef.current?.isCountdownVisible && !contentStateRef.current?.countdownActive;
     if (contentStateRef.current.alarm) {
       if (contentStateRef.current.alarmTime === 0) {
         setContentState((prevContentState) => ({
@@ -242,15 +226,11 @@ const ContentState = (props: React.PropsWithChildren) => {
       timeWarning: false,
       pendingRecording: false,
       preparingRecording: false,
-      ...(shouldClearCountdown
-        ? { countdownActive: false, isCountdownVisible: false }
-        : {}),
+      ...(shouldClearCountdown ? { countdownActive: false, isCountdownVisible: false } : {}),
     }));
     if (tabIdRef.current != null) {
       const preferredTab =
-        tabRecordedIdRef.current ??
-        recordingUiTabRef.current ??
-        tabIdRef.current;
+        tabRecordedIdRef.current ?? recordingUiTabRef.current ?? tabIdRef.current;
       chrome.storage.local.set({ recordingBeepTabId: preferredTab });
       recordingBeepTabIdRef.current = preferredTab;
     }
@@ -372,7 +352,7 @@ const ContentState = (props: React.PropsWithChildren) => {
             });
           }, 200);
         }
-      }
+      },
     );
     // Watchdog: clear finalizing if BG never signals editor-open.
     // 30s is past worst-case (encoder flush is ~15s cap).
@@ -426,7 +406,7 @@ const ContentState = (props: React.PropsWithChildren) => {
       if (!dismiss) {
         contentStateRef.current.openToast(
           chrome.i18n.getMessage("pausedRecordingToast"),
-          function () {}
+          function () {},
         );
       }
     }, 100);
@@ -441,8 +421,7 @@ const ContentState = (props: React.PropsWithChildren) => {
     const now = Date.now();
     if (pausedAtRef.current) {
       totalPausedMsRef.current =
-        (totalPausedMsRef.current || 0) +
-        Math.max(0, now - pausedAtRef.current);
+        (totalPausedMsRef.current || 0) + Math.max(0, now - pausedAtRef.current);
     }
     pausedRef.current = false;
     pausedAtRef.current = null;
@@ -541,22 +520,15 @@ const ContentState = (props: React.PropsWithChildren) => {
   // is fine; awaiting anything before invoking is not.
   const checkChromeCapturePermissionsSW = useCallback(() => {
     return new Promise<boolean>((resolve) => {
-      chrome.runtime.sendMessage(
-        { type: "check-capture-permissions" },
-        (response) => {
-          resolve(Boolean(response && response.status === "ok"));
-        }
-      );
+      chrome.runtime.sendMessage({ type: "check-capture-permissions" }, (response) => {
+        resolve(Boolean(response && response.status === "ok"));
+      });
     });
   }, []);
 
   const startStreaming = useCallback(async () => {
     // Double-click guard: a previous start may still be in flight.
-    const snap = await chrome.storage.local.get([
-      "pendingRecording",
-      "recording",
-      "restarting",
-    ]);
+    const snap = await chrome.storage.local.get(["pendingRecording", "recording", "restarting"]);
     if (snap.pendingRecording || snap.recording || snap.restarting) {
       return;
     }
@@ -564,16 +536,10 @@ const ContentState = (props: React.PropsWithChildren) => {
     // Kick off synchronously: later awaits (trace init, quota checks) would
     // consume the click's user-gesture before it reaches
     // chrome.permissions.request in the SW.
-    const isExtensionPage = window.location.href.includes(
-      "chrome-extension://"
-    );
-    const permissionPromise = isExtensionPage
-      ? null
-      : checkChromeCapturePermissionsSW();
+    const isExtensionPage = window.location.href.includes("chrome-extension://");
+    const permissionPromise = isExtensionPage ? null : checkChromeCapturePermissionsSW();
 
-    const attemptId = `ra-${Date.now().toString(36)}-${Math.random()
-      .toString(36)
-      .slice(2, 8)}`;
+    const attemptId = `ra-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     await initStartFlowTrace(attemptId, {
       recordingType: contentStateRef.current.recordingType,
       countdown: Boolean(contentStateRef.current.countdown),
@@ -620,7 +586,7 @@ const ContentState = (props: React.PropsWithChildren) => {
         null,
         chrome.i18n.getMessage("learnMoreDot"),
         URL,
-        true
+        true,
       );
       setStartFlowOutcome("cancelled", { error: "permission-denied" });
       chrome.storage.local.set({ pendingRecording: false });
@@ -670,7 +636,7 @@ const ContentState = (props: React.PropsWithChildren) => {
               source: "not-enough-space",
               zipBundled: true,
             });
-          }
+          },
         );
       }
       setStartFlowOutcome("error", { error: "insufficient-memory" });
@@ -686,10 +652,7 @@ const ContentState = (props: React.PropsWithChildren) => {
       tabRecordedID: null,
     });
 
-    if (
-      contentStateRef.current.recordingType === "region" &&
-      contentStateRef.current.cropTarget
-    ) {
+    if (contentStateRef.current.recordingType === "region" && contentStateRef.current.cropTarget) {
       contentStateRef.current.regionCaptureRef.contentWindow.postMessage(
         {
           type: "crop-target",
@@ -697,7 +660,7 @@ const ContentState = (props: React.PropsWithChildren) => {
           width: contentStateRef.current.regionWidth,
           height: contentStateRef.current.regionHeight,
         },
-        "*"
+        "*",
       );
     }
 
@@ -706,10 +669,7 @@ const ContentState = (props: React.PropsWithChildren) => {
       showOnboardingArrow: false,
     }));
 
-    if (
-      !contentStateRef.current.micActive &&
-      contentStateRef.current.askMicrophone
-    ) {
+    if (!contentStateRef.current.micActive && contentStateRef.current.askMicrophone) {
       contentStateRef.current.openModal(
         chrome.i18n.getMessage("micMutedModalTitle"),
         chrome.i18n.getMessage("micMutedModalDescription"),
@@ -718,12 +678,10 @@ const ContentState = (props: React.PropsWithChildren) => {
         () => {
           chrome.runtime.sendMessage({
             type: "desktop-capture",
-            region:
-              contentStateRef.current.recordingType === "region" ? true : false,
+            region: contentStateRef.current.recordingType === "region" ? true : false,
             customRegion: contentStateRef.current.customRegion,
             offscreenRecording: contentStateRef.current.offscreenRecording,
-            camera:
-              contentStateRef.current.recordingType === "camera" ? true : false,
+            camera: contentStateRef.current.recordingType === "camera" ? true : false,
           });
           setContentState((prevContentState) => ({
             ...prevContentState,
@@ -752,7 +710,7 @@ const ContentState = (props: React.PropsWithChildren) => {
             askMicrophone: false,
           }));
           chrome.storage.local.set({ askMicrophone: false });
-        }
+        },
       );
     } else {
       perfMark("Content desktop-capture.sent");
@@ -765,12 +723,10 @@ const ContentState = (props: React.PropsWithChildren) => {
       });
       chrome.runtime.sendMessage({
         type: "desktop-capture",
-        region:
-          contentStateRef.current.recordingType === "region" ? true : false,
+        region: contentStateRef.current.recordingType === "region" ? true : false,
         customRegion: contentStateRef.current.customRegion,
         offscreenRecording: contentStateRef.current.offscreenRecording,
-        camera:
-          contentStateRef.current.recordingType === "camera" ? true : false,
+        camera: contentStateRef.current.recordingType === "camera" ? true : false,
       });
       traceStep("desktopCaptureSent");
       setContentState((prevContentState) => ({
@@ -796,7 +752,7 @@ const ContentState = (props: React.PropsWithChildren) => {
       },
       () => {
         contentStateRef.current.resumeRecording();
-      }
+      },
     );
   }, []);
 
@@ -815,7 +771,7 @@ const ContentState = (props: React.PropsWithChildren) => {
         },
         () => {
           contentStateRef.current.resumeRecording();
-        }
+        },
       );
     } else {
       contentStateRef.current.dismissRecording("user-discard");
@@ -842,14 +798,10 @@ const ContentState = (props: React.PropsWithChildren) => {
       }));
 
       const audioInputById = Array.isArray(audioInput)
-        ? Object.fromEntries(
-            audioInput.map((device) => [device.deviceId, device.label])
-          )
+        ? Object.fromEntries(audioInput.map((device) => [device.deviceId, device.label]))
         : {};
       const videoInputById = Array.isArray(videoInput)
-        ? Object.fromEntries(
-            videoInput.map((device) => [device.deviceId, device.label])
-          )
+        ? Object.fromEntries(videoInput.map((device) => [device.deviceId, device.label]))
         : {};
 
       const defaultAudioInputLabel =
@@ -859,19 +811,15 @@ const ContentState = (props: React.PropsWithChildren) => {
 
       setContentState((prevContentState) => ({
         ...prevContentState,
-        defaultAudioInputLabel:
-          defaultAudioInputLabel || prevContentState.defaultAudioInputLabel,
-        defaultVideoInputLabel:
-          defaultVideoInputLabel || prevContentState.defaultVideoInputLabel,
+        defaultAudioInputLabel: defaultAudioInputLabel || prevContentState.defaultAudioInputLabel,
+        defaultVideoInputLabel: defaultVideoInputLabel || prevContentState.defaultVideoInputLabel,
       }));
 
       chrome.storage.local.set({
         defaultAudioInputLabel:
-          defaultAudioInputLabel ||
-          contentStateRef.current.defaultAudioInputLabel,
+          defaultAudioInputLabel || contentStateRef.current.defaultAudioInputLabel,
         defaultVideoInputLabel:
-          defaultVideoInputLabel ||
-          contentStateRef.current.defaultVideoInputLabel,
+          defaultVideoInputLabel || contentStateRef.current.defaultVideoInputLabel,
       });
 
       chrome.runtime.sendMessage({
@@ -935,7 +883,7 @@ const ContentState = (props: React.PropsWithChildren) => {
             chrome.i18n.getMessage("learnMoreDot"),
             chrome.runtime.getURL("permissions.html"),
             true,
-            false
+            false,
           );
         } else {
           contentStateRef.current.openModal(
@@ -951,7 +899,7 @@ const ContentState = (props: React.PropsWithChildren) => {
             chrome.i18n.getMessage("learnMoreDot"),
             URL2,
             true,
-            false
+            false,
           );
         }
       }
@@ -1156,9 +1104,7 @@ const ContentState = (props: React.PropsWithChildren) => {
         recording: false,
         restarting: false,
       });
-      chrome.runtime
-        .sendMessage({ type: "diag-countdown-cancelled" })
-        .catch(() => {});
+      chrome.runtime.sendMessage({ type: "diag-countdown-cancelled" }).catch(() => {});
       setContentState((prev) => ({
         ...prev,
         countdownActive: false,
@@ -1222,10 +1168,7 @@ const ContentState = (props: React.PropsWithChildren) => {
     }
   };
 
-  const playBeep = (
-    ref: React.MutableRefObject<HTMLAudioElement | null>,
-    filename: string
-  ) => {
+  const playBeep = (ref: React.MutableRefObject<HTMLAudioElement | null>, filename: string) => {
     const calledAt = Date.now();
     const wasPreloaded = !!ref.current;
     if (!ref.current) {
@@ -1274,13 +1217,10 @@ const ContentState = (props: React.PropsWithChildren) => {
     let pollTimer: ReturnType<typeof setInterval> | null = null;
 
     const getStatus = async () => {
-      const { fastRecorderActiveRecordingId, postStopRecordingId } =
-        await chrome.storage.local.get([
-          "fastRecorderActiveRecordingId",
-          "postStopRecordingId",
-        ]);
-      const recordingId =
-        fastRecorderActiveRecordingId || postStopRecordingId || null;
+      const { fastRecorderActiveRecordingId, postStopRecordingId } = await chrome.storage.local.get(
+        ["fastRecorderActiveRecordingId", "postStopRecordingId"],
+      );
+      const recordingId = fastRecorderActiveRecordingId || postStopRecordingId || null;
       if (!recordingId) return null;
       const key = `freeFinalizeStatus:${recordingId}`;
       const res = await chrome.storage.local.get([key]);
@@ -1289,22 +1229,16 @@ const ContentState = (props: React.PropsWithChildren) => {
 
     const applyStatus = (status: any) => {
       if (!status || canceled) return;
-      const pct =
-        typeof status.percent === "number" ? Math.round(status.percent) : 0;
+      const pct = typeof status.percent === "number" ? Math.round(status.percent) : 0;
       setContentState((prev) => ({
         ...prev,
         processingProgress: pct,
       }));
     };
 
-    const onChanged = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string
-    ) => {
+    const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
       if (area !== "local") return;
-      const entry = Object.keys(changes).find((k) =>
-        k.startsWith("freeFinalizeStatus:")
-      );
+      const entry = Object.keys(changes).find((k) => k.startsWith("freeFinalizeStatus:"));
       if (!entry) return;
       applyStatus(changes[entry].newValue);
     };
@@ -1363,11 +1297,7 @@ const ContentState = (props: React.PropsWithChildren) => {
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [
-    contentState.pendingRecording,
-    contentState.preparingRecording,
-    contentState.recording,
-  ]);
+  }, [contentState.pendingRecording, contentState.preparingRecording, contentState.recording]);
 
   useEffect(() => {
     const isRecording = Boolean(contentState.recording);
@@ -1394,10 +1324,7 @@ const ContentState = (props: React.PropsWithChildren) => {
         return;
       }
       // Countdown plays its own start beep.
-      if (
-        contentStateRef.current?.countdownActive ||
-        contentStateRef.current?.isCountdownVisible
-      ) {
+      if (contentStateRef.current?.countdownActive || contentStateRef.current?.isCountdownVisible) {
         return;
       }
       const startTime = recordingStartTimeRef.current;
@@ -1462,12 +1389,9 @@ const ContentState = (props: React.PropsWithChildren) => {
       ) {
         contentState.openWarning(
           chrome.i18n.getMessage("audioWarningTitle"),
-          chrome.i18n.getMessage(
-            "audioWarningDescription",
-            chrome.i18n.getMessage("tabType")
-          ),
+          chrome.i18n.getMessage("audioWarningDescription", chrome.i18n.getMessage("tabType")),
           "AudioIcon",
-          10000
+          10000,
         );
       } else if (
         window.location.href.includes("playground.html") &&
@@ -1478,15 +1402,11 @@ const ContentState = (props: React.PropsWithChildren) => {
           chrome.i18n.getMessage("extensionNotSupportedTitle"),
           chrome.i18n.getMessage("extensionNotSupportedDescription"),
           "NotSupportedIcon",
-          10000
+          10000,
         );
       }
     }
-  }, [
-    contentState.openWarning,
-    contentState.recording,
-    contentState.recordingType,
-  ]);
+  }, [contentState.openWarning, contentState.recording, contentState.recordingType]);
 
   useEffect(() => {
     if (!contentState) return;
@@ -1515,12 +1435,10 @@ const ContentState = (props: React.PropsWithChildren) => {
     const now = Date.now();
     const basePaused = totalPausedMsRef.current || 0;
     const extraPaused =
-      pausedRef.current && pausedAtRef.current
-        ? Math.max(0, now - pausedAtRef.current)
-        : 0;
+      pausedRef.current && pausedAtRef.current ? Math.max(0, now - pausedAtRef.current) : 0;
     const elapsedSeconds = Math.max(
       0,
-      Math.floor((now - startTime - basePaused - extraPaused) / 1000)
+      Math.floor((now - startTime - basePaused - extraPaused) / 1000),
     );
 
     if (contentStateRef.current?.alarm) {
@@ -1588,10 +1506,7 @@ const ContentState = (props: React.PropsWithChildren) => {
     const reconcileOnVisible = async () => {
       if (document.hidden) return;
       try {
-        const snap = await chrome.storage.local.get([
-          "recording",
-          "restarting",
-        ]);
+        const snap = await chrome.storage.local.get(["recording", "restarting"]);
         if (snap.recording || snap.restarting) return;
         setContentState((prev) =>
           prev.finalizingRecording ||
@@ -1607,7 +1522,7 @@ const ContentState = (props: React.PropsWithChildren) => {
                 restartingRecording: false,
                 recording: false,
               }
-            : prev
+            : prev,
         );
       } catch {}
     };
@@ -1623,10 +1538,7 @@ const ContentState = (props: React.PropsWithChildren) => {
   }, []);
 
   useEffect(() => {
-    const onChanged = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string
-    ) => {
+    const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
       if (area !== "local") return;
       let shouldUpdateTimer = false;
 
@@ -1640,8 +1552,7 @@ const ContentState = (props: React.PropsWithChildren) => {
         recordingUiTabRef.current = changes.recordingUiTabId.newValue ?? null;
       }
       if (changes.recordingStartTime) {
-        recordingStartTimeRef.current =
-          changes.recordingStartTime.newValue ?? null;
+        recordingStartTimeRef.current = changes.recordingStartTime.newValue ?? null;
       }
       // Mirror pause/recording state into refs the timer reads
       // synchronously each tick. Keeps the visual tick correct even
@@ -1655,30 +1566,23 @@ const ContentState = (props: React.PropsWithChildren) => {
         // restart→recording-resumes transition.
         if (changes.recording.newValue === true) {
           setContentState((prev) =>
-            prev.restartingRecording
-              ? { ...prev, restartingRecording: false }
-              : prev
+            prev.restartingRecording ? { ...prev, restartingRecording: false } : prev,
           );
         }
         // Recording true → false: clear start-side flow flags the
         // sandboxTab listener might have missed on a hidden tab. Leave
         // finalizingRecording alone so the toolbar stop button stays
         // disabled until sandboxTab (or the 30s watchdog) lands.
-        if (
-          changes.recording.oldValue === true &&
-          changes.recording.newValue === false
-        ) {
+        if (changes.recording.oldValue === true && changes.recording.newValue === false) {
           setContentState((prev) =>
-            prev.preparingRecording ||
-            prev.pendingRecording ||
-            prev.restartingRecording
+            prev.preparingRecording || prev.pendingRecording || prev.restartingRecording
               ? {
                   ...prev,
                   preparingRecording: false,
                   pendingRecording: false,
                   restartingRecording: false,
                 }
-              : prev
+              : prev,
           );
         }
       }
@@ -1690,9 +1594,7 @@ const ContentState = (props: React.PropsWithChildren) => {
         changes.restarting.newValue === false
       ) {
         setContentState((prev) =>
-          prev.restartingRecording
-            ? { ...prev, restartingRecording: false }
-            : prev
+          prev.restartingRecording ? { ...prev, restartingRecording: false } : prev,
         );
       }
       if (changes.paused) {
@@ -1705,8 +1607,7 @@ const ContentState = (props: React.PropsWithChildren) => {
         totalPausedMsRef.current = Number(changes.totalPausedMs.newValue) || 0;
       }
       if (changes.recordingBeepTabId) {
-        recordingBeepTabIdRef.current =
-          changes.recordingBeepTabId.newValue ?? null;
+        recordingBeepTabIdRef.current = changes.recordingBeepTabId.newValue ?? null;
       }
       if (changes.recordingNow) {
         shouldUpdateTimer = true;
@@ -1745,8 +1646,7 @@ const ContentState = (props: React.PropsWithChildren) => {
       // driven so it fires even on a non-recording tab. Covers free/local
       // single-scene stop; multi-scene reuses the editor tab and cleans up
       // via reopen-popup-multi.
-      const sandboxTabAppeared =
-        changes.sandboxTab && changes.sandboxTab.newValue != null;
+      const sandboxTabAppeared = changes.sandboxTab && changes.sandboxTab.newValue != null;
       // Some finalize paths use pendingEditorOpen instead of sandboxTab, so
       // treat it as the same handoff-done signal.
       const localEditorOpening =
@@ -1778,7 +1678,7 @@ const ContentState = (props: React.PropsWithChildren) => {
                 cursorEffects: wasMulti ? prev.cursorEffects : [],
                 cameraActive: false,
               }
-            : prev
+            : prev,
         );
         setTimer(0);
         // Match the old stop handler's DOM cleanup; pre-clear blur
@@ -1795,17 +1695,12 @@ const ContentState = (props: React.PropsWithChildren) => {
         lifecycle("Content.ContentState", "recording-flag-observed", {
           isRecording,
           isTargetTab: isTargetTab(),
-          recordingType:
-            recordingTypeFromChange ??
-            contentStateRef.current?.recordingType ??
-            null,
+          recordingType: recordingTypeFromChange ?? contentStateRef.current?.recordingType ?? null,
         });
         if (isRecording && !isTargetTab()) {
           // Tab/region recordings: clear UI flags that preparing-recording set on non-target tabs.
-          const recordingType =
-            recordingTypeFromChange ?? contentStateRef.current?.recordingType;
-          const isTabBound =
-            recordingType === "tab" || recordingType === "region";
+          const recordingType = recordingTypeFromChange ?? contentStateRef.current?.recordingType;
+          const isTabBound = recordingType === "tab" || recordingType === "region";
           if (isTabBound) {
             setContentState((prev) => ({
               ...prev,
@@ -1851,9 +1746,7 @@ const ContentState = (props: React.PropsWithChildren) => {
           // seconds after stop on contended Chrome; without the gate
           // the loader bleeds into the recorded video.
           setContentState((prev) =>
-            prev.encoderActive !== false
-              ? { ...prev, encoderActive: false }
-              : prev
+            prev.encoderActive !== false ? { ...prev, encoderActive: false } : prev,
           );
           shouldUpdateTimer = false;
         } else {
@@ -1872,13 +1765,9 @@ const ContentState = (props: React.PropsWithChildren) => {
         }
       }
       if (changes.cursorEffects) {
-        const nextEffects = normalizeCursorEffects(
-          changes.cursorEffects.newValue
-        );
+        const nextEffects = normalizeCursorEffects(changes.cursorEffects.newValue);
         const fallbackMode =
-          changes.cursorMode?.newValue ||
-          contentStateRef.current?.cursorMode ||
-          "none";
+          changes.cursorMode?.newValue || contentStateRef.current?.cursorMode || "none";
         const nextMode = deriveCursorMode(nextEffects, fallbackMode);
         setContentState((prev) => ({
           ...prev,
@@ -2089,7 +1978,7 @@ const ContentState = (props: React.PropsWithChildren) => {
   // Memoize: a fresh array literal would re-render every consumer per parent update.
   const providerValue = useMemo<ContentStateContextValue>(
     () => [contentState, setContentState, timer, setTimer],
-    [contentState, timer]
+    [contentState, timer],
   );
 
   return (
@@ -2097,10 +1986,7 @@ const ContentState = (props: React.PropsWithChildren) => {
       {props.children}
       <Shortcuts shortcuts={contentState.shortcuts} />
       {process.env.SAYLESS_DEV_MODE === "true" && (
-        <DevHUD
-          contentStateRef={contentStateRef}
-          setContentState={setContentState}
-        />
+        <DevHUD contentStateRef={contentStateRef} setContentState={setContentState} />
       )}
     </contentStateContext.Provider>
   );

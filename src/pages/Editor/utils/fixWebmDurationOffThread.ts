@@ -20,17 +20,12 @@ const getWorkerUrl = (): string => {
     "    self.postMessage({ ok: false, error: String((err && err.message) || err) });\n" +
     "  }\n" +
     "};\n";
-  cachedWorkerUrl = URL.createObjectURL(
-    new Blob([src], { type: "application/javascript" }),
-  );
+  cachedWorkerUrl = URL.createObjectURL(new Blob([src], { type: "application/javascript" }));
   return cachedWorkerUrl;
 };
 
 // Resolves to a duration-fixed Blob. Off the main thread when possible.
-export const fixWebmDurationOffThread = (
-  blob: Blob,
-  durationMs: number,
-): Promise<Blob> =>
+export const fixWebmDurationOffThread = (blob: Blob, durationMs: number): Promise<Blob> =>
   new Promise<Blob>((resolve) => {
     let done = false;
     let worker: Worker | null = null;

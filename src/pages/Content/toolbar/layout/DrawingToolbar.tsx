@@ -1,10 +1,4 @@
-import React, {
-  useRef,
-  useEffect,
-  useCallback,
-  useContext,
-  useState,
-} from "react";
+import React, { useRef, useEffect, useCallback, useContext, useState } from "react";
 import * as Toolbar from "@radix-ui/react-toolbar";
 
 // Components
@@ -13,11 +7,7 @@ import RadialMenu from "../components/RadialMenu";
 import ShapeToolbar from "./ShapeToolbar";
 
 // Canvas utils
-import {
-  undoCanvas,
-  redoCanvas,
-  saveCanvas,
-} from "../../canvas/modules/History";
+import { undoCanvas, redoCanvas, saveCanvas } from "../../canvas/modules/History";
 
 // Icons
 import {
@@ -87,7 +77,7 @@ const DrawingToolbar = (props: { visible?: string }) => {
           contentState,
           setContentState,
           saveCanvas,
-          contentStateRef.current as any
+          contentStateRef.current as any,
         );
 
         if (imageFileInput.current) imageFileInput.current.value = "";
@@ -99,14 +89,11 @@ const DrawingToolbar = (props: { visible?: string }) => {
 
       reader.readAsDataURL(file);
     },
-    [contentState, setContentState, saveCanvas]
+    [contentState, setContentState, saveCanvas],
   );
 
   return (
-    <Toolbar.Root
-      className={"DrawingToolbar" + " " + props.visible}
-      aria-label="Drawing tools"
-    >
+    <Toolbar.Root className={"DrawingToolbar" + " " + props.visible} aria-label="Drawing tools">
       <Toolbar.ToggleGroup
         type="single"
         className="ToolbarToggleGroup"

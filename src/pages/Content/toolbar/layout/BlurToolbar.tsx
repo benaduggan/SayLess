@@ -14,11 +14,7 @@ const BlurToolbar = (props: { visible?: string }) => {
       aria-label="Cursor options"
       tabIndex={0}
     >
-      <Toolbar.ToggleGroup
-        type="single"
-        className="ToolbarToggleGroup"
-        value="target"
-      >
+      <Toolbar.ToggleGroup type="single" className="ToolbarToggleGroup" value="target">
         <div className="ToolbarToggleWrap">
           <Toolbar.ToggleItem className="ToolbarToggleItem" value="target">
             <TransformIcon />
@@ -31,8 +27,7 @@ const BlurToolbar = (props: { visible?: string }) => {
           shortcut="0"
           onClick={() => {
             // Remove class screenity-blur from all elements
-            const blurredElements =
-              document.querySelectorAll(".screenity-blur");
+            const blurredElements = document.querySelectorAll(".screenity-blur");
             blurredElements.forEach((element) => {
               element.classList.remove("screenity-blur");
             });

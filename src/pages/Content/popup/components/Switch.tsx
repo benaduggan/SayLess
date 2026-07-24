@@ -14,12 +14,7 @@ interface BaseSwitchProps {
 }
 
 export const BaseSwitch = ({ value, checked, onChange }: BaseSwitchProps) => (
-  <S.Root
-    className="SwitchRoot"
-    id={value}
-    checked={checked}
-    onCheckedChange={onChange}
-  >
+  <S.Root className="SwitchRoot" id={value} checked={checked} onCheckedChange={onChange}>
     <S.Thumb className="SwitchThumb" />
   </S.Root>
 );
@@ -41,10 +36,9 @@ const Switch = (props: SwitchProps) => {
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const dropdownInRef = useRef<HTMLDivElement | null>(null);
   const switchId = props.anchorId || props.value || props.name;
-  const switchRowId =
-    props.rowAnchorId || (props.anchorId ? `${props.anchorId}-row` : undefined);
+  const switchRowId = props.rowAnchorId || (props.anchorId ? `${props.anchorId}-row` : undefined);
   const [hideToolbarLabel, setHideToolbarLabel] = useState(
-    chrome.i18n.getMessage("hideToolbarLabel")
+    chrome.i18n.getMessage("hideToolbarLabel"),
   );
   const [hideToolbarState, setHideToolbarState] = useState(1);
 
@@ -106,12 +100,7 @@ const Switch = (props: SwitchProps) => {
             if (props.name === "hideUI") {
               e.preventDefault();
               e.stopPropagation();
-              if (
-                (e.target as HTMLElement).classList.contains(
-                  "labelDropdownContentItem"
-                )
-              )
-                return;
+              if ((e.target as HTMLElement).classList.contains("labelDropdownContentItem")) return;
               dropdownRef.current?.classList.toggle("labelDropdownActive");
             }
           }}
@@ -138,12 +127,8 @@ const Switch = (props: SwitchProps) => {
                       hideUIAlerts: false,
                       toolbarHover: false,
                     });
-                    setHideToolbarLabel(
-                      chrome.i18n.getMessage("hideToolbarLabel")
-                    );
-                    dropdownRef.current?.classList.remove(
-                      "labelDropdownActive"
-                    );
+                    setHideToolbarLabel(chrome.i18n.getMessage("hideToolbarLabel"));
+                    dropdownRef.current?.classList.remove("labelDropdownActive");
                     setHideToolbarState(1);
                   }}
                 >
@@ -164,9 +149,7 @@ const Switch = (props: SwitchProps) => {
                       toolbarHover: false,
                     });
                     setHideToolbarLabel(chrome.i18n.getMessage("hideUIAlerts"));
-                    dropdownRef.current?.classList.remove(
-                      "labelDropdownActive"
-                    );
+                    dropdownRef.current?.classList.remove("labelDropdownActive");
                     setHideToolbarState(2);
                   }}
                 >
@@ -186,12 +169,8 @@ const Switch = (props: SwitchProps) => {
                       hideUIAlerts: false,
                       toolbarHover: true,
                     });
-                    setHideToolbarLabel(
-                      chrome.i18n.getMessage("toolbarHoverOnly")
-                    );
-                    dropdownRef.current?.classList.remove(
-                      "labelDropdownActive"
-                    );
+                    setHideToolbarLabel(chrome.i18n.getMessage("toolbarHoverOnly"));
+                    dropdownRef.current?.classList.remove("labelDropdownActive");
                     setHideToolbarState(3);
                   }}
                 >
@@ -200,9 +179,7 @@ const Switch = (props: SwitchProps) => {
               </div>
             </div>
           )}
-          {props.experimental && (
-            <span className="ExperimentalLabel">Experimental</span>
-          )}
+          {props.experimental && <span className="ExperimentalLabel">Experimental</span>}
         </label>
         {props.value ? (
           <S.Root

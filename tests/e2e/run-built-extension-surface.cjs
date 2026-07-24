@@ -19,13 +19,7 @@ const EVIDENCE_PATH = process.env.SAYLESS_BUILT_EXTENSION_EVIDENCE
   ? path.resolve(process.env.SAYLESS_BUILT_EXTENSION_EVIDENCE)
   : path.join(ROOT, "release-artifacts", "built-extension-surface.json");
 const MIN_EXPECTED_PACKAGED_WHISPER_BYTES = 70 * 1024 * 1024;
-const PAGES = [
-  "setup.html",
-  "permissions.html",
-  "recorder.html",
-  "editor.html",
-  "download.html",
-];
+const PAGES = ["setup.html", "permissions.html", "recorder.html", "editor.html", "download.html"];
 const FORBIDDEN_SURFACE_PATTERNS = [
   /\bpaid tiers?\b/i,
   /\bpaid[- ]plans?\b/i,
@@ -92,8 +86,8 @@ const writeEvidence = (evidence) => {
         ...evidence,
       },
       null,
-      2
-    )}\n`
+      2,
+    )}\n`,
   );
   fs.renameSync(temporaryPath, EVIDENCE_PATH);
 };
@@ -106,16 +100,13 @@ const fail = (message) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const formatPageError = (error) =>
-  String(error?.stack || error?.message || error).slice(0, 2000);
+const formatPageError = (error) => String(error?.stack || error?.message || error).slice(0, 2000);
 
 const formatConsoleError = (message) => {
   const location = message.location();
   return [
     message.text(),
-    location?.url
-      ? `at ${location.url}:${location.lineNumber}:${location.columnNumber}`
-      : "",
+    location?.url ? `at ${location.url}:${location.lineNumber}:${location.columnNumber}` : "",
     ...message.args().map((arg) => String(arg).slice(0, 500)),
   ]
     .filter(Boolean)
@@ -145,7 +136,7 @@ const recordConsoleErrors = (hits, pageName, consoleErrors) => {
 
 const isTargetClosedError = (error) =>
   /Target page, context or browser has been closed|Page closed|has been closed/i.test(
-    String(error?.message || error)
+    String(error?.message || error),
   );
 
 const scanExtensionPage = async (context, extensionId, pageName) => {
@@ -166,9 +157,7 @@ const scanExtensionPage = async (context, extensionId, pageName) => {
     try {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
       const openedUrl = page.url();
-      const chromeError = openedUrl.startsWith("chrome-error://")
-        ? openedUrl
-        : null;
+      const chromeError = openedUrl.startsWith("chrome-error://") ? openedUrl : null;
       const text = await page.evaluate(collectSurfaceText);
 
       // Give async page errors a short chance to surface. Some CI Chrome builds
@@ -205,10 +194,7 @@ const scanExtensionPage = async (context, extensionId, pageName) => {
         chromeError: null,
         text: "",
         textBytes: 0,
-        pageErrors: [
-          ...pageErrors,
-          `surface probe failed: ${formatPageError(error)}`,
-        ],
+        pageErrors: [...pageErrors, `surface probe failed: ${formatPageError(error)}`],
         consoleErrors,
       };
     }
@@ -264,9 +250,7 @@ const getExtensionIdFromPreferences = async (userDataDir) => {
       for (const [id, entry] of Object.entries(settings)) {
         const entryPath = entry?.path ? path.resolve(entry.path) : "";
         const realEntryPath =
-          entryPath && fs.existsSync(entryPath)
-            ? fs.realpathSync(entryPath)
-            : entryPath;
+          entryPath && fs.existsSync(entryPath) ? fs.realpathSync(entryPath) : entryPath;
         const manifest = entry?.manifest || {};
         preferenceSnapshots.push({
           id,
@@ -287,10 +271,7 @@ const getExtensionIdFromPreferences = async (userDataDir) => {
     await sleep(250);
   }
   if (preferenceSnapshots.length) {
-    console.warn(
-      "  [extension preferences]",
-      JSON.stringify(preferenceSnapshots, null, 2)
-    );
+    console.warn("  [extension preferences]", JSON.stringify(preferenceSnapshots, null, 2));
   }
   return null;
 };
@@ -308,17 +289,13 @@ const getExtensionId = async (context, userDataDir) => {
   }
   const id = await getExtensionIdFromPreferences(userDataDir);
   if (id) return id;
-  throw new Error(
-    "Unable to derive extension id from service worker or Chrome Preferences"
-  );
+  throw new Error("Unable to derive extension id from service worker or Chrome Preferences");
 };
 
 const ensureServiceWorker = async (context, extensionId) => {
   let worker = context
     .serviceWorkers()
-    .find((candidate) =>
-      candidate.url().startsWith(`chrome-extension://${extensionId}/`)
-    );
+    .find((candidate) => candidate.url().startsWith(`chrome-extension://${extensionId}/`));
   if (worker) return worker;
 
   const page = await context.newPage();
@@ -327,9 +304,7 @@ const ensureServiceWorker = async (context, extensionId) => {
   await sleep(500);
   worker = context
     .serviceWorkers()
-    .find((candidate) =>
-      candidate.url().startsWith(`chrome-extension://${extensionId}/`)
-    );
+    .find((candidate) => candidate.url().startsWith(`chrome-extension://${extensionId}/`));
   if (!worker) {
     try {
       worker = await context.waitForEvent("serviceworker", { timeout: 10000 });
@@ -337,9 +312,7 @@ const ensureServiceWorker = async (context, extensionId) => {
   }
   await page.close().catch(() => {});
   if (!worker) {
-    throw new Error(
-      `Unable to start extension service worker for ${extensionId}`
-    );
+    throw new Error(`Unable to start extension service worker for ${extensionId}`);
   }
   return worker;
 };
@@ -365,7 +338,7 @@ const sendMessageToTab = async (context, extensionId, tabUrl, message) => {
           });
         });
       }),
-    { tabUrl, message }
+    { tabUrl, message },
   );
 };
 
@@ -391,7 +364,7 @@ const injectContentScriptIntoTab = async (context, extensionId, tabUrl) => {
           }
         });
       }),
-    tabUrl
+    tabUrl,
   );
 };
 
@@ -446,7 +419,7 @@ const exerciseDownloadId = async (context, extensionId) => {
         chrome.downloads.download(
           {
             url: `data:text/plain;charset=utf-8,${encodeURIComponent(
-              "SayLess local download id probe"
+              "SayLess local download id probe",
             )}`,
             filename,
             conflictAction: "overwrite",
@@ -466,26 +439,22 @@ const exerciseDownloadId = async (context, extensionId) => {
             }
             downloadId = id;
             chrome.downloads.onChanged.addListener(onChanged);
-          }
+          },
         );
-      })
+      }),
   );
 };
 
 const probePackagedWhisperAssets = async (context, extensionId) => {
   const worker = await ensureServiceWorker(context, extensionId);
   return worker.evaluate(async () => {
-    const manifestUrl = chrome.runtime.getURL(
-      "assets/whisper/model-manifest.json"
-    );
+    const manifestUrl = chrome.runtime.getURL("assets/whisper/model-manifest.json");
     const manifestResponse = await fetch(manifestUrl);
     if (!manifestResponse.ok) {
       throw new Error(`model-manifest:${manifestResponse.status}`);
     }
     const manifest = await manifestResponse.json();
-    const requiredFiles = Array.isArray(manifest.requiredFiles)
-      ? manifest.requiredFiles
-      : [];
+    const requiredFiles = Array.isArray(manifest.requiredFiles) ? manifest.requiredFiles : [];
     const assetRoot = manifest.assetRoot || "assets/whisper/models/";
     const files = [];
     let totalBytes = 0;
@@ -512,7 +481,7 @@ const probePackagedWhisperAssets = async (context, extensionId) => {
 const collectSurfaceText = () => {
   const parts = [document.title, document.body?.innerText || ""];
   for (const node of document.querySelectorAll(
-    "button,input,textarea,select,a,img,[aria-label],[title]"
+    "button,input,textarea,select,a,img,[aria-label],[title]",
   )) {
     for (const attr of ["aria-label", "title", "alt", "placeholder", "value"]) {
       const value = node.getAttribute?.(attr);
@@ -537,10 +506,7 @@ const collectContentScriptSurface = () => {
       if (text) textParts.push(text);
       return;
     }
-    if (
-      node.nodeType !== Node.ELEMENT_NODE &&
-      node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE
-    ) {
+    if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) {
       return;
     }
     if (["STYLE", "SCRIPT", "NOSCRIPT"].includes(node.tagName)) return;
@@ -556,15 +522,9 @@ const collectContentScriptSurface = () => {
   const labels = [];
   for (const root of roots) {
     for (const node of root.querySelectorAll(
-      "button,input,textarea,select,a,img,[aria-label],[title]"
+      "button,input,textarea,select,a,img,[aria-label],[title]",
     )) {
-      for (const attr of [
-        "aria-label",
-        "title",
-        "alt",
-        "placeholder",
-        "value",
-      ]) {
+      for (const attr of ["aria-label", "title", "alt", "placeholder", "value"]) {
         const value = node.getAttribute?.(attr);
         if (value) labels.push(value);
       }
@@ -589,10 +549,7 @@ const contentScriptTextMatches = (patternSource, flags = "i") => {
       if (text) textParts.push(text);
       return;
     }
-    if (
-      node.nodeType !== Node.ELEMENT_NODE &&
-      node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE
-    ) {
+    if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) {
       return;
     }
     if (["STYLE", "SCRIPT", "NOSCRIPT"].includes(node.tagName)) return;
@@ -616,10 +573,7 @@ const contentScriptTextAbsent = (patternSource, flags = "i") => {
       if (text) textParts.push(text);
       return;
     }
-    if (
-      node.nodeType !== Node.ELEMENT_NODE &&
-      node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE
-    ) {
+    if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) {
       return;
     }
     if (["STYLE", "SCRIPT", "NOSCRIPT"].includes(node.tagName)) return;
@@ -635,10 +589,7 @@ const openVideosTab = () => {
   const roots = [];
   const visit = (node) => {
     if (!node) return;
-    if (
-      node.nodeType !== Node.ELEMENT_NODE &&
-      node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE
-    ) {
+    if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) {
       return;
     }
     roots.push(node);
@@ -650,17 +601,13 @@ const openVideosTab = () => {
   };
   visit(host?.shadowRoot || host);
   const topLevelTab = roots
-    .map((root) =>
-      root.querySelector(".TabsRoot.tl .TabsTrigger[value='videos']")
-    )
+    .map((root) => root.querySelector(".TabsRoot.tl .TabsTrigger[value='videos']"))
     .find(Boolean);
-  const candidates = roots.flatMap((root) => [
-    ...root.querySelectorAll("button,[role='tab']"),
-  ]);
+  const candidates = roots.flatMap((root) => [...root.querySelectorAll("button,[role='tab']")]);
   const videosTab =
     topLevelTab ||
     candidates.find((node) =>
-      /videos/i.test(node.textContent || node.getAttribute("aria-label") || "")
+      /videos/i.test(node.textContent || node.getAttribute("aria-label") || ""),
     );
   if (!videosTab) return false;
   for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup"]) {
@@ -670,7 +617,7 @@ const openVideosTab = () => {
         cancelable: true,
         composed: true,
         button: 0,
-      })
+      }),
     );
   }
   videosTab.click();
@@ -681,10 +628,7 @@ const clickContentScriptButton = (label) => {
   const roots = [];
   const visit = (node) => {
     if (!node) return;
-    if (
-      node.nodeType !== Node.ELEMENT_NODE &&
-      node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE
-    ) {
+    if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) {
       return;
     }
     roots.push(node);
@@ -699,7 +643,7 @@ const clickContentScriptButton = (label) => {
       (candidate) =>
         (candidate.textContent || candidate.getAttribute("aria-label") || "")
           .trim()
-          .toLowerCase() === normalizedLabel
+          .toLowerCase() === normalizedLabel,
     );
   if (!button) return false;
   button.click();
@@ -715,7 +659,7 @@ const openTroubleshootingModal = async () => {
           cancelable: true,
           composed: true,
           button: 0,
-        })
+        }),
       );
     }
     element.click();
@@ -725,10 +669,7 @@ const openTroubleshootingModal = async () => {
     const roots = [];
     const visit = (node) => {
       if (!node) return;
-      if (
-        node.nodeType !== Node.ELEMENT_NODE &&
-        node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE
-      ) {
+      if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) {
         return;
       }
       roots.push(node);
@@ -745,25 +686,23 @@ const openTroubleshootingModal = async () => {
   const roots = collectRoots();
   const buttonCandidates = roots
     .flatMap((root) => [...root.querySelectorAll("button,[role='button']")])
-    .map((button) =>
-      (button.textContent || button.getAttribute("aria-label") || "").trim()
-    )
+    .map((button) => (button.textContent || button.getAttribute("aria-label") || "").trim())
     .filter(Boolean)
     .slice(0, 30);
   const settingsButton =
     roots
       .map((root) =>
         root.querySelector(
-          ".popup-controls button.IconButton, .popup-controls [role='button'].IconButton"
-        )
+          ".popup-controls button.IconButton, .popup-controls [role='button'].IconButton",
+        ),
       )
       .find(Boolean) ||
     roots
       .flatMap((root) => [...root.querySelectorAll("button,[role='button']")])
       .find((button) =>
         /customise options|customize options|settings/i.test(
-          button.textContent || button.getAttribute("aria-label") || ""
-        )
+          button.textContent || button.getAttribute("aria-label") || "",
+        ),
       );
   if (!settingsButton) {
     return {
@@ -777,24 +716,20 @@ const openTroubleshootingModal = async () => {
   const menuRoots = collectRoots();
   const menuCandidates = menuRoots
     .flatMap((root) => [...root.querySelectorAll("[role='menuitem'],button")])
-    .map((node) =>
-      (node.textContent || node.getAttribute("aria-label") || "").trim()
-    )
+    .map((node) => (node.textContent || node.getAttribute("aria-label") || "").trim())
     .filter(Boolean)
     .slice(0, 40);
   const troubleshootingItem = menuRoots
     .flatMap((root) => [...root.querySelectorAll("[role='menuitem'],button")])
     .find((node) =>
       /troubleshoot|troubleshooting|diagnostic/i.test(
-        node.textContent || node.getAttribute("aria-label") || ""
-      )
+        node.textContent || node.getAttribute("aria-label") || "",
+      ),
     );
   if (!troubleshootingItem) {
     return {
       opened: false,
-      reason: `troubleshooting menu item not found: ${menuCandidates.join(
-        " | "
-      )}`,
+      reason: `troubleshooting menu item not found: ${menuCandidates.join(" | ")}`,
     };
   }
   clickElement(troubleshootingItem);
@@ -816,7 +751,7 @@ const openTroubleshootingModal = async () => {
       bubbles: true,
       cancelable: true,
       composed: true,
-    })
+    }),
   );
   return {
     opened: true,
@@ -842,10 +777,7 @@ const launchExtensionContext = async (userDataDir) => {
   try {
     return await chromium.launchPersistentContext(userDataDir, launchOptions);
   } catch (error) {
-    if (
-      channel ||
-      !/Executable doesn't exist/.test(String(error?.message || error))
-    ) {
+    if (channel || !/Executable doesn't exist/.test(String(error?.message || error))) {
       throw error;
     }
     return chromium.launchPersistentContext(userDataDir, {
@@ -867,15 +799,12 @@ const launchExtensionContext = async (userDataDir) => {
   await context.addInitScript(() => {
     if (!location.pathname.endsWith("/permissions.html")) return;
 
-    const storedCameraState =
-      localStorage.getItem("sayless-e2e-camera-permission") || "prompt";
+    const storedCameraState = localStorage.getItem("sayless-e2e-camera-permission") || "prompt";
     const statuses = {
       camera: { state: storedCameraState, onchange: null },
       microphone: { state: "prompt", onchange: null },
     };
-    const enumerateDevices = navigator.mediaDevices.enumerateDevices.bind(
-      navigator.mediaDevices
-    );
+    const enumerateDevices = navigator.mediaDevices.enumerateDevices.bind(navigator.mediaDevices);
     navigator.permissions.query = async ({ name }) => statuses[name];
     navigator.mediaDevices.getUserMedia = async (constraints) => {
       const type = constraints.video ? "camera" : "microphone";
@@ -897,13 +826,9 @@ const launchExtensionContext = async (userDataDir) => {
   try {
     extensionId = await getExtensionId(context, userDataDir);
     try {
-      const whisperProbe = await probePackagedWhisperAssets(
-        context,
-        extensionId
-      );
+      const whisperProbe = await probePackagedWhisperAssets(context, extensionId);
       if (
-        whisperProbe.defaultModel !==
-          "onnx-community/whisper-base_timestamped" ||
+        whisperProbe.defaultModel !== "onnx-community/whisper-base_timestamped" ||
         whisperProbe.requiredCount !== 7 ||
         whisperProbe.fetchedCount !== 7 ||
         whisperProbe.totalBytes < MIN_EXPECTED_PACKAGED_WHISPER_BYTES
@@ -985,9 +910,7 @@ const launchExtensionContext = async (userDataDir) => {
     const contentPage = await context.newPage();
     const contentErrors = [];
     const contentConsoleErrors = [];
-    contentPage.on("pageerror", (error) =>
-      contentErrors.push(formatPageError(error))
-    );
+    contentPage.on("pageerror", (error) => contentErrors.push(formatPageError(error)));
     contentPage.on("console", (message) => {
       if (message.type() === "error") {
         contentConsoleErrors.push(formatConsoleError(message));
@@ -1001,11 +924,8 @@ const launchExtensionContext = async (userDataDir) => {
     let popupMounted = true;
     try {
       await contentPage.waitForFunction(
-        () =>
-          Boolean(
-            document.querySelector("#screenity-ui .screenity-shadow-dom")
-          ),
-        { timeout: 10000 }
+        () => Boolean(document.querySelector("#screenity-ui .screenity-shadow-dom")),
+        { timeout: 10000 },
       );
     } catch (error) {
       const mountState = await contentPage.evaluate(() => {
@@ -1042,22 +962,15 @@ const launchExtensionContext = async (userDataDir) => {
       popupMounted = false;
     }
     if (popupMounted) {
-      const toggleResponse = await sendMessageToTab(
-        context,
-        extensionId,
-        contentPage.url(),
-        {
-          type: "toggle-popup",
-        }
-      );
+      const toggleResponse = await sendMessageToTab(context, extensionId, contentPage.url(), {
+        type: "toggle-popup",
+      });
       try {
         await contentPage.waitForFunction(contentScriptTextMatches, "record", {
           timeout: 10000,
         });
       } catch (error) {
-        const postToggleSurface = await contentPage.evaluate(
-          collectContentScriptSurface
-        );
+        const postToggleSurface = await contentPage.evaluate(collectContentScriptSurface);
         const postToggleDom = await contentPage.evaluate(() => {
           const host = document.querySelector("#screenity-ui");
           const root = host?.shadowRoot || host;
@@ -1085,33 +998,29 @@ const launchExtensionContext = async (userDataDir) => {
         await contentPage.waitForTimeout(500);
         const cameraNeedsPermission = await contentPage.evaluate(
           contentScriptTextMatches,
-          "allow camera access"
+          "allow camera access",
         );
         if (cameraNeedsPermission) {
           const openedPermissionModal = await contentPage.evaluate(
             clickContentScriptButton,
-            "Allow camera access"
+            "Allow camera access",
           );
           if (!openedPermissionModal) {
             throw new Error("Allow camera access button was not clickable");
           }
-          await contentPage.waitForFunction(
-            contentScriptTextMatches,
-            "review permissions",
-            { timeout: 5000 }
-          );
+          await contentPage.waitForFunction(contentScriptTextMatches, "review permissions", {
+            timeout: 5000,
+          });
           const requestedCamera = await contentPage.evaluate(
             clickContentScriptButton,
-            "Review permissions"
+            "Review permissions",
           );
           if (!requestedCamera) {
             throw new Error("Review permissions button was not clickable");
           }
-          await contentPage.waitForFunction(
-            contentScriptTextAbsent,
-            "allow camera access",
-            { timeout: 10000 }
-          );
+          await contentPage.waitForFunction(contentScriptTextAbsent, "allow camera access", {
+            timeout: 10000,
+          });
         }
         summaries.push({
           page: "content-script-media-permissions",
@@ -1131,21 +1040,17 @@ const launchExtensionContext = async (userDataDir) => {
         });
         const permissionWentStale = await contentPage.evaluate(
           contentScriptTextMatches,
-          "allow camera access"
+          "allow camera access",
         );
         if (permissionWentStale) {
-          throw new Error(
-            "Camera permission became stale after closing and reopening the popup"
-          );
+          throw new Error("Camera permission became stale after closing and reopening the popup");
         }
         summaries.push({
           page: "content-script-media-permissions-reopen",
           cameraPermissionStayedCurrent: true,
         });
       } catch (error) {
-        const permissionFailureSurface = await contentPage.evaluate(
-          collectContentScriptSurface
-        );
+        const permissionFailureSurface = await contentPage.evaluate(collectContentScriptSurface);
         hits.push({
           pageName: "content-script-media-permissions",
           pattern: "permission-request-action",
@@ -1156,9 +1061,7 @@ const launchExtensionContext = async (userDataDir) => {
           }),
         });
       }
-      const troubleshootingModal = await contentPage.evaluate(
-        openTroubleshootingModal
-      );
+      const troubleshootingModal = await contentPage.evaluate(openTroubleshootingModal);
       if (!troubleshootingModal.opened) {
         hits.push({
           pageName: "content-script-popup",
@@ -1179,12 +1082,10 @@ const launchExtensionContext = async (userDataDir) => {
           await contentPage.waitForFunction(
             contentScriptTextMatches,
             "Search local recordings|local recordings",
-            { timeout: 10000 }
+            { timeout: 10000 },
           );
         } catch (error) {
-          const postVideosSurface = await contentPage.evaluate(
-            collectContentScriptSurface
-          );
+          const postVideosSurface = await contentPage.evaluate(collectContentScriptSurface);
           hits.push({
             pageName: "content-script-popup",
             pattern: "videos-tab-local-library",
@@ -1198,9 +1099,7 @@ const launchExtensionContext = async (userDataDir) => {
           });
         }
       }
-      const popupSurface = await contentPage.evaluate(
-        collectContentScriptSurface
-      );
+      const popupSurface = await contentPage.evaluate(collectContentScriptSurface);
       const popupText = [popupSurface.text, ...popupSurface.labels].join("\n");
       for (const pattern of FORBIDDEN_SURFACE_PATTERNS) {
         const match = popupText.match(pattern);
@@ -1212,10 +1111,7 @@ const launchExtensionContext = async (userDataDir) => {
           });
         }
       }
-      for (const required of [
-        /Search local recordings/i,
-        /\blocal recordings\b/i,
-      ]) {
+      for (const required of [/Search local recordings/i, /\blocal recordings\b/i]) {
         if (!required.test(popupText)) {
           hits.push({
             pageName: "content-script-popup",

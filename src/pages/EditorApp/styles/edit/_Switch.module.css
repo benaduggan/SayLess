@@ -1,0 +1,86 @@
+@font-face {
+  font-family: "Satoshi-Light";
+  src: url("/assets/fonts/Satoshi-Light.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Satoshi-Medium";
+  src: url("/assets/fonts/Satoshi-Medium.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Satoshi-Bold";
+  src: url("/assets/fonts/Satoshi-Bold.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+/* Colors */
+/* Font */
+/* Spacing */
+/*
+$spacing-01: 0.125rem;
+$spacing-02: 0.25rem;
+$spacing-03: 0.5rem;
+$spacing-04: 0.75rem;
+$spacing-05: 1rem;
+*/
+/* Container */
+/* Gradients */
+/* Events */
+/* Z-index */
+.SwitchRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+}
+
+.SwitchRoot {
+  width: 34px;
+  height: 22px;
+  background-color: #e8e8e8;
+  border-radius: 9999px;
+  position: relative;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  border: none !important;
+}
+
+.SwitchRoot[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+}
+
+.SwitchRoot:focus {
+  box-shadow: 0px 0px 0px 2px rgba(48, 128, 248, 0.5);
+}
+
+.SwitchRoot[data-state="checked"] {
+  background-color: #3080f8;
+}
+
+.SwitchRoot:hover {
+  cursor: pointer;
+}
+
+.SwitchThumb {
+  display: block;
+  width: 14px;
+  height: 14px;
+  background-color: white;
+  border-radius: 9999px;
+  box-shadow: 0px 1px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 100ms;
+  transform: translateX(4px);
+  will-change: transform;
+}
+
+.SwitchThumb[data-state="checked"] {
+  transform: translateX(16px);
+}
+
+.Label {
+  color: #6e7684;
+}

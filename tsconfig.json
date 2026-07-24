@@ -19,13 +19,7 @@
     "incremental": true,
     "isolatedModules": true
   },
-  "include": [
-    "src",
-    "utils",
-    "scripts/patch-radix.cts",
-    "custom.config.cts",
-    "webpack.config.cts"
-  ],
+  "include": ["src", "utils", "scripts/patch-radix.cts", "custom.config.cts", "webpack.config.cts"],
   "exclude": [
     "build",
     "node_modules",

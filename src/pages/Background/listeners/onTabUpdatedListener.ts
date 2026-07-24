@@ -15,11 +15,7 @@ interface TabUpdateChromeApi {
   tabs: {
     onUpdated: {
       addListener: (
-        listener: (
-          tabId: number,
-          changeInfo: { status?: string },
-          tab: UpdatedTab,
-        ) => void,
+        listener: (tabId: number, changeInfo: { status?: string }, tab: UpdatedTab) => void,
       ) => void;
     };
   };
@@ -90,14 +86,11 @@ export const handleTabUpdate = async (
         const startedAt = Number(recordingStartTime);
         const basePaused = Number(totalPausedMs) || 0;
         const pausedTimestamp = Number(pausedAt) || 0;
-        const extraPaused =
-          paused && pausedTimestamp ? Math.max(0, now - pausedTimestamp) : 0;
+        const extraPaused = paused && pausedTimestamp ? Math.max(0, now - pausedTimestamp) : 0;
 
         const elapsed = Math.max(
           0,
-          Math.floor(
-            (now - startedAt - basePaused - extraPaused) / 1000,
-          ),
+          Math.floor((now - startedAt - basePaused - extraPaused) / 1000),
         );
 
         const { alarm } = await chromeApi().storage.local.get(["alarm"]);

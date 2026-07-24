@@ -38,13 +38,8 @@ export function screenCaptureUsesDisplayMedia({
 
 // Resolves platform/version from navigator + the forceDisplayMediaScreen /
 // macSystemAudioCapture storage flags.
-export function shouldUseDisplayMediaForScreen(
-  settings: ScreenCaptureSettings = {},
-): boolean {
-  const ua =
-    typeof navigator !== "undefined" && navigator.userAgent
-      ? navigator.userAgent
-      : "";
+export function shouldUseDisplayMediaForScreen(settings: ScreenCaptureSettings = {}): boolean {
+  const ua = typeof navigator !== "undefined" && navigator.userAgent ? navigator.userAgent : "";
   return screenCaptureUsesDisplayMedia({
     chromeMajor: parseChromeMajor(ua),
     isMac: isMacUserAgent(ua),

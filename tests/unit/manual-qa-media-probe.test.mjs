@@ -23,8 +23,7 @@ const runProbe = (...args) =>
     encoding: "utf8",
   });
 
-const sha256 = (path) =>
-  createHash("sha256").update(readFileSync(path)).digest("hex");
+const sha256 = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
 
 test("manual QA media probe measures video recording fields exactly", () => {
   const result = runProbe("--json", MP4);
@@ -71,10 +70,7 @@ test("manual QA media probe measures video recording fields exactly", () => {
   assert.deepEqual(report.releaseCoverage.longAndLargeCandidates, []);
   assert.equal(report.releaseCoverage.projectAudioCandidateCount, 0);
   assert.deepEqual(report.releaseCoverage.projectAudioFormats, []);
-  assert.equal(
-    report.releaseCoverage.remainingMeasurableRequirements.length,
-    5
-  );
+  assert.equal(report.releaseCoverage.remainingMeasurableRequirements.length, 5);
   assert.equal(report.releaseCoverage.limitations.length, 2);
 });
 
@@ -116,10 +112,7 @@ test("manual QA media probe remains read-only guidance in human output", () => {
   assert.match(result.stdout, /32x20/);
   assert.match(result.stdout, /beep\.mp3/);
   assert.match(result.stdout, /48000 Hz/);
-  assert.match(
-    result.stdout,
-    /Measurable release media coverage: incomplete \(0\/5 checks\)/
-  );
+  assert.match(result.stdout, /Measurable release media coverage: incomplete \(0\/5 checks\)/);
   assert.match(result.stdout, /TODO: MP4 and WebM source-container candidates/);
   assert.match(result.stdout, /Manual limits:/);
   assert.match(result.stdout, /observations manually/i);
@@ -140,37 +133,25 @@ test("manual QA media probe summarizes only measurable release coverage", () => 
       (check) =>
         typeof check.id === "string" &&
         typeof check.label === "string" &&
-        typeof check.passed === "boolean"
-    )
+        typeof check.passed === "boolean",
+    ),
   );
   assert.match(coverage.limitations.join(" "), /original source recordings/i);
-  assert.match(
-    coverage.limitations.join(" "),
-    /playback or perceptual observations manually/i
-  );
+  assert.match(coverage.limitations.join(" "), /playback or perceptual observations manually/i);
 });
 
 test("manual QA media probe can require complete measurable coverage", () => {
   const dir = mkdtempSync(join(tmpdir(), "sayless-media-probe-report-"));
   try {
     const outputPath = join(dir, "media-report.json");
-    const result = runProbe(
-      "--json",
-      "--require-complete",
-      `--output=${outputPath}`,
-      MP4,
-      MP3
-    );
+    const result = runProbe("--json", "--require-complete", `--output=${outputPath}`, MP4, MP3);
     assert.equal(result.status, 1);
     const report = JSON.parse(result.stdout);
     assert.equal(report.requireComplete, true);
     assert.equal(report.reportPath, "media-report.json");
     assert.equal(report.releaseCoverage.status, "incomplete");
     assert.deepEqual(JSON.parse(readFileSync(outputPath, "utf8")), report);
-    assert.match(
-      result.stderr,
-      /measurable release media coverage is incomplete \(0\/5 checks\)/
-    );
+    assert.match(result.stderr, /measurable release media coverage is incomplete \(0\/5 checks\)/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -33,9 +33,7 @@ const persistRestartFlow = async (
 ): Promise<void> => {
   const entry = { phase, ts: Date.now(), ...details };
   try {
-    const { restartFlowHistory } = await chrome.storage.local.get([
-      "restartFlowHistory",
-    ]);
+    const { restartFlowHistory } = await chrome.storage.local.get(["restartFlowHistory"]);
     const history = Array.isArray(restartFlowHistory) ? restartFlowHistory : [];
     history.push(entry);
     while (history.length > RESTART_HISTORY_MAX) history.shift();
@@ -49,17 +47,14 @@ const persistRestartFlow = async (
 const resolveSourceTabId = (
   message: RestartMessage,
   sender: chrome.runtime.MessageSender | null,
-): number | null =>
-  message?.sourceTabId || sender?.tab?.id || null;
+): number | null => message?.sourceTabId || sender?.tab?.id || null;
 
 export const handleRestart = async (
   message: RestartMessage = {},
   sender: chrome.runtime.MessageSender | null = null,
 ) => {
   const sourceTabId = resolveSourceTabId(message, sender);
-  const attemptId = `restart-${Date.now().toString(36)}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
+  const attemptId = `restart-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
   let preflight: Record<string, unknown> = {};
   try {
@@ -71,18 +66,13 @@ export const handleRestart = async (
       "recorderSession",
     ]);
   } catch {}
-  const recorderSession = isRecord(preflight.recorderSession)
-    ? preflight.recorderSession
-    : null;
+  const recorderSession = isRecord(preflight.recorderSession) ? preflight.recorderSession : null;
   const preflightSummary = {
     recordingTab: preflight.recordingTab ?? null,
     recording: Boolean(preflight.recording),
     pendingRecording: Boolean(preflight.pendingRecording),
     offscreen: Boolean(preflight.offscreen),
-    recorderSessionTab:
-      recorderSession?.recorderTabId ||
-      recorderSession?.tabId ||
-      null,
+    recorderSessionTab: recorderSession?.recorderTabId || recorderSession?.tabId || null,
   };
 
   // reset before round-trip so a mid-flight alarm can't fire tier-3 against stale keys
@@ -99,9 +89,7 @@ export const handleRestart = async (
   ]);
   await chrome.storage.local.set({
     restarting: true,
-    ...(sourceTabId != null
-      ? { activeTab: sourceTabId, recordingUiTabId: sourceTabId }
-      : {}),
+    ...(sourceTabId != null ? { activeTab: sourceTabId, recordingUiTabId: sourceTabId } : {}),
     // Re-pin in the same batch so anything reading immediately sees
     // the preserved state.
     ...(multiSnapshot.multiMode
@@ -173,8 +161,7 @@ export const handleRestart = async (
           !afterRoundTrip.multiMode ||
           (Number(multiSnapshot.multiSceneCount) > 0 &&
             !(Number(afterRoundTrip.multiSceneCount) > 0)) ||
-          (multiSnapshot.multiProjectId &&
-            !afterRoundTrip.multiProjectId);
+          (multiSnapshot.multiProjectId && !afterRoundTrip.multiProjectId);
         if (lostMulti) {
           await chrome.storage.local.set({
             multiMode: multiSnapshot.multiMode,
@@ -225,9 +212,7 @@ export const handleRestart = async (
     // Content caller is fire-and-forget; toast the user directly
     try {
       const targetTabId =
-        sourceTabId ||
-        (await chrome.storage.local.get(["activeTab"])).activeTab ||
-        null;
+        sourceTabId || (await chrome.storage.local.get(["activeTab"])).activeTab || null;
       if (Number.isInteger(targetTabId)) {
         chrome.tabs
           .sendMessage(targetTabId as number, {
@@ -245,5 +230,4 @@ export const handleRestart = async (
 export const handleRestartRecordingTab = async (
   message: RestartMessage,
   sender: chrome.runtime.MessageSender,
-) =>
-  handleRestart(message, sender);
+) => handleRestart(message, sender);

@@ -18,32 +18,24 @@ const clearFallback = (): void => {
   }
 };
 
-const scheduleFallback = (
-  delayMs = FALLBACK_AFTER_COUNTDOWN_STARTED_MS,
-): void => {
+const scheduleFallback = (delayMs = FALLBACK_AFTER_COUNTDOWN_STARTED_MS): void => {
   clearFallback();
   fallbackTimerId = setTimeout(async () => {
     fallbackTimerId = null;
     try {
-      const { pendingRecording, recording, restarting } =
-        await chrome.storage.local.get([
-          "pendingRecording",
-          "recording",
-          "restarting",
-        ]);
+      const { pendingRecording, recording, restarting } = await chrome.storage.local.get([
+        "pendingRecording",
+        "recording",
+        "restarting",
+      ]);
       // Only auto-dispatch if still pending and recording hasn't started.
       // Skip during restart - that flow has its own start sequencing.
       if (!pendingRecording || recording || restarting) return;
-      console.info(
-        "[SayLess][BG] countdown-finished missing after delay, auto-dispatching start",
-      );
+      console.info("[SayLess][BG] countdown-finished missing after delay, auto-dispatching start");
       try {
         startAfterCountdown("countdownFallback");
       } catch (err) {
-        console.error(
-          "[SayLess][BG] countdownFallback startAfterCountdown failed",
-          err,
-        );
+        console.error("[SayLess][BG] countdownFallback startAfterCountdown failed", err);
       }
     } catch (err) {
       console.error("[SayLess][BG] countdownFallback storage read failed", err);
@@ -93,10 +85,7 @@ export const recoverPendingCountdownOnStartup = async (): Promise<void> => {
       );
     }
   } catch (err) {
-    console.error(
-      "[SayLess][BG] recoverPendingCountdownOnStartup storage read failed",
-      err,
-    );
+    console.error("[SayLess][BG] recoverPendingCountdownOnStartup storage read failed", err);
   }
 };
 
@@ -104,10 +93,7 @@ export const initCountdownFallback = (): void => {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
     // pendingRecording true → false (user cancelled): clear any armed timer.
-    if (
-      changes.pendingRecording &&
-      changes.pendingRecording.newValue === false
-    ) {
+    if (changes.pendingRecording && changes.pendingRecording.newValue === false) {
       clearFallback();
       return;
     }

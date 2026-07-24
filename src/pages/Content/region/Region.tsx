@@ -18,16 +18,8 @@ const ResizableBox = () => {
     if (contentState.recordingType != "region") return;
     if (!contentState.customRegion) return;
     if (regionRef.current === null) return;
-    if (
-      contentState.regionWidth === 0 ||
-      contentState.regionWidth === undefined
-    )
-      return;
-    if (
-      contentState.regionHeight === 0 ||
-      contentState.regionHeight === undefined
-    )
-      return;
+    if (contentState.regionWidth === 0 || contentState.regionWidth === undefined) return;
+    if (contentState.regionHeight === 0 || contentState.regionHeight === undefined) return;
     if (contentState.regionX === undefined) return;
     if (contentState.regionY === undefined) return;
     if (contentState.fromRegion) return;
@@ -84,7 +76,7 @@ const ResizableBox = () => {
     _direction: string,
     ref: HTMLElement,
     _delta: { width: number; height: number },
-    position: { x: number; y: number }
+    position: { x: number; y: number },
   ) => {
     const width = parseInt(ref.style.width, 10);
     const height = parseInt(ref.style.height, 10);
@@ -162,7 +154,7 @@ const ResizableBox = () => {
             screenY: e.screenY,
             button: e.button,
             buttons: e.buttons,
-          })
+          }),
         );
       }
     };
@@ -180,9 +172,7 @@ const ResizableBox = () => {
   // the recorder's first frame capture, leaking handles into the first
   // ~33ms of the recording.
   const hideRegionUI =
-    contentState.recording ||
-    contentState.countdownActive ||
-    contentState.pendingRecording;
+    contentState.recording || contentState.countdownActive || contentState.pendingRecording;
 
   return (
     <div
@@ -194,9 +184,7 @@ const ResizableBox = () => {
         height: "100%",
         zIndex: -1,
         pointerEvents:
-          hideRegionUI || contentState.drawingMode || contentState.blurMode
-            ? "none"
-            : "auto",
+          hideRegionUI || contentState.drawingMode || contentState.blurMode ? "none" : "auto",
       }}
       className={hideRegionUI ? "region-recording" : ""}
       onClick={(e) => {
@@ -219,9 +207,7 @@ const ResizableBox = () => {
           height: "100%",
           zIndex: 1,
           pointerEvents:
-            hideRegionUI || contentState.drawingMode || contentState.blurMode
-              ? "none"
-              : "auto",
+            hideRegionUI || contentState.drawingMode || contentState.blurMode ? "none" : "auto",
         }}
       >
         <div className="box-hole" />
@@ -232,9 +218,7 @@ const ResizableBox = () => {
           position: "relative",
           zIndex: 2,
           pointerEvents:
-            hideRegionUI || contentState.drawingMode || contentState.blurMode
-              ? "none"
-              : "auto",
+            hideRegionUI || contentState.drawingMode || contentState.blurMode ? "none" : "auto",
         }}
         default={{
           x: contentState.regionX,
@@ -259,12 +243,8 @@ const ResizableBox = () => {
         bounds="parent"
         onResizeStop={handleResize}
         onDragStop={handleMove}
-        disableDragging={
-          hideRegionUI || contentState.drawingMode || contentState.blurMode
-        }
-        enableResizing={
-          !hideRegionUI && !contentState.drawingMode && !contentState.blurMode
-        }
+        disableDragging={hideRegionUI || contentState.drawingMode || contentState.blurMode}
+        enableResizing={!hideRegionUI && !contentState.drawingMode && !contentState.blurMode}
       >
         <div
           ref={cropRef}
@@ -280,9 +260,7 @@ const ResizableBox = () => {
             zIndex: 2,
             boxSizing: "border-box",
             pointerEvents:
-              hideRegionUI || contentState.drawingMode || contentState.blurMode
-                ? "none"
-                : "auto",
+              hideRegionUI || contentState.drawingMode || contentState.blurMode ? "none" : "auto",
           }}
         />
       </Rnd>

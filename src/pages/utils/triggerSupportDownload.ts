@@ -1,7 +1,4 @@
-import {
-  buildDiagnosticZip,
-  type DiagnosticZipOptions,
-} from "./buildDiagnosticZip";
+import { buildDiagnosticZip, type DiagnosticZipOptions } from "./buildDiagnosticZip";
 
 // Anchor-tag download of the local diagnostic ZIP.
 export const triggerSupportDownload = async (

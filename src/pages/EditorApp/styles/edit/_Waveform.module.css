@@ -1,0 +1,62 @@
+@font-face {
+  font-family: "Satoshi-Light";
+  src: url("/assets/fonts/Satoshi-Light.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Satoshi-Medium";
+  src: url("/assets/fonts/Satoshi-Medium.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Satoshi-Bold";
+  src: url("/assets/fonts/Satoshi-Bold.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+/* Colors */
+/* Font */
+/* Spacing */
+/*
+$spacing-01: 0.125rem;
+$spacing-02: 0.25rem;
+$spacing-03: 0.5rem;
+$spacing-04: 0.75rem;
+$spacing-05: 1rem;
+*/
+/* Container */
+/* Gradients */
+/* Events */
+/* Z-index */
+.waveform {
+  height: 100%;
+}
+
+.waveform ::part(cursor) {
+  display: none;
+}
+
+.cursor {
+  height: 100%;
+  background-color: #3080f8;
+  z-index: 999999;
+  width: 3px;
+  position: absolute;
+  border-radius: 30px;
+  padding-top: 20px;
+  transform: translateY(-10px);
+}
+
+.ghostCursor {
+  height: 100%;
+  padding-top: 20px;
+  transform: translateY(-10px);
+  background-color: #8aafee;
+  z-index: 999999;
+  width: 3px;
+  position: absolute;
+  border-radius: 30px;
+  pointer-events: none;
+}

@@ -5,10 +5,7 @@ import { buildSupportContext } from "../../src/pages/utils/buildSupportContext.t
 import { buildSupportDebugInfo } from "../../src/pages/utils/buildSupportDebugInfo.ts";
 
 const originalChrome = globalThis.chrome;
-const originalNavigatorDescriptor = Object.getOwnPropertyDescriptor(
-  globalThis,
-  "navigator",
-);
+const originalNavigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
 
 const installMocks = (storage = {}) => {
   Object.defineProperty(globalThis, "navigator", {

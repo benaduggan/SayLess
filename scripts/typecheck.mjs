@@ -7,19 +7,10 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = ["--noEmit", "--pretty", "false"];
-const typescript7Path = join(
-  ROOT,
-  "node_modules",
-  "@typescript",
-  "native",
-  "bin",
-  "tsc"
-);
+const typescript7Path = join(ROOT, "node_modules", "@typescript", "native", "bin", "tsc");
 
 if (!existsSync(typescript7Path)) {
-  console.error(
-    "TypeScript 7.0.2 is missing. Run npm ci and retry npm run typecheck."
-  );
+  console.error("TypeScript 7.0.2 is missing. Run npm ci and retry npm run typecheck.");
   process.exit(1);
 }
 

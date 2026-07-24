@@ -36,9 +36,7 @@ test("buildSavePickerOptions maps known extensions to picker accept types", () =
   });
 
   assert.equal(
-    buildSavePickerOptions("clip.m4a", "audio/mp4").types[0].accept[
-      "audio/mp4"
-    ][0],
+    buildSavePickerOptions("clip.m4a", "audio/mp4").types[0].accept["audio/mp4"][0],
     ".m4a",
   );
 });
@@ -97,10 +95,10 @@ test("saveOrDownloadBlob stops after picker cancellation", async () => {
       runtime: {},
     };
 
-    assert.deepEqual(
-      await saveOrDownloadBlob(new Blob(["x"]), "x.txt", { preferPicker: true }),
-      { saved: false, reason: "cancelled" },
-    );
+    assert.deepEqual(await saveOrDownloadBlob(new Blob(["x"]), "x.txt", { preferPicker: true }), {
+      saved: false,
+      reason: "cancelled",
+    });
     assert.equal(downloadCalled, false);
   } finally {
     if (originalWindow === undefined) delete globalThis.window;
@@ -140,10 +138,11 @@ test("saveOrDownloadBlob falls back to Chrome download after picker failure", as
     };
     console.warn = () => {};
 
-    assert.deepEqual(
-      await saveOrDownloadBlob(new Blob(["x"]), "x.txt", { preferPicker: true }),
-      { saved: true, downloadId: 42, fileName: "x.txt" },
-    );
+    assert.deepEqual(await saveOrDownloadBlob(new Blob(["x"]), "x.txt", { preferPicker: true }), {
+      saved: true,
+      downloadId: 42,
+      fileName: "x.txt",
+    });
     assert.deepEqual(downloadOptions, {
       url: "blob:test",
       filename: "x.txt",

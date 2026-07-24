@@ -2,10 +2,7 @@ import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useEditorContent } from "../../context/ContentState";
 import { EdlContext } from "../../context/EdlContext";
 import { attachTimelinePreview } from "../../../../edl/timelinePreview";
-import {
-  computeZoomViewportTransform,
-  zoomTransformToCss,
-} from "../../../../edl/zoomViewport";
+import { computeZoomViewportTransform, zoomTransformToCss } from "../../../../edl/zoomViewport";
 import type { Timeline } from "../../../../edl/timeline";
 import { cropPreviewLayout, cropRelativePoint } from "../../../../edl/crop";
 import { useProjectAudioPreview } from "./useProjectAudioPreview";
@@ -35,11 +32,7 @@ const VideoPlayer = (_props: VideoPlayerProps) => {
     if (!activeZoom) return undefined;
     const viewportZoom = {
       ...activeZoom,
-      ...cropRelativePoint(
-        edlCtx?.crop,
-        activeZoom.xRatio,
-        activeZoom.yRatio,
-      ),
+      ...cropRelativePoint(edlCtx?.crop, activeZoom.xRatio, activeZoom.yRatio),
     };
     return zoomTransformToCss(computeZoomViewportTransform(viewportZoom, 100, 100));
   }, [activeZoom, edlCtx?.crop]);
@@ -48,25 +41,13 @@ const VideoPlayer = (_props: VideoPlayerProps) => {
     return { width, height };
   }, [videoRatio]);
   const cropLayout = useMemo(
-    () => cropPreviewLayout(
-      edlCtx?.crop,
-      sourceDimensions.width,
-      sourceDimensions.height,
-    ),
+    () => cropPreviewLayout(edlCtx?.crop, sourceDimensions.width, sourceDimensions.height),
     [edlCtx?.crop, sourceDimensions],
   );
-  useProjectAudioPreview(
-    videoRef,
-    edlCtx?.audioAsset,
-    edlCtx?.audioTrack,
-    edlCtx?.timeline,
-  );
+  useProjectAudioPreview(videoRef, edlCtx?.audioAsset, edlCtx?.audioTrack, edlCtx?.timeline);
 
   useEffect(() => {
-    if (
-      videoRef.current &&
-      contentState.updatePlayerTime
-    ) {
+    if (videoRef.current && contentState.updatePlayerTime) {
       videoRef.current.currentTime = Number(contentState.time) || 0;
     }
   }, [contentState.time]);
@@ -171,14 +152,18 @@ const VideoPlayer = (_props: VideoPlayerProps) => {
                 controls
                 playsInline
                 preload="metadata"
-                style={cropLayout ? {
-                  position: "absolute",
-                  maxWidth: "none",
-                  left: `${cropLayout.leftPercent}%`,
-                  top: `${cropLayout.topPercent}%`,
-                  width: `${cropLayout.widthPercent}%`,
-                  height: `${cropLayout.heightPercent}%`,
-                } : undefined}
+                style={
+                  cropLayout
+                    ? {
+                        position: "absolute",
+                        maxWidth: "none",
+                        left: `${cropLayout.leftPercent}%`,
+                        top: `${cropLayout.topPercent}%`,
+                        width: `${cropLayout.widthPercent}%`,
+                        height: `${cropLayout.heightPercent}%`,
+                      }
+                    : undefined
+                }
               />
             </div>
           </div>

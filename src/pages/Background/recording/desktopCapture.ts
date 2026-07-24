@@ -10,9 +10,7 @@ export interface DesktopCaptureRequest {
   [key: string]: unknown;
 }
 
-export const desktopCapture = async (
-  request: DesktopCaptureRequest,
-): Promise<void> => {
+export const desktopCapture = async (request: DesktopCaptureRequest): Promise<void> => {
   perfMark("BG.desktopCapture.enter", {
     region: Boolean(request?.region),
     camera: Boolean(request?.camera),
@@ -25,9 +23,7 @@ export const desktopCapture = async (
   // onboarding gate: prevent recorder tab opening behind the Welcome splash
   if (onboarding === true) {
     perfMark("BG.desktopCapture.blocked-by-onboarding");
-    console.log(
-      "[SayLess][desktopCapture] blocked: onboarding active",
-    );
+    console.log("[SayLess][desktopCapture] blocked: onboarding active");
     return;
   }
 
@@ -36,9 +32,7 @@ export const desktopCapture = async (
   // getCurrentTab uses lastFocusedWindow which races with editor-open focus pulls;
   // prefer the explicit sender tab id
   const initiatingTabId =
-    typeof request?.initiatingTabId === "number"
-      ? request.initiatingTabId
-      : null;
+    typeof request?.initiatingTabId === "number" ? request.initiatingTabId : null;
 
   startRecorderSession(request, initiatingTabId);
 };

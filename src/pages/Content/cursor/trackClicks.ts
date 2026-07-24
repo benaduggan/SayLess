@@ -4,7 +4,7 @@ export function startClickTracking(
   regionHeight = 0,
   regionX = 0,
   regionY = 0,
-  contentStateRef: { current?: { blurMode?: boolean } | null } | null = null
+  contentStateRef: { current?: { blurMode?: boolean } | null } | null = null,
 ): () => void {
   // Refreshed on storage change: a restart can swap recordingType
   // (camera ↔ screen) and we'd otherwise dispatch against the prior mode.
@@ -14,27 +14,21 @@ export function startClickTracking(
   chrome.storage.local
     .get(["surface", "recordingWindowId", "recordingType"])
     .then((vals) => {
-      cachedSurface =
-        typeof vals.surface === "string" ? vals.surface : "unknown";
+      cachedSurface = typeof vals.surface === "string" ? vals.surface : "unknown";
       cachedRecordingWindowId =
-        typeof vals.recordingWindowId === "number"
-          ? vals.recordingWindowId
-          : null;
-      cachedRecordingType =
-        typeof vals.recordingType === "string" ? vals.recordingType : null;
+        typeof vals.recordingWindowId === "number" ? vals.recordingWindowId : null;
+      cachedRecordingType = typeof vals.recordingType === "string" ? vals.recordingType : null;
     })
     .catch(() => {});
 
   const onStorageChanged = (
     changes: Record<string, chrome.storage.StorageChange>,
-    area: string
+    area: string,
   ): void => {
     if (area !== "local") return;
     if (changes.surface)
       cachedSurface =
-        typeof changes.surface.newValue === "string"
-          ? changes.surface.newValue
-          : "unknown";
+        typeof changes.surface.newValue === "string" ? changes.surface.newValue : "unknown";
     if (changes.recordingWindowId)
       cachedRecordingWindowId =
         typeof changes.recordingWindowId.newValue === "number"
@@ -42,9 +36,7 @@ export function startClickTracking(
           : null;
     if (changes.recordingType)
       cachedRecordingType =
-        typeof changes.recordingType.newValue === "string"
-          ? changes.recordingType.newValue
-          : null;
+        typeof changes.recordingType.newValue === "string" ? changes.recordingType.newValue : null;
   };
   try {
     chrome.storage.onChanged.addListener(onStorageChanged);

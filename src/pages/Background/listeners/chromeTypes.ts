@@ -18,10 +18,7 @@ export interface ListenerChromeApi {
     };
     onInstalled: {
       addListener(
-        listener: (details: {
-          reason: string;
-          previousVersion?: string;
-        }) => void | Promise<void>,
+        listener: (details: { reason: string; previousVersion?: string }) => void | Promise<void>,
       ): void;
     };
   };
@@ -33,15 +30,10 @@ export interface ListenerChromeApi {
       remove(keys: string[]): Promise<void>;
     };
     managed: {
-      get(
-        key: string,
-        callback: (values: Record<string, unknown>) => void,
-      ): void;
+      get(key: string, callback: (values: Record<string, unknown>) => void): void;
     };
     onChanged: {
-      addListener(
-        listener: (changes: Record<string, unknown>, area: string) => void,
-      ): void;
+      addListener(listener: (changes: Record<string, unknown>, area: string) => void): void;
     };
   };
   tabs: {

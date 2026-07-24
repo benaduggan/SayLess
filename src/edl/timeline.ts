@@ -62,10 +62,7 @@ function newId(): string {
 const EPS = 1e-4;
 
 /** @param {number} duration @param {{id?:string}} [o] @returns {Timeline} */
-export function createTimeline(
-  duration: number,
-  o: { id?: string } = {},
-): Timeline {
+export function createTimeline(duration: number, o: { id?: string } = {}): Timeline {
   return {
     version: 2,
     source: { duration },
@@ -102,11 +99,7 @@ export function deleteClip(tl: Timeline, id: string): Timeline {
 }
 
 /** @param {Timeline} tl @param {string} id @param {boolean} muted @returns {Timeline} */
-export function setClipMuted(
-  tl: Timeline,
-  id: string,
-  muted: boolean,
-): Timeline {
+export function setClipMuted(tl: Timeline, id: string, muted: boolean): Timeline {
   return { ...tl, clips: tl.clips.map((c) => (c.id === id ? { ...c, muted } : c)) };
 }
 
@@ -114,11 +107,7 @@ export function setClipMuted(
  * Move the clip at `fromIndex` to `toIndex` (reorder).
  * @param {Timeline} tl @param {number} fromIndex @param {number} toIndex @returns {Timeline}
  */
-export function moveClip(
-  tl: Timeline,
-  fromIndex: number,
-  toIndex: number,
-): Timeline {
+export function moveClip(tl: Timeline, fromIndex: number, toIndex: number): Timeline {
   const clips = [...tl.clips];
   if (fromIndex < 0 || fromIndex >= clips.length) return tl;
   const [c] = clips.splice(fromIndex, 1);
@@ -134,11 +123,7 @@ function splitAtRange(tl: Timeline, s: number, e: number): Timeline {
 }
 
 /** Clips whose source range falls within [s,e] (after splitAtRange). */
-function clipsWithin(
-  clips: readonly Clip[],
-  s: number,
-  e: number,
-): Clip[] {
+function clipsWithin(clips: readonly Clip[], s: number, e: number): Clip[] {
   return clips.filter((c) => c.sourceStart >= s - EPS && c.sourceEnd <= e + EPS);
 }
 

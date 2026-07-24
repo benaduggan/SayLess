@@ -10,11 +10,7 @@ import {
 } from "../../src/edl/crop.ts";
 
 test("crop regions round-trip between pixels and durable ratios", () => {
-  const crop = cropRegionFromPixels(
-    { x: 320, y: 180, width: 1280, height: 720 },
-    1920,
-    1080,
-  );
+  const crop = cropRegionFromPixels({ x: 320, y: 180, width: 1280, height: 720 }, 1920, 1080);
 
   assert.deepEqual(crop, {
     xRatio: 1 / 6,
@@ -51,10 +47,7 @@ test("source-relative zoom points map into the cropped viewport", () => {
 });
 
 test("crop normalization clamps bounds and treats the full frame as no edit", () => {
-  assert.equal(
-    normalizeCropRegion({ xRatio: 0, yRatio: 0, widthRatio: 1, heightRatio: 1 }),
-    null,
-  );
+  assert.equal(normalizeCropRegion({ xRatio: 0, yRatio: 0, widthRatio: 1, heightRatio: 1 }), null);
   const clamped = normalizeCropRegion({
     xRatio: 0.8,
     yRatio: -1,

@@ -49,16 +49,12 @@ const Setup = (): React.JSX.Element => {
           </div>
           <div className="setupText">
             <div className="setupEmoji">👋</div>
-            <div className="setupTitle">
-              {chrome.i18n.getMessage("setupTitle")}
-            </div>
+            <div className="setupTitle">{chrome.i18n.getMessage("setupTitle")}</div>
             <div className="setupDescription">
               <div className="setupStep">
                 {chrome.i18n.getMessage("setupStep1Before")}
                 <span>
-                  <img
-                    src={chrome.runtime.getURL("assets/helper/puzzle.svg")}
-                  />
+                  <img src={chrome.runtime.getURL("assets/helper/puzzle.svg")} />
                 </span>
                 {chrome.i18n.getMessage("setupStep1After")}
               </div>
@@ -72,11 +68,7 @@ const Setup = (): React.JSX.Element => {
               <div className="setupStep">
                 {chrome.i18n.getMessage("setupStep3Before")}
                 <span>
-                  <img
-                    src={chrome.runtime.getURL(
-                      "assets/helper/mini-logo.png"
-                    )}
-                  />
+                  <img src={chrome.runtime.getURL("assets/helper/mini-logo.png")} />
                 </span>
                 {chrome.i18n.getMessage("setupStep3After")}
               </div>
@@ -88,19 +80,14 @@ const Setup = (): React.JSX.Element => {
         <div className="setupContainer center">
           <div className="setupText center">
             <div className="setupEmoji">🥳</div>
-            <div className="setupTitle">
-              {chrome.i18n.getMessage("setupCompleteTitle")}
-            </div>
+            <div className="setupTitle">{chrome.i18n.getMessage("setupCompleteTitle")}</div>
             <div className="setupDescription">
               {chrome.i18n.getMessage("setupCompleteDescription")}
             </div>
           </div>
         </div>
       )}
-      <img
-        className="setupLogo"
-        src={chrome.runtime.getURL("assets/logo-text.svg")}
-      />
+      <img className="setupLogo" src={chrome.runtime.getURL("assets/logo-text.svg")} />
       <style>
         {`
 				body {

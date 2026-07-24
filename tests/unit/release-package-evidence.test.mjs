@@ -171,7 +171,10 @@ test("release package verifier rejects tampered zip and manual evidence", async 
     const result = runVerifier(fixture.dir);
 
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /package release evidence does not match current extension\.zip SHA-256/);
+    assert.match(
+      result.stderr,
+      /package release evidence does not match current extension\.zip SHA-256/,
+    );
     assert.match(result.stderr, /package release evidence manual QA evidence hash does not match/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -193,8 +196,14 @@ test("release package verifier rejects stale build evidence", async () => {
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /package release evidence build file count/);
     assert.match(result.stderr, /package release evidence build byte size/);
-    assert.match(result.stderr, /package release evidence formatted build size must match current build size/);
-    assert.match(result.stderr, /package release evidence build fingerprint does not match current build/);
+    assert.match(
+      result.stderr,
+      /package release evidence formatted build size must match current build size/,
+    );
+    assert.match(
+      result.stderr,
+      /package release evidence build fingerprint does not match current build/,
+    );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -351,7 +360,10 @@ test("release package verifier rejects non-passing package evidence status", asy
     const result = runVerifier(fixture.dir);
 
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /package release evidence is non-passing: Release package has not passed/);
+    assert.match(
+      result.stderr,
+      /package release evidence is non-passing: Release package has not passed/,
+    );
     assert.match(
       result.stderr,
       /package release evidence failed step: scripts\/verify-manual-qa-evidence\.mjs exit code 1/,
@@ -522,7 +534,10 @@ test("release package verifier rejects a zip that does not contain the fingerpri
     const result = runVerifier(fixture.dir);
 
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /extension\.zip contents do not match package release build fingerprint/);
+    assert.match(
+      result.stderr,
+      /extension\.zip contents do not match package release build fingerprint/,
+    );
     assert.match(result.stderr, /extension\.zip contents do not match current build fingerprint/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });

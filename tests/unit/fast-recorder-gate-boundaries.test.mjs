@@ -11,7 +11,7 @@ test("fast recorder cached probes reject malformed outer fields", () => {
       reasons: "none",
       details: {},
     }),
-    null
+    null,
   );
   assert.equal(
     normalizeFastRecorderProbeResult({
@@ -20,7 +20,7 @@ test("fast recorder cached probes reject malformed outer fields", () => {
       details: [],
       at: 1,
     }),
-    null
+    null,
   );
 });
 

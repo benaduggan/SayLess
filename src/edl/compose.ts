@@ -27,10 +27,10 @@ export interface ExportPlan {
 export function compose(edl: Edl): ExportPlan {
   const duration = edl.source.duration;
   const deletes = mergeRanges(
-    edl.edits.filter((e) => e.kind === "delete").map((e) => ({ start: e.start, end: e.end }))
+    edl.edits.filter((e) => e.kind === "delete").map((e) => ({ start: e.start, end: e.end })),
   );
   const mutes = mergeRanges(
-    edl.edits.filter((e) => e.kind === "mute").map((e) => ({ start: e.start, end: e.end }))
+    edl.edits.filter((e) => e.kind === "mute").map((e) => ({ start: e.start, end: e.end })),
   );
 
   // keptSegments = source minus deletes.
@@ -77,10 +77,7 @@ export function compose(edl: Edl): ExportPlan {
  * a deleted range.
  * @param {ExportPlan} plan @param {number} sourceTime @returns {number|null}
  */
-export function sourceToOutput(
-  plan: ExportPlan,
-  sourceTime: number,
-): number | null {
+export function sourceToOutput(plan: ExportPlan, sourceTime: number): number | null {
   let outOffset = 0;
   for (const seg of plan.keptSegments) {
     if (sourceTime >= seg.start && sourceTime < seg.end) {

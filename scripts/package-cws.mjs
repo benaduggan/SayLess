@@ -29,8 +29,7 @@ const writeFileAtomic = (path, bytes) => {
 const writeNonPassingCwsEvidence = ({ status, failedStep = null }) => {
   mkdirSync(EVIDENCE_DIR, { recursive: true });
   const evidence = {
-    kind:
-      status === "failed" ? "sayless.cwsPackageFailed" : "sayless.cwsPackageIncomplete",
+    kind: status === "failed" ? "sayless.cwsPackageFailed" : "sayless.cwsPackageIncomplete",
     status,
     generatedAt: new Date().toISOString(),
     remainingReleaseWork:

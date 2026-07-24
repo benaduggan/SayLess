@@ -48,8 +48,7 @@ const parseLog = (value: unknown): DiagnosticLog => {
   const candidate = value as Partial<DiagnosticLog>;
   if (!Array.isArray(candidate.sessions)) return emptyLog();
   return {
-    schemaVersion:
-      typeof candidate.schemaVersion === "number" ? candidate.schemaVersion : 1,
+    schemaVersion: typeof candidate.schemaVersion === "number" ? candidate.schemaVersion : 1,
     sessions: candidate.sessions as DiagnosticSession[],
   };
 };
@@ -110,8 +109,7 @@ let _dirty = 0;
 
 const now = (): number => Date.now();
 
-const makeId = (): string =>
-  `diag-${now()}-${Math.random().toString(16).slice(2, 7)}`;
+const makeId = (): string => `diag-${now()}-${Math.random().toString(16).slice(2, 7)}`;
 
 const currentSession = (): DiagnosticSession | null => {
   if (!_log || !_log.sessions || _log.sessions.length === 0) return null;
@@ -145,9 +143,7 @@ export const hydrateDiagnosticLog = async (): Promise<void> => {
 };
 
 /** Start a new session. Call from startRecording(). */
-export const initDiagSession = async (
-  config: Record<string, unknown> = {},
-): Promise<string> => {
+export const initDiagSession = async (config: Record<string, unknown> = {}): Promise<string> => {
   if (!_log) await hydrateDiagnosticLog();
 
   const session: DiagnosticSession = {

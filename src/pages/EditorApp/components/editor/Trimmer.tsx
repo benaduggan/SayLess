@@ -1,6 +1,6 @@
 import { useRef, useEffect, useContext } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
-import styles from "../../styles/edit/_Trimmer.module.scss";
+import styles from "../../styles/edit/_Trimmer.module.css";
 import WaveformGenerator from "./Waveform";
 
 import { useEditorContent } from "../../context/ContentState";
@@ -40,19 +40,13 @@ const Trimmer = () => {
       const newPosition = mouseX / trimmerWidth;
 
       if (activeHandle.current === "start") {
-        const validPosition = Math.max(
-          Math.min(newPosition, endBoundRef.current - 0.02),
-          0,
-        );
+        const validPosition = Math.max(Math.min(newPosition, endBoundRef.current - 0.02), 0);
         setContentStateRef.current((prev) => ({
           ...prev,
           start: Math.min(validPosition, (Number(prev.end) || 1) - 0.02),
         }));
       } else if (activeHandle.current === "end") {
-        const validPosition = Math.min(
-          Math.max(newPosition, startBoundRef.current + 0.02),
-          1,
-        );
+        const validPosition = Math.min(Math.max(newPosition, startBoundRef.current + 0.02), 1);
         setContentStateRef.current((prev) => ({
           ...prev,
           end: Math.max(validPosition, (Number(prev.start) || 0) + 0.02),
@@ -92,10 +86,7 @@ const Trimmer = () => {
     };
   }, []);
 
-  const handleMouseDown = (
-    e: ReactMouseEvent<HTMLDivElement>,
-    handle: "start" | "end",
-  ) => {
+  const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement>, handle: "start" | "end") => {
     e.preventDefault();
     isDragging.current = true;
     activeHandle.current = handle;

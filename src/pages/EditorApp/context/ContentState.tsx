@@ -50,10 +50,7 @@ import {
   getLocalRecordingIndex,
 } from "../../localRecordings/localRecordingLibrary";
 import type { LocalRecordingBackendRef } from "../../localRecordings/localRecordingLibrary";
-import type {
-  EditorContentContextValue,
-  EditorContentState,
-} from "./contentStateTypes";
+import type { EditorContentContextValue, EditorContentState } from "./contentStateTypes";
 import type { RecordingBackendRef } from "../recorderStorage/chunkReaderInterface";
 import type { GifExportOptions } from "../../Editor/utils/toGIF";
 // mediabunny is ~630KB, only used by export/remux/conversion on user action.
@@ -93,7 +90,7 @@ const asRecordingBackendRef = (value: unknown): RecordingBackendRef | null => {
 };
 
 const asLocalRecordingBackendRef = (
-  value: RecordingBackendRef | null
+  value: RecordingBackendRef | null,
 ): LocalRecordingBackendRef | null =>
   value?.backend === "opfs" && typeof value.fileName === "string"
     ? { backend: "opfs", fileName: value.fileName }
@@ -146,8 +143,7 @@ const editorActionNotReady = (): never => {
   throw new Error("Editor content actions are not ready.");
 };
 
-const editorAsyncActionNotReady = async (): Promise<never> =>
-  editorActionNotReady();
+const editorAsyncActionNotReady = async (): Promise<never> => editorActionNotReady();
 
 localforage.config({
   driver: localforage.INDEXEDDB,
@@ -160,8 +156,7 @@ const chunksStore = localforage.createInstance({
   storeName: "keyvaluepairs",
 });
 
-export const ContentStateContext =
-  createContext<EditorContentContextValue | null>(null);
+export const ContentStateContext = createContext<EditorContentContextValue | null>(null);
 
 export const useEditorContent = (): EditorContentContextValue => {
   const context = useContext(ContentStateContext);
@@ -171,14 +166,10 @@ export const useEditorContent = (): EditorContentContextValue => {
   return context;
 };
 
-const DEBUG_RECORDER =
-  typeof window !== "undefined" ? !!window.SAYLESS_DEBUG_RECORDER : false;
+const DEBUG_RECORDER = typeof window !== "undefined" ? !!window.SAYLESS_DEBUG_RECORDER : false;
 const DEBUG_POSTSTOP = DEBUG_RECORDER;
 
-const ContentState = ({
-  children,
-  viewer = false,
-}: PropsWithChildren<{ viewer?: boolean }>) => {
+const ContentState = ({ children, viewer = false }: PropsWithChildren<{ viewer?: boolean }>) => {
   // Viewer mode (editor.html?view=1): playback only. Derived synchronously (not
   // in an effect) so it's set before the child's mount-time loadFFmpeg().
   const isViewer =
@@ -195,17 +186,14 @@ const ContentState = ({
 
   useEffect(() => {
     if (!DEBUG_RECORDER && !isRecordingDebugEnabled()) return;
-    chrome.storage.local.get(
-      ["recordingDebugSessionId", "recordingDebugStartMs"],
-      (res) => {
-        if (!res?.recordingDebugSessionId) return;
-        recdbgSessionRef.current = {
-          sessionId: String(res.recordingDebugSessionId),
-          startTimeMs: Number(res.recordingDebugStartMs) || Date.now(),
-          startPerfMs: null,
-        };
-      }
-    );
+    chrome.storage.local.get(["recordingDebugSessionId", "recordingDebugStartMs"], (res) => {
+      if (!res?.recordingDebugSessionId) return;
+      recdbgSessionRef.current = {
+        sessionId: String(res.recordingDebugSessionId),
+        startTimeMs: Number(res.recordingDebugStartMs) || Date.now(),
+        startPerfMs: null,
+      };
+    });
   }, []);
 
   useEffect(() => {
@@ -244,11 +232,7 @@ const ContentState = ({
         clearInterval(interval);
         // Stuck with no data after ~3 min. Show the same "couldn't load" error
         // the load-failure paths use instead of spinning forever.
-        if (
-          !s?.ready &&
-          !editorErrorShownRef.current &&
-          typeof s?.openModal === "function"
-        ) {
+        if (!s?.ready && !editorErrorShownRef.current && typeof s?.openModal === "function") {
           editorErrorShownRef.current = true;
           diagForward("sandbox-stuck-timeout-error", {});
           s.openModal(
@@ -271,7 +255,7 @@ const ContentState = ({
                 errorCode: "EDITOR_STUCK_TIMEOUT",
                 zipBundled: true,
               });
-            }
+            },
           );
           setContentState((prev) => ({
             ...prev,
@@ -287,9 +271,7 @@ const ContentState = ({
         chunkIndex: s?.chunkIndex ?? 0,
         hasRawBlob: Boolean(s?.rawBlob),
         hasBlob: Boolean(s?.blob),
-        secondsSinceMount: Math.round(
-          (Date.now() - (diagMountAtRef.current || Date.now())) / 1000
-        ),
+        secondsSinceMount: Math.round((Date.now() - (diagMountAtRef.current || Date.now())) / 1000),
       });
     }, HEARTBEAT_MS);
 
@@ -312,8 +294,7 @@ const ContentState = ({
         sessionId: recordingDebugSessionId,
       });
     };
-    window.__saylessPingRecdbg = () =>
-      chrome.runtime.sendMessage({ type: "recdbg-ping" });
+    window.__saylessPingRecdbg = () => chrome.runtime.sendMessage({ type: "recdbg-ping" });
   }, []);
 
   // mediabunny streams the edit (no whole-blob RAM cap like ffmpeg), so one flat limit
@@ -397,18 +378,13 @@ const ContentState = ({
     cancelDownload: editorActionNotReady,
   } satisfies EditorContentState;
 
-  const [contentState, _setContentState] =
-    useState<EditorContentState>(defaultState);
+  const [contentState, _setContentState] = useState<EditorContentState>(defaultState);
   const contentStateRef = useRef(contentState);
   const launchModeRef = useRef("normal");
   const launchRecordingIdRef = useRef<string | null>(null);
   const launchLocalRecordingIdRef = useRef<string | null>(null);
-  const pseudoProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(
-    null
-  );
-  const pseudoProgressStartRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
+  const pseudoProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pseudoProgressStartRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pseudoProgressStartAtRef = useRef<number | null>(null);
   const diagMountAtRef = useRef<number | null>(null);
   const diagMakeVideoAtRef = useRef<number | null>(null);
@@ -420,9 +396,7 @@ const ContentState = ({
   const opfsReadInFlightRef = useRef(false);
   const diagHeartbeatCountRef = useRef(0);
 
-  const setContentState = useCallback<
-    Dispatch<SetStateAction<EditorContentState>>
-  >((updater) => {
+  const setContentState = useCallback<Dispatch<SetStateAction<EditorContentState>>>((updater) => {
     _setContentState((prev) => {
       const next = typeof updater === "function" ? updater(prev) : updater;
       contentStateRef.current = next;
@@ -435,8 +409,7 @@ const ContentState = ({
       const params = new URLSearchParams(window.location.search);
       launchModeRef.current = params.get("mode") || "normal";
       launchRecordingIdRef.current = params.get("recordingId") || null;
-      launchLocalRecordingIdRef.current =
-        params.get("localRecordingId") || null;
+      launchLocalRecordingIdRef.current = params.get("localRecordingId") || null;
     } catch {}
   }, []);
 
@@ -457,11 +430,9 @@ const ContentState = ({
           launchLocalRecordingIdRef.current ||
           localRecordingIdFromBackendRef(
             localBackendRef,
-            typeof recordingAttemptId === "string" ? recordingAttemptId : null
+            typeof recordingAttemptId === "string" ? recordingAttemptId : null,
           );
-        const storedRecordingMeta = isRecord(recordingMeta)
-          ? recordingMeta
-          : null;
+        const storedRecordingMeta = isRecord(recordingMeta) ? recordingMeta : null;
         const entry = await registerLocalRecording({
           id,
           title: current.title || undefined,
@@ -484,7 +455,7 @@ const ContentState = ({
         return null;
       }
     },
-    [setContentState]
+    [setContentState],
   );
 
   const checkpointCurrentLocalEdit = useCallback(
@@ -498,7 +469,7 @@ const ContentState = ({
         console.warn("[SayLess] Failed to checkpoint local edit", error);
       }
     },
-    [setContentState]
+    [setContentState],
   );
 
   useEffect(() => {
@@ -507,13 +478,9 @@ const ContentState = ({
     if (editorReadyDiagSentRef.current) return;
     editorReadyDiagSentRef.current = true;
     const blobType =
-      contentStateRef.current?.blob?.type ||
-      contentStateRef.current?.rawBlob?.type ||
-      null;
+      contentStateRef.current?.blob?.type || contentStateRef.current?.rawBlob?.type || null;
     const path = blobType?.includes("mp4") ? "mp4-fast" : "webm";
-    chrome.runtime
-      .sendMessage({ type: "diag-editor-ready", path })
-      .catch(() => {});
+    chrome.runtime.sendMessage({ type: "diag-editor-ready", path }).catch(() => {});
     // mirror to storage so BG's deferred endDiagSession watcher sees ready
     // without the diag session being open
     try {
@@ -538,8 +505,7 @@ const ContentState = ({
       return;
     }
 
-    if (pseudoProgressTimerRef.current || pseudoProgressStartRef.current)
-      return;
+    if (pseudoProgressTimerRef.current || pseudoProgressStartRef.current) return;
     pseudoProgressStartRef.current = setTimeout(() => {
       pseudoProgressStartRef.current = null;
       if (contentStateRef.current?.ready) return;
@@ -551,7 +517,7 @@ const ContentState = ({
           const current = Number(prev.processingProgress || 0);
           const elapsedMs = Math.max(
             0,
-            Date.now() - (pseudoProgressStartAtRef.current || Date.now())
+            Date.now() - (pseudoProgressStartAtRef.current || Date.now()),
           );
           const target = Math.min(90, Math.round((elapsedMs / 6000) * 90));
           const next = Math.max(current, target);
@@ -575,7 +541,7 @@ const ContentState = ({
   }, [contentState.ready]);
 
   const waitForFinalizeReady = async (
-    recordingId: string | null | undefined
+    recordingId: string | null | undefined,
   ): Promise<FinalizeReadyResult> => {
     if (!recordingId) return { ok: true };
     const key = `freeFinalizeStatus:${recordingId}`;
@@ -599,15 +565,12 @@ const ContentState = ({
     // error when the marker is lost.
     const isOpfsFinalized = async () => {
       try {
-        const {
-          lastRecordingBackendRef,
-          lastRecordingFinalizedFileName,
-          freeRecorderSession,
-        } = await chrome.storage.local.get([
-          "lastRecordingBackendRef",
-          "lastRecordingFinalizedFileName",
-          "freeRecorderSession",
-        ]);
+        const { lastRecordingBackendRef, lastRecordingFinalizedFileName, freeRecorderSession } =
+          await chrome.storage.local.get([
+            "lastRecordingBackendRef",
+            "lastRecordingFinalizedFileName",
+            "freeRecorderSession",
+          ]);
         const backendRef = asRecordingBackendRef(lastRecordingBackendRef);
         const fileName = backendRef?.fileName;
         if (
@@ -619,9 +582,7 @@ const ContentState = ({
         }
         if (lastRecordingFinalizedFileName === fileName) return true;
         // Marker missing: trust a completed session + the on-disk file.
-        const status = isRecord(freeRecorderSession)
-          ? freeRecorderSession.status
-          : null;
+        const status = isRecord(freeRecorderSession) ? freeRecorderSession.status : null;
         if (status !== "completed" && status !== "complete") return false;
         const dir = await navigator.storage.getDirectory();
         const handle = await dir.getFileHandle(fileName);
@@ -633,14 +594,10 @@ const ContentState = ({
     };
 
     if (await isOpfsFinalized()) {
-      debugRecordingEventWithSession(
-        recdbgSessionRef.current,
-        "poststop-ready",
-        {
-          recordingId,
-          stage: "opfs-finalized",
-        }
-      );
+      debugRecordingEventWithSession(recdbgSessionRef.current, "poststop-ready", {
+        recordingId,
+        stage: "opfs-finalized",
+      });
       return { ok: true };
     }
 
@@ -649,7 +606,7 @@ const ContentState = ({
       return isRecord(res[key]) ? (res[key] as FinalizeStatus) : null;
     };
 
-    return new Promise<FinalizeReadyResult>(async (resolve) => {
+    return new Promise<FinalizeReadyResult>((resolve) => {
       let done = false;
       const cleanup = () => {
         done = true;
@@ -665,16 +622,12 @@ const ContentState = ({
           });
         const rawPct = typeof status.percent === "number" ? status.percent : 0;
         const prePct = Math.min(90, Math.max(0, Math.round(rawPct * 0.9)));
-        debugRecordingEventWithSession(
-          recdbgSessionRef.current,
-          "poststop-status",
-          {
-            recordingId,
-            stage: status.stage,
-            percent: status.percent,
-            updatedAt: status.updatedAt,
-          }
-        );
+        debugRecordingEventWithSession(recdbgSessionRef.current, "poststop-status", {
+          recordingId,
+          stage: status.stage,
+          percent: status.percent,
+          updatedAt: status.updatedAt,
+        });
         setContentState((prev) => ({
           ...prev,
           isFfmpegRunning: true,
@@ -682,33 +635,26 @@ const ContentState = ({
         }));
         if (status.stage === "chunks_ready" || status.stage === "ready") {
           cleanup();
-          debugRecordingEventWithSession(
-            recdbgSessionRef.current,
-            "poststop-ready",
-            { recordingId, stage: status.stage }
-          );
+          debugRecordingEventWithSession(recdbgSessionRef.current, "poststop-ready", {
+            recordingId,
+            stage: status.stage,
+          });
           resolve({ ok: true });
         } else if (status.stage === "failed") {
           cleanup();
-          debugRecordingEventWithSession(
-            recdbgSessionRef.current,
-            "poststop-failed",
-            { recordingId, error: status.error || "failed" }
-          );
+          debugRecordingEventWithSession(recdbgSessionRef.current, "poststop-failed", {
+            recordingId,
+            error: status.error || "failed",
+          });
           resolve({ ok: false, error: status.error || "failed" });
         }
       };
 
-      const onChanged = (
-        changes: Record<string, chrome.storage.StorageChange>,
-        area: string
-      ) => {
+      const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
         if (area !== "local") return;
         if (!changes[key]) return;
         const nextValue = changes[key].newValue;
-        handleStatus(
-          isRecord(nextValue) ? (nextValue as FinalizeStatus) : null
-        );
+        handleStatus(isRecord(nextValue) ? (nextValue as FinalizeStatus) : null);
       };
 
       chrome.storage.onChanged.addListener(onChanged);
@@ -717,11 +663,10 @@ const ContentState = ({
         if (done) return;
         if (Date.now() - start > timeoutMs) {
           cleanup();
-          debugRecordingEventWithSession(
-            recdbgSessionRef.current,
-            "poststop-timeout",
-            { recordingId, timeoutMs }
-          );
+          debugRecordingEventWithSession(recdbgSessionRef.current, "poststop-timeout", {
+            recordingId,
+            timeoutMs,
+          });
           resolve({ ok: false, error: "timeout" });
           return;
         }
@@ -730,11 +675,10 @@ const ContentState = ({
         // the throttled freeFinalizeStatus write.
         if (await isOpfsFinalized()) {
           cleanup();
-          debugRecordingEventWithSession(
-            recdbgSessionRef.current,
-            "poststop-ready",
-            { recordingId, stage: "opfs-finalized" }
-          );
+          debugRecordingEventWithSession(recdbgSessionRef.current, "poststop-ready", {
+            recordingId,
+            stage: "opfs-finalized",
+          });
           resolve({ ok: true });
           return;
         }
@@ -742,8 +686,12 @@ const ContentState = ({
         handleStatus(status);
       }, pollMs);
 
-      const initial = await getStatus();
-      handleStatus(initial);
+      void getStatus()
+        .then(handleStatus)
+        .catch((error) => {
+          cleanup();
+          resolve({ ok: false, error: String(error) });
+        });
     });
   };
 
@@ -751,9 +699,7 @@ const ContentState = ({
     if (launchModeRef.current !== "postStop") return;
     if (!contentState.chunkCount) return;
     const ratio =
-      contentState.chunkCount > 0
-        ? contentState.chunkIndex / contentState.chunkCount
-        : 0;
+      contentState.chunkCount > 0 ? contentState.chunkIndex / contentState.chunkCount : 0;
     const pct = Math.min(100, Math.max(20, Math.round(ratio * 80 + 20)));
     setContentState((prev) => ({
       ...prev,
@@ -762,9 +708,7 @@ const ContentState = ({
   }, [contentState.chunkIndex, contentState.chunkCount]);
 
   const buildBlobFromChunks = async () => {
-    const { lastRecordingBackendRef } = await chrome.storage.local.get([
-      "lastRecordingBackendRef",
-    ]);
+    const { lastRecordingBackendRef } = await chrome.storage.local.get(["lastRecordingBackendRef"]);
     const backendRef = asRecordingBackendRef(lastRecordingBackendRef);
     if (!backendRef) return null;
     const reader = chooseReader(backendRef);
@@ -776,8 +720,7 @@ const ContentState = ({
       await reader.close().catch(() => {});
     }
     if (!readResult?.blob || readResult.chunkCount === 0) {
-      if (DEBUG_POSTSTOP)
-        console.warn("[SayLess][Sandbox] buildBlobFromChunks: no parts found");
+      if (DEBUG_POSTSTOP) console.warn("[SayLess][Sandbox] buildBlobFromChunks: no parts found");
       debugRecordingEventWithSession(recdbgSessionRef.current, "blob-empty", {
         chunkCount: 0,
       });
@@ -785,14 +728,11 @@ const ContentState = ({
     }
     const blob = readResult.blob;
     if (DEBUG_POSTSTOP)
-      console.debug(
-        "[SayLess][Sandbox] buildBlobFromChunks: reconstructed blob",
-        {
-          size: blob.size,
-          type: blob.type,
-          chunkCount: readResult.chunkCount,
-        }
-      );
+      console.debug("[SayLess][Sandbox] buildBlobFromChunks: reconstructed blob", {
+        size: blob.size,
+        type: blob.type,
+        chunkCount: readResult.chunkCount,
+      });
     registerLoadedLocalRecording(blob, backendRef).catch(() => {});
     reconstructVideo(blob);
     return blob;
@@ -812,21 +752,17 @@ const ContentState = ({
       const fallbackTitle = `SayLess video - ${formattedDate}`;
 
       try {
-        const { recordingMeta } = await chrome.storage.local.get([
-          "recordingMeta",
-        ]);
+        const { recordingMeta } = await chrome.storage.local.get(["recordingMeta"]);
         if (isRecord(recordingMeta) && recordingMeta.type === "tab") {
           const baseTitle = sanitizeFilenameBase(
-            (typeof recordingMeta.title === "string"
-              ? recordingMeta.title.trim()
-              : "") ||
+            (typeof recordingMeta.title === "string" ? recordingMeta.title.trim() : "") ||
               getHostnameFromUrl(
-                typeof recordingMeta.url === "string" ? recordingMeta.url : null
+                typeof recordingMeta.url === "string" ? recordingMeta.url : null,
               ) ||
-              fallbackTitle
+              fallbackTitle,
           );
           const timestamp = formatLocalTimestamp(
-            recordingMeta.startedAt as string | number | Date | null | undefined
+            recordingMeta.startedAt as string | number | Date | null | undefined,
           );
           setContentState((prevState) => ({
             ...prevState,
@@ -834,8 +770,7 @@ const ContentState = ({
             recordingMeta,
           }));
           const localId =
-            contentStateRef.current?.localRecordingId ||
-            launchLocalRecordingIdRef.current;
+            contentStateRef.current?.localRecordingId || launchLocalRecordingIdRef.current;
           if (localId) {
             saveLocalRecordingEntry({
               id: localId,
@@ -856,8 +791,7 @@ const ContentState = ({
         recordingMeta: null,
       }));
       const localId =
-        contentStateRef.current?.localRecordingId ||
-        launchLocalRecordingIdRef.current;
+        contentStateRef.current?.localRecordingId || launchLocalRecordingIdRef.current;
       if (localId) {
         saveLocalRecordingEntry({
           id: localId,
@@ -903,8 +837,7 @@ const ContentState = ({
 
   const undo = useCallback(() => {
     if (contentState.history.length > 1) {
-      const previousState =
-        contentState.history[contentState.history.length - 2];
+      const previousState = contentState.history[contentState.history.length - 2];
       const newHistory = contentState.history.slice(0, -1);
       setContentState((prevState) => ({
         ...prevState,
@@ -963,22 +896,14 @@ const ContentState = ({
       // fMP4 mvhd can be wrong; cross-check storage, but only on the original
       // (edited blobs are shorter than recordingDuration)
       const isOriginalBlob =
-        !contentState.originalBlob ||
-        contentState.blob === contentState.originalBlob;
+        !contentState.originalBlob || contentState.blob === contentState.originalBlob;
       let durationSec = video.duration;
       if (isOriginalBlob) {
         try {
-          const { recordingDuration } = await chrome.storage.local.get([
-            "recordingDuration",
-          ]);
-          const recSec =
-            Number(recordingDuration) > 0
-              ? Number(recordingDuration) / 1000
-              : 0;
+          const { recordingDuration } = await chrome.storage.local.get(["recordingDuration"]);
+          const recSec = Number(recordingDuration) > 0 ? Number(recordingDuration) / 1000 : 0;
           const probedSec =
-            Number.isFinite(video.duration) && video.duration > 0
-              ? video.duration
-              : 0;
+            Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
           if (recSec > probedSec + 0.3) {
             durationSec = recSec;
           } else if (probedSec > 0) {
@@ -1046,9 +971,7 @@ const ContentState = ({
           "lastRecordingBackendRef",
         ]);
         const backendRef = asRecordingBackendRef(lastRecordingBackendRef);
-        isFastWebm =
-          backendRef?.backend === "opfs" &&
-          /\.webm$/i.test(backendRef.fileName || "");
+        isFastWebm = backendRef?.backend === "opfs" && /\.webm$/i.test(backendRef.fileName || "");
       } catch {}
     }
     if (blob.type === "video/mp4" || isFastWebm) {
@@ -1127,9 +1050,7 @@ const ContentState = ({
       }
 
       chrome.runtime.sendMessage({ type: "recording-complete" });
-      chrome.runtime
-        .sendMessage({ type: "diag-editor-ready", path: "mp4-fast" })
-        .catch(() => {});
+      chrome.runtime.sendMessage({ type: "diag-editor-ready", path: "mp4-fast" }).catch(() => {});
       return;
     }
 
@@ -1138,9 +1059,7 @@ const ContentState = ({
 
     // If recordingDuration is missing or 0, try to probe it from the blob
     if (!recordingDuration || recordingDuration <= 0) {
-      console.warn(
-        "[SayLess][WebM] recordingDuration missing or 0, probing from blob"
-      );
+      console.warn("[SayLess][WebM] recordingDuration missing or 0, probing from blob");
       try {
         const probeDuration = await new Promise<number>((resolve) => {
           const probe = document.createElement("video");
@@ -1186,45 +1105,39 @@ const ContentState = ({
     try {
       if (safeDuration > 0) {
         if (!isWindows10) {
-          requestParentFixWebmDuration(
-            blob,
-            safeDuration,
-            async (fixedWebm: Blob) => {
-              if (
-                contentStateRef.current.updateChrome ||
-                contentStateRef.current.noffmpeg ||
-                (contentStateRef.current.duration >
-                  contentStateRef.current.editLimit &&
-                  !contentStateRef.current.override)
-              ) {
-                setContentState((prevState) => ({
-                  ...prevState,
-                  webm: fixedWebm,
-                  ready: true,
-                  isFfmpegRunning: false,
-                }));
-                chrome.runtime.sendMessage({ type: "recording-complete" });
-                return;
-              }
-
-              const reader = new FileReader();
-              reader.onloadend = function () {
-                const base64data = reader.result;
-                setContentState((prevContentState) => ({
-                  ...prevContentState,
-                  base64: base64data,
-                }));
-              };
-              reader.readAsDataURL(fixedWebm);
+          requestParentFixWebmDuration(blob, safeDuration, async (fixedWebm: Blob) => {
+            if (
+              contentStateRef.current.updateChrome ||
+              contentStateRef.current.noffmpeg ||
+              (contentStateRef.current.duration > contentStateRef.current.editLimit &&
+                !contentStateRef.current.override)
+            ) {
+              setContentState((prevState) => ({
+                ...prevState,
+                webm: fixedWebm,
+                ready: true,
+                isFfmpegRunning: false,
+              }));
+              chrome.runtime.sendMessage({ type: "recording-complete" });
+              return;
             }
-          );
+
+            const reader = new FileReader();
+            reader.onloadend = function () {
+              const base64data = reader.result;
+              setContentState((prevContentState) => ({
+                ...prevContentState,
+                base64: base64data,
+              }));
+            };
+            reader.readAsDataURL(fixedWebm);
+          });
         } else {
           const fixedWebm = await fixWebmDurationFallback(blob);
           if (
             contentStateRef.current.updateChrome ||
             contentStateRef.current.noffmpeg ||
-            (contentStateRef.current.duration >
-              contentStateRef.current.editLimit &&
+            (contentStateRef.current.duration > contentStateRef.current.editLimit &&
               !contentStateRef.current.override)
           ) {
             setContentState((prevState) => ({
@@ -1249,13 +1162,12 @@ const ContentState = ({
         }
       } else {
         console.warn(
-          "[SayLess][WebM] skipping duration fix: safeDuration=0, blob will have broken seek metadata"
+          "[SayLess][WebM] skipping duration fix: safeDuration=0, blob will have broken seek metadata",
         );
         if (
           contentStateRef.current.updateChrome ||
           contentStateRef.current.noffmpeg ||
-          (contentStateRef.current.duration >
-            contentStateRef.current.editLimit &&
+          (contentStateRef.current.duration > contentStateRef.current.editLimit &&
             !contentStateRef.current.override)
         ) {
           setContentState((prevState) => ({
@@ -1279,10 +1191,7 @@ const ContentState = ({
         reader.readAsDataURL(blob);
       }
     } catch (error) {
-      console.error(
-        "[SayLess][WebM] duration fix failed, using unfixed blob:",
-        error
-      );
+      console.error("[SayLess][WebM] duration fix failed, using unfixed blob:", error);
       setContentState((prevState) => ({
         ...prevState,
         webm: blob,
@@ -1298,7 +1207,7 @@ const ContentState = ({
         const s = contentStateRef.current;
         if (s?.ready) return;
         console.warn(
-          "[SayLess][WebM] reconstructVideo(blob) safety timeout: forcing ready with raw blob"
+          "[SayLess][WebM] reconstructVideo(blob) safety timeout: forcing ready with raw blob",
         );
         setContentState((prev) => {
           if (prev.ready) return prev;
@@ -1342,7 +1251,7 @@ const ContentState = ({
                 source: "memory-limit",
                 zipBundled: true,
               });
-            }
+            },
           );
         }
       });
@@ -1369,7 +1278,7 @@ const ContentState = ({
 
   const makeVideoTab = async (
     sendResponse: ((response?: unknown) => void) | null = null,
-    message: Record<string, unknown> = {}
+    message: Record<string, unknown> = {},
   ): Promise<void> => {
     if (makeVideoCheck.current) return;
     makeVideoCheck.current = true;
@@ -1398,7 +1307,7 @@ const ContentState = ({
       if (process.env.SAYLESS_DEV_MODE === "true") {
         console.log(
           "[recorder-opfs][sandbox] makeVideoTab backend",
-          backendRef || { backend: "idb" }
+          backendRef || { backend: "idb" },
         );
       }
       setContentState((prev) => ({
@@ -1428,9 +1337,7 @@ const ContentState = ({
                   elapsedMs: Date.now() - readBlobStart,
                 });
                 setContentState((prev) =>
-                  prev.finalizingRecording
-                    ? prev
-                    : { ...prev, finalizingRecording: true }
+                  prev.finalizingRecording ? prev : { ...prev, finalizingRecording: true },
                 );
               },
             });
@@ -1503,9 +1410,7 @@ const ContentState = ({
             });
             if (attempt < MAX_OPFS_READ_ATTEMPTS) {
               setContentState((prev) =>
-                prev.finalizingRecording
-                  ? prev
-                  : { ...prev, finalizingRecording: true }
+                prev.finalizingRecording ? prev : { ...prev, finalizingRecording: true },
               );
               await new Promise((r) => setTimeout(r, attempt * 750));
               continue;
@@ -1514,9 +1419,7 @@ const ContentState = ({
           }
         }
         setContentState((prev) =>
-          prev.finalizingRecording
-            ? { ...prev, finalizingRecording: false }
-            : prev
+          prev.finalizingRecording ? { ...prev, finalizingRecording: false } : prev,
         );
       }
     } catch (err) {
@@ -1531,8 +1434,7 @@ const ContentState = ({
     // failure. editor is a top-level page with IDB access, no chunk relay (the
     // legacy relay raced the editor open and delivered 0 chunks = black video).
     const needsIdbDirectRead =
-      !directBlob &&
-      (opfsReadFailed || backendRefForThisLoad?.backend !== "opfs");
+      !directBlob && (opfsReadFailed || backendRefForThisLoad?.backend !== "opfs");
     if (needsIdbDirectRead) {
       try {
         const idbReader = chooseReader({ backend: "idb" });
@@ -1577,7 +1479,7 @@ const ContentState = ({
                 errorCode: "OPFS_LOAD_FAILED",
                 zipBundled: true,
               });
-            }
+            },
           );
         }
         diagForward("sandbox-recording-load-failed", {
@@ -1587,9 +1489,7 @@ const ContentState = ({
     }
     // null directBlob means the read failed and the modal already fired
     if (directBlob) {
-      registerLoadedLocalRecording(directBlob, backendRefForThisLoad).catch(
-        () => {}
-      );
+      registerLoadedLocalRecording(directBlob, backendRefForThisLoad).catch(() => {});
       reconstructVideo(directBlob);
     }
 
@@ -1621,9 +1521,7 @@ const ContentState = ({
       if (complete && s?.rawBlob) {
         if (s?.webm) {
           if (DEBUG_RECORDER)
-            console.log(
-              "[SayLess][WebM] safety timeout: webm already set by fix, marking ready"
-            );
+            console.log("[SayLess][WebM] safety timeout: webm already set by fix, marking ready");
           setContentState((prev) => ({
             ...prev,
             ready: true,
@@ -1632,7 +1530,7 @@ const ContentState = ({
           }));
         } else {
           console.warn(
-            "[SayLess][WebM] safety timeout: duration fix did not complete in time, using unfixed rawBlob"
+            "[SayLess][WebM] safety timeout: duration fix did not complete in time, using unfixed rawBlob",
           );
           setContentState((prev) => ({
             ...prev,
@@ -1675,7 +1573,7 @@ const ContentState = ({
     (
       request: EditorRuntimeMessage,
       sender: chrome.runtime.MessageSender,
-      sendResponse: RuntimeSendResponse
+      sendResponse: RuntimeSendResponse,
     ): boolean | void => {
       const message = request;
       if (DEBUG_POSTSTOP)
@@ -1683,16 +1581,12 @@ const ContentState = ({
           type: message?.type,
           senderTab: sender?.tab?.id,
         });
-      if (
-        message?._targetTabId &&
-        tabIdRef.current &&
-        message._targetTabId !== tabIdRef.current
-      ) {
+      if (message?._targetTabId && tabIdRef.current && message._targetTabId !== tabIdRef.current) {
         return false;
       }
-      const localRecordingId = new URLSearchParams(
-        window.location.search || ""
-      ).get("localRecordingId");
+      const localRecordingId = new URLSearchParams(window.location.search || "").get(
+        "localRecordingId",
+      );
       if (
         localRecordingId &&
         message.type &&
@@ -1739,8 +1633,7 @@ const ContentState = ({
       } else if (message.type === "recording-error") {
         // suppress when this editor already loaded; error belongs to a later attempt
         const editorAlreadyLoaded =
-          Boolean(contentStateRef.current?.ready) ||
-          Boolean(contentStateRef.current?.blob);
+          Boolean(contentStateRef.current?.ready) || Boolean(contentStateRef.current?.blob);
         if (editorAlreadyLoaded) return;
         // drop teardown errors landing mid-read; if the read truly fails the
         // OPFS_LOAD_FAILED path surfaces the real cause
@@ -1785,7 +1678,7 @@ const ContentState = ({
                 errorCode: errCode,
                 zipBundled: true,
               });
-            }
+            },
           );
         }
         setContentState((prev) => ({
@@ -1794,8 +1687,7 @@ const ContentState = ({
           recordingFailed: true,
         }));
       } else if (message.type === "make-video-tab") {
-        if (DEBUG_POSTSTOP)
-          console.debug("[SayLess][Sandbox] received make-video-tab");
+        if (DEBUG_POSTSTOP) console.debug("[SayLess][Sandbox] received make-video-tab");
         diagMakeVideoAtRef.current = Date.now();
         diagForward("sandbox-make-video-tab", null);
         makeVideoTab(sendResponse, message);
@@ -1831,8 +1723,7 @@ const ContentState = ({
           editLimit: 0,
         }));
         const shouldGate =
-          launchModeRef.current === "postStop" &&
-          Boolean(launchRecordingIdRef.current);
+          launchModeRef.current === "postStop" && Boolean(launchRecordingIdRef.current);
         if (shouldGate) {
           waitForFinalizeReady(launchRecordingIdRef.current).then((result) => {
             if (!result.ok) {
@@ -1855,9 +1746,7 @@ const ContentState = ({
                 }
                 sendResponse({ status: "ok" });
               })
-              .catch((error) =>
-                sendResponse({ status: "error", error: error.message })
-              );
+              .catch((error) => sendResponse({ status: "error", error: error.message }));
           });
           return true;
         }
@@ -1884,8 +1773,7 @@ const ContentState = ({
           editLimit: MAX_EDIT_LIMIT_S,
         }));
         const shouldGate =
-          launchModeRef.current === "postStop" &&
-          Boolean(launchRecordingIdRef.current);
+          launchModeRef.current === "postStop" && Boolean(launchRecordingIdRef.current);
         if (shouldGate) {
           waitForFinalizeReady(launchRecordingIdRef.current).then((result) => {
             if (!result.ok) {
@@ -1908,9 +1796,7 @@ const ContentState = ({
                 }
                 sendResponse({ status: "ok" });
               })
-              .catch((error) =>
-                sendResponse({ status: "error", error: error.message })
-              );
+              .catch((error) => sendResponse({ status: "error", error: error.message }));
           });
           return true;
         }
@@ -1937,8 +1823,7 @@ const ContentState = ({
           editLimit: 0,
         }));
         const shouldGate =
-          launchModeRef.current === "postStop" &&
-          Boolean(launchRecordingIdRef.current);
+          launchModeRef.current === "postStop" && Boolean(launchRecordingIdRef.current);
         if (shouldGate) {
           waitForFinalizeReady(launchRecordingIdRef.current).then((result) => {
             if (!result.ok) {
@@ -1955,9 +1840,7 @@ const ContentState = ({
             }
             buildBlobFromChunks()
               .then(() => sendResponse({ status: "ok" }))
-              .catch((error) =>
-                sendResponse({ status: "error", error: error.message })
-              );
+              .catch((error) => sendResponse({ status: "error", error: error.message }));
           });
           return true;
         }
@@ -1982,7 +1865,7 @@ const ContentState = ({
         }));
       }
     },
-    [makeVideoCheck.current, contentState, contentStateRef.current]
+    [makeVideoCheck.current, contentState, contentStateRef.current],
   );
 
   // sandbox self-triggers reconstruct on OPFS; recovery mode is driven by restore-recording
@@ -2005,7 +1888,7 @@ const ContentState = ({
           if (process.env.SAYLESS_DEV_MODE === "true") {
             console.log(
               "[recorder-opfs][sandbox] self-trigger makeVideoTab for OPFS backend",
-              isRetry ? "(retry)" : ""
+              isRetry ? "(retry)" : "",
             );
           }
           makeVideoTab(null, { override: false });
@@ -2059,10 +1942,7 @@ const ContentState = ({
         reconstructVideo(blob);
       } catch (error) {
         console.warn("[SayLess] Failed to load local recording", error);
-        if (
-          !cancelled &&
-          typeof contentStateRef.current?.openModal === "function"
-        ) {
+        if (!cancelled && typeof contentStateRef.current?.openModal === "function") {
           contentStateRef.current.openModal(
             chrome.i18n.getMessage("opfsLoadErrorTitle"),
             chrome.i18n.getMessage("opfsLoadErrorDescription"),
@@ -2073,7 +1953,7 @@ const ContentState = ({
             null,
             null,
             null,
-            true
+            true,
           );
         }
         setContentState((prev) => ({
@@ -2093,12 +1973,12 @@ const ContentState = ({
     const messageListener = (
       message: unknown,
       sender: chrome.runtime.MessageSender,
-      sendResponse: RuntimeSendResponse
+      sendResponse: RuntimeSendResponse,
     ) => {
       const shouldKeepPortOpen = onChromeMessage(
         isRecord(message) ? message : {},
         sender,
-        sendResponse
+        sendResponse,
       );
       return shouldKeepPortOpen === true;
     };
@@ -2107,27 +1987,21 @@ const ContentState = ({
 
     const storageListener = (
       changes: Record<string, chrome.storage.StorageChange>,
-      areaName: string
+      areaName: string,
     ) => {
       if (areaName !== "local") return;
       try {
         const tabId = tabIdRef.current;
         // BG writes editorRecordingError; sandboxed context can't use runtime.onMessage
-        if (
-          changes.editorRecordingError &&
-          changes.editorRecordingError.newValue
-        ) {
+        if (changes.editorRecordingError && changes.editorRecordingError.newValue) {
           const rawPayload = changes.editorRecordingError.newValue;
           const payload = isRecord(rawPayload) ? rawPayload : {};
           // suppress when THIS editor already loaded; error belongs to a later attempt
           const editorAlreadyLoaded =
-            Boolean(contentStateRef.current?.ready) ||
-            Boolean(contentStateRef.current?.blob);
+            Boolean(contentStateRef.current?.ready) || Boolean(contentStateRef.current?.blob);
           if (
             !editorAlreadyLoaded &&
-            (tabId == null ||
-              payload?.sandboxTab == null ||
-              payload.sandboxTab === tabId)
+            (tabId == null || payload?.sandboxTab == null || payload.sandboxTab === tabId)
           ) {
             // same in-flight-read suppression as the runtime listener above
             if (opfsReadInFlightRef.current) {
@@ -2154,11 +2028,8 @@ const ContentState = ({
                 "EDITOR_CONTENT_SCRIPT_TIMEOUT",
                 "EDITOR_MESSAGE_DELIVERY_FAILED",
               ]);
-              const isPipelineFailure = pipelineFailureCodes.has(
-                String(payload?.errorCode || "")
-              );
-              const isStuckTimeout =
-                payload?.errorCode === "EDITOR_STUCK_TIMEOUT";
+              const isPipelineFailure = pipelineFailureCodes.has(String(payload?.errorCode || ""));
+              const isStuckTimeout = payload?.errorCode === "EDITOR_STUCK_TIMEOUT";
               let title;
               let description;
               if (isStuckTimeout) {
@@ -2166,15 +2037,11 @@ const ContentState = ({
                 description = chrome.i18n.getMessage("editorStuckDescription");
               } else if (isPipelineFailure) {
                 title = chrome.i18n.getMessage("editorRecoveryFailedTitle");
-                description = chrome.i18n.getMessage(
-                  "editorRecoveryFailedDescription"
-                );
+                description = chrome.i18n.getMessage("editorRecoveryFailedDescription");
               } else {
                 title = chrome.i18n.getMessage("opfsLoadErrorTitle");
                 // Never surface the raw internal `why` to users (see above).
-                description = chrome.i18n.getMessage(
-                  "opfsLoadErrorDescription"
-                );
+                description = chrome.i18n.getMessage("opfsLoadErrorDescription");
               }
               contentStateRef.current.openModal(
                 title,
@@ -2204,7 +2071,7 @@ const ContentState = ({
                       zipBundled: true,
                     });
                   } catch {}
-                }
+                },
               );
               setContentState((prev) => ({
                 ...prev,
@@ -2227,7 +2094,7 @@ const ContentState = ({
           if (!window.indexedDB) {
             if (DEBUG_POSTSTOP)
               console.warn(
-                "[SayLess][Sandbox] storage fallback: no indexedDB in this context, skipping"
+                "[SayLess][Sandbox] storage fallback: no indexedDB in this context, skipping",
               );
             return;
           }
@@ -2236,30 +2103,21 @@ const ContentState = ({
             .then((blob) => {
               if (!blob) {
                 if (DEBUG_POSTSTOP)
-                  console.warn(
-                    "[SayLess][Sandbox] storage fallback: no blob built"
-                  );
+                  console.warn("[SayLess][Sandbox] storage fallback: no blob built");
                 return;
               }
               if (DEBUG_POSTSTOP)
-                console.debug(
-                  "[SayLess][Sandbox] storage fallback: blob built",
-                  {
-                    size: blob.size,
-                  }
-                );
+                console.debug("[SayLess][Sandbox] storage fallback: blob built", {
+                  size: blob.size,
+                });
             })
             .catch((err) => {
               if (DEBUG_POSTSTOP)
-                console.warn(
-                  "[SayLess][Sandbox] storage fallback build error",
-                  err
-                );
+                console.warn("[SayLess][Sandbox] storage fallback build error", err);
             });
         }
       } catch (err) {
-        if (DEBUG_POSTSTOP)
-          console.warn("[SayLess][Sandbox] storageListener error", err);
+        if (DEBUG_POSTSTOP) console.warn("[SayLess][Sandbox] storageListener error", err);
       }
     };
 
@@ -2288,8 +2146,7 @@ const ContentState = ({
       const payload = event.data.payload || {};
       // suppress when this editor already loaded; parent forwards every error
       const editorAlreadyLoaded =
-        Boolean(contentStateRef.current?.ready) ||
-        Boolean(contentStateRef.current?.blob);
+        Boolean(contentStateRef.current?.ready) || Boolean(contentStateRef.current?.blob);
       if (editorAlreadyLoaded) return;
       diagForward("sandbox-recording-error-received-via-parent", {
         error: String(payload?.error || "").slice(0, 120),
@@ -2323,7 +2180,7 @@ const ContentState = ({
               errorCode: errCode,
               zipBundled: true,
             });
-          }
+          },
         );
         setContentState((prev) => ({
           ...prev,
@@ -2358,8 +2215,7 @@ const ContentState = ({
           ...prev,
           blob: blob,
           mp4ready: true,
-          hasBeenEdited:
-            event.data.edited === false ? prev.hasBeenEdited : true,
+          hasBeenEdited: event.data.edited === false ? prev.hasBeenEdited : true,
           isFfmpegRunning: false,
           reencoding: false,
           processingProgress: 0,
@@ -2449,9 +2305,7 @@ const ContentState = ({
         isFfmpegRunning: false,
         // defer the mode flip until the frame's in hand, else the cropper
         // mounts over an empty stage (black flash)
-        ...(prevContentState.pendingCropEntry
-          ? { mode: "crop", pendingCropEntry: false }
-          : {}),
+        ...(prevContentState.pendingCropEntry ? { mode: "crop", pendingCropEntry: false } : {}),
       }));
     } else if (event.data.type === "ffmpeg-loaded") {
       setContentState((prevContentState) => ({
@@ -2468,9 +2322,7 @@ const ContentState = ({
         ffmpegLoaded: true,
         isFfmpegRunning: false,
       }));
-      console.log(
-        "[SayLess][Editor] recording-complete sent from ffmpeg-load-error fallback"
-      );
+      console.log("[SayLess][Editor] recording-complete sent from ffmpeg-load-error fallback");
       chrome.runtime.sendMessage({ type: "recording-complete" });
     } else if (event.data.type === "ffmpeg-error") {
       console.warn("FFmpeg error:", {
@@ -2490,11 +2342,7 @@ const ContentState = ({
       if (wasExporting) {
         finishExportJob({
           status: "failed",
-          error: String(
-            event.data.errorMessage ||
-              event.data.error ||
-              "Media export failed."
-          ),
+          error: String(event.data.errorMessage || event.data.error || "Media export failed."),
         });
       }
 
@@ -2512,9 +2360,7 @@ const ContentState = ({
           reencoding: false,
           processingProgress: 0,
           editErrorType: wasEditing ? "failed" : prev.editErrorType,
-          ...(prev.rawBlob || prev.webm
-            ? { ready: true, webm: prev.webm || prev.rawBlob }
-            : {}),
+          ...(prev.rawBlob || prev.webm ? { ready: true, webm: prev.webm || prev.rawBlob } : {}),
         };
       });
 
@@ -2577,9 +2423,7 @@ const ContentState = ({
         window.dispatchEvent(new MessageEvent("message", { data: resultMsg }));
       } catch {}
     };
-    Promise.resolve().then(() =>
-      runEditorOp(message, reply, { viewer: isViewer })
-    );
+    Promise.resolve().then(() => runEditorOp(message, reply, { viewer: isViewer }));
   };
 
   // off-thread the WebM duration fix via editor.html (CSP allows blob workers);
@@ -2587,7 +2431,7 @@ const ContentState = ({
   const requestParentFixWebmDuration = (
     blob: Blob,
     durationMs: number,
-    callback: (fixed: Blob) => void
+    callback: (fixed: Blob) => void,
   ): void => {
     let done = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -2601,14 +2445,9 @@ const ContentState = ({
         callback(fixed);
       } else {
         try {
-          fixWebmDuration(
-            blob,
-            durationMs,
-            (fixedBlob) => callback(fixedBlob),
-            {
-              logger: false,
-            }
-          );
+          fixWebmDuration(blob, durationMs, (fixedBlob) => callback(fixedBlob), {
+            logger: false,
+          });
         } catch (err) {
           callback(blob);
         }
@@ -2694,24 +2533,15 @@ const ContentState = ({
           noffmpeg: true,
           ffmpegLoaded: true,
           fallback: true,
-          ...(fallbackWebm && !prev.ready
-            ? { webm: fallbackWebm, ready: true }
-            : {}),
+          ...(fallbackWebm && !prev.ready ? { webm: fallbackWebm, ready: true } : {}),
         };
       });
-      console.log(
-        "[SayLess][Editor] recording-complete sent from ffmpeg-load-timeout fallback"
-      );
+      console.log("[SayLess][Editor] recording-complete sent from ffmpeg-load-timeout fallback");
       chrome.runtime.sendMessage({ type: "recording-complete" });
     }, 30000);
 
     return () => clearTimeout(timer);
-  }, [
-    contentState.base64,
-    contentState.ffmpeg,
-    contentState.ffmpegLoaded,
-    contentState.noffmpeg,
-  ]);
+  }, [contentState.base64, contentState.ffmpeg, contentState.ffmpegLoaded, contentState.noffmpeg]);
 
   const getImage = useCallback(async () => {
     if (!contentState.blob) return;
@@ -2732,17 +2562,20 @@ const ContentState = ({
     }
     opIdRef.current += 1;
     const id = opIdRef.current;
-    editWatchdogRef.current = setTimeout(() => {
-      editWatchdogRef.current = null;
-      opIdRef.current += 1;
-      setContentState((prev) => ({
-        ...prev,
-        isFfmpegRunning: false,
-        reencoding: false,
-        processingProgress: 0,
-        editErrorType: "timeout",
-      }));
-    }, 5 * 60 * 1000);
+    editWatchdogRef.current = setTimeout(
+      () => {
+        editWatchdogRef.current = null;
+        opIdRef.current += 1;
+        setContentState((prev) => ({
+          ...prev,
+          isFfmpegRunning: false,
+          reencoding: false,
+          processingProgress: 0,
+          editErrorType: "timeout",
+        }));
+      },
+      5 * 60 * 1000,
+    );
     return id;
   };
 
@@ -2781,7 +2614,7 @@ const ContentState = ({
 
   const sanitizeDownloadFilename = (
     name: unknown,
-    { maxLen = 180 }: { maxLen?: number } = {}
+    { maxLen = 180 }: { maxLen?: number } = {},
   ): string => {
     let out = String(name ?? "");
     out = out.replace(/[\\/:*?"<>|]/g, " ");
@@ -2795,10 +2628,7 @@ const ContentState = ({
     return out;
   };
 
-  const requestDownload = async (
-    url: string,
-    ext: string
-  ): Promise<SaveBlobResult> => {
+  const requestDownload = async (url: string, ext: string): Promise<SaveBlobResult> => {
     const exportUrl = assertLocalExportObjectUrl(url);
     // rapid double-click would otherwise create two downloads + double-revoke
     if (contentStateRef.current?.downloadInProgress) {
@@ -2842,18 +2672,12 @@ const ContentState = ({
           return pickerResult;
         }
       } catch (err) {
-        console.warn(
-          "[SayLess] Save picker failed, falling back to Chrome download.",
-          err
-        );
+        console.warn("[SayLess] Save picker failed, falling back to Chrome download.", err);
       }
     }
 
     // Brave: route via background for download
-    if (
-      typeof navigator.brave?.isBrave === "function" &&
-      (await navigator.brave.isBrave())
-    ) {
+    if (typeof navigator.brave?.isBrave === "function" && (await navigator.brave.isBrave())) {
       const resp = await fetch(assertLocalExportObjectUrl(exportUrl));
       const blob = await resp.blob();
       await new Promise<void>((resolve) => {
@@ -2885,10 +2709,7 @@ const ContentState = ({
             const lastErr = chrome.runtime.lastError;
             // user cancelled Save-As; don't show "Download failed"
             const errMsg = String(lastErr?.message || "");
-            if (
-              errMsg.includes("USER_CANCELED") ||
-              errMsg.includes("canceled")
-            ) {
+            if (errMsg.includes("USER_CANCELED") || errMsg.includes("canceled")) {
               revoke();
               resolve(null);
               return;
@@ -2898,7 +2719,7 @@ const ContentState = ({
             } else {
               resolve(id);
             }
-          }
+          },
         );
       });
     } catch (error) {
@@ -2923,10 +2744,11 @@ const ContentState = ({
           chrome.downloads.onChanged.removeListener(handler);
         } catch {}
         revoke();
-        console.warn(
-          "[SayLess] download status listener timed out, releasing handle",
-          { downloadId, filename, timeoutMs }
-        );
+        console.warn("[SayLess] download status listener timed out, releasing handle", {
+          downloadId,
+          filename,
+          timeoutMs,
+        });
         // surface error so editor toasts fire; silent resolve would mask as success
         try {
           setContentState((prev) => ({
@@ -2950,10 +2772,7 @@ const ContentState = ({
           resolve(completed);
         };
 
-        if (
-          delta.state.current === "interrupted" &&
-          delta.error?.current === "USER_CANCELED"
-        ) {
+        if (delta.state.current === "interrupted" && delta.error?.current === "USER_CANCELED") {
           done(false);
         } else if (delta.state.current === "interrupted") {
           try {
@@ -2972,9 +2791,7 @@ const ContentState = ({
               try {
                 chrome.runtime.sendMessage({
                   type: "show-toast",
-                  message: chrome.i18n.getMessage(
-                    "downloadInterruptedLargeToast"
-                  ),
+                  message: chrome.i18n.getMessage("downloadInterruptedLargeToast"),
                   timeout: 8000,
                 });
               } catch {}
@@ -2995,10 +2812,7 @@ const ContentState = ({
           } finally {
             done();
           }
-        } else if (
-          delta.state.current === "complete" ||
-          delta.state.current === "interrupted"
-        ) {
+        } else if (delta.state.current === "complete" || delta.state.current === "interrupted") {
           done();
         }
       };
@@ -3012,7 +2826,7 @@ const ContentState = ({
 
   const deliverLocalExport = async (
     url: string,
-    ext: string
+    ext: string,
   ): Promise<{
     status: Exclude<ExportJobStatus, "running">;
     error?: string;
@@ -3030,17 +2844,10 @@ const ContentState = ({
   // positioned write that a stream-to-blob pipe would drop.
   const remuxFragmentedToStandardMp4 = async (
     fragmentedBlob: Blob,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
   ): Promise<Blob> => {
-    const {
-      Input,
-      Output,
-      BlobSource,
-      BufferTarget,
-      Mp4OutputFormat,
-      ALL_FORMATS,
-      Conversion,
-    } = await loadMb();
+    const { Input, Output, BlobSource, BufferTarget, Mp4OutputFormat, ALL_FORMATS, Conversion } =
+      await loadMb();
     const input = new Input({
       formats: ALL_FORMATS,
       source: new BlobSource(fragmentedBlob),
@@ -3068,7 +2875,7 @@ const ContentState = ({
   const remuxViaOffscreenOpfs = async (
     fragmentedBlob: Blob,
     onProgress?: (progress: number) => void,
-    kind = "remux"
+    kind = "remux",
   ): Promise<Blob> => {
     const requestId =
       typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -3076,8 +2883,7 @@ const ContentState = ({
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const devLog =
       process.env.SAYLESS_DEV_MODE === "true"
-        ? (label: string, data?: unknown) =>
-            console.log("[remux][sandbox]", label, data || "")
+        ? (label: string, data?: unknown) => console.log("[remux][sandbox]", label, data || "")
         : (_label: string, _data?: unknown) => {};
     devLog("offscreen-remux-start", {
       requestId,
@@ -3098,9 +2904,7 @@ const ContentState = ({
 
     // sendMessage's structured clone is lossy for Blobs across the SW
     // (BlobSource rejects with "blob must be a Blob"); transport via OPFS+filename
-    const outputFileName = `remux-${requestId}.${
-      kind === "webm" ? "webm" : "mp4"
-    }`;
+    const outputFileName = `remux-${requestId}.${kind === "webm" ? "webm" : "mp4"}`;
     let opfsDir;
     try {
       opfsDir = await navigator.storage.getDirectory();
@@ -3113,8 +2917,9 @@ const ContentState = ({
     let stagedInputFileName = null;
     let inputFileName;
     try {
-      const { lastRecordingBackendRef: rawBackendRef } =
-        await chrome.storage.local.get(["lastRecordingBackendRef"]);
+      const { lastRecordingBackendRef: rawBackendRef } = await chrome.storage.local.get([
+        "lastRecordingBackendRef",
+      ]);
       const lastRecordingBackendRef = asRecordingBackendRef(rawBackendRef);
       if (
         lastRecordingBackendRef?.backend === "opfs" &&
@@ -3122,9 +2927,7 @@ const ContentState = ({
         lastRecordingBackendRef.fileName.length > 0
       ) {
         try {
-          const handle = await opfsDir.getFileHandle(
-            lastRecordingBackendRef.fileName
-          );
+          const handle = await opfsDir.getFileHandle(lastRecordingBackendRef.fileName);
           const opfsFile = await handle.getFile();
           if (
             fragmentedBlob &&
@@ -3195,7 +2998,7 @@ const ContentState = ({
   const REMUX_STALL_MS = 60000;
   const runRemuxWithStallGuard = <T,>(
     startFn: (onProgress: (progress: number) => void) => Promise<T> | T,
-    baseProgress?: (progress: number) => void
+    baseProgress?: (progress: number) => void,
   ): Promise<T> =>
     new Promise<T>((resolve, reject) => {
       let timer: ReturnType<typeof setTimeout> | null = null;
@@ -3225,7 +3028,7 @@ const ContentState = ({
           settled = true;
           if (timer) clearTimeout(timer);
           reject(e);
-        }
+        },
       );
     });
 
@@ -3257,9 +3060,7 @@ const ContentState = ({
     downloadId?: unknown;
   }): void => {
     const now = Date.now();
-    setContentState((prev) =>
-      finishExportJobState(prev, { status, error }, now)
-    );
+    setContentState((prev) => finishExportJobState(prev, { status, error }, now));
   };
 
   const dismissExportJob = () => {
@@ -3302,7 +3103,7 @@ const ContentState = ({
       diagForward("remux-offscreen-start", { inputBytes: inputSize });
       remuxedBlob = await runRemuxWithStallGuard(
         (pg) => remuxViaOffscreenOpfs(blob, pg),
-        sharedFinalizeProgress
+        sharedFinalizeProgress,
       );
       remuxPath = "offscreen-opfs";
       diagForward("remux-offscreen-ok", { inputBytes: inputSize });
@@ -3321,7 +3122,7 @@ const ContentState = ({
       try {
         remuxedBlob = await runRemuxWithStallGuard(
           (pg) => remuxFragmentedToStandardMp4(blob, pg),
-          sharedFinalizeProgress
+          sharedFinalizeProgress,
         );
         remuxPath = "buffer-target";
         diagForward("remux-buffer-target-ok", { inputBytes: inputSize });
@@ -3345,11 +3146,7 @@ const ContentState = ({
       return Promise.resolve({ blob: null, path: null });
     }
     const cur = standardMp4Ref.current;
-    if (
-      cur &&
-      cur.forBlob === blob &&
-      (cur.status === "ready" || cur.status === "pending")
-    ) {
+    if (cur && cur.forBlob === blob && (cur.status === "ready" || cur.status === "pending")) {
       return cur.promise;
     }
     const promise = produceStandardMp4(blob).then((res) => {
@@ -3389,7 +3186,7 @@ const ContentState = ({
     /abort|cancel/i.test(errorMessage(err));
 
   const renderPendingTimelineForDownload = async (
-    latest: EditorContentState
+    latest: EditorContentState,
   ): Promise<{
     blob: Blob | null | undefined;
     timelineExport: boolean;
@@ -3399,8 +3196,7 @@ const ContentState = ({
     if (typeof latest.getTimelineExportBlob !== "function") {
       return { blob: sourceBlob, timelineExport: false };
     }
-    const controller =
-      typeof AbortController !== "undefined" ? new AbortController() : null;
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
     exportAbortControllerRef.current = controller;
     let rendered: Blob | null = null;
     try {
@@ -3416,7 +3212,7 @@ const ContentState = ({
             controller?.abort?.();
           }
         },
-        { signal: controller?.signal }
+        { signal: controller?.signal },
       );
     } catch (err) {
       if (downloadCancelledRef.current || isAbortError(err)) {
@@ -3605,8 +3401,7 @@ const ContentState = ({
     beginExportJob({ kind: "webm", label: "WebM export" });
 
     const sourceBlob = latest.blob || latest.webm;
-    const hasTimelineExport =
-      typeof latest.getTimelineExportBlob === "function";
+    const hasTimelineExport = typeof latest.getTimelineExportBlob === "function";
 
     if (!sourceBlob) {
       finishExportJob({
@@ -3662,7 +3457,7 @@ const ContentState = ({
         chrome.i18n.getMessage("webmSlowMp4"),
         chrome.i18n.getMessage("webmSlowContinue"),
         () => resolve("mp4"),
-        () => resolve("webm")
+        () => resolve("webm"),
       );
     });
     if (webmChoice === "mp4") {
@@ -3685,10 +3480,7 @@ const ContentState = ({
       exportBlob = prepared.blob || sourceBlob;
       exportedFromTimeline = prepared.timelineExport;
     } catch (err) {
-      console.error(
-        "[SayLess] timeline export failed before WebM download",
-        err
-      );
+      console.error("[SayLess] timeline export failed before WebM download", err);
       setContentState((prev) => ({
         ...prev,
         downloadingWEBM: false,
@@ -3731,13 +3523,10 @@ const ContentState = ({
               ...prev,
               processingProgress: Math.round(p * 100),
             }));
-          }
+          },
         );
       } catch (err) {
-        console.warn(
-          "[SayLess] offscreen webm convert failed, falling back",
-          err
-        );
+        console.warn("[SayLess] offscreen webm convert failed, falling back", err);
       }
       if (downloadCancelledRef.current) {
         setContentState((prevState) => ({
@@ -3759,7 +3548,7 @@ const ContentState = ({
         isFfmpegRunning: false,
         saved: delivery.status === "completed" ? true : prevState.saved,
         lastDownloadInfo: {
-          ...(prevState.lastDownloadInfo || {}),
+          ...prevState.lastDownloadInfo,
           timelineExport: exportedFromTimeline,
           at: Date.now(),
         },
@@ -3839,9 +3628,7 @@ const ContentState = ({
     beginExportJob({ kind: "gif", label: "GIF export" });
     const gifDuration = Number(options.durationSeconds);
     const durationForLimit =
-      Number.isFinite(gifDuration) && gifDuration > 0
-        ? gifDuration
-        : getExportDuration(latest);
+      Number.isFinite(gifDuration) && gifDuration > 0 ? gifDuration : getExportDuration(latest);
     if (durationForLimit > 30) {
       try {
         chrome.runtime.sendMessage({
@@ -3870,10 +3657,7 @@ const ContentState = ({
       if (prepared.cancelled) return;
       exportBlob = prepared.blob || latest.blob;
     } catch (err) {
-      console.error(
-        "[SayLess] timeline export failed before GIF download",
-        err
-      );
+      console.error("[SayLess] timeline export failed before GIF download", err);
       setContentState((prev) => ({
         ...prev,
         downloadingGIF: false,

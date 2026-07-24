@@ -2,10 +2,7 @@ import { sendMessageTab } from "../tabManagement/sendMessageTab";
 import { getCurrentTab } from "../tabManagement/getCurrentTab";
 import { sendMessageRecord } from "../recording/sendMessageRecord.ts";
 
-type CommandTabUpdateListener = (
-  tabId: number,
-  changeInfo: { status?: string },
-) => void;
+type CommandTabUpdateListener = (tabId: number, changeInfo: { status?: string }) => void;
 
 interface CommandChromeApi {
   commands: {
@@ -44,12 +41,11 @@ export const onCommandListener = (): void => {
     if (command === "start-recording") {
       // shortcut pressed from another window must not start a second recording
       try {
-        const { recording, pendingRecording, restarting } =
-          await chromeApi().storage.local.get([
-            "recording",
-            "pendingRecording",
-            "restarting",
-          ]);
+        const { recording, pendingRecording, restarting } = await chromeApi().storage.local.get([
+          "recording",
+          "pendingRecording",
+          "restarting",
+        ]);
         if (recording || pendingRecording || restarting) {
           return;
         }
@@ -68,8 +64,8 @@ export const onCommandListener = (): void => {
       ) {
         sendMessageTab(activeTab.id, { type: "start-stream" });
       } else {
-        chromeApi().tabs
-          .create({
+        chromeApi()
+          .tabs.create({
             url: "playground.html",
             active: true,
           })
@@ -99,9 +95,7 @@ export const onCommandListener = (): void => {
       // recording and may be unscriptable (chrome://, web store), which
       // silently dropped the shortcut. recordingUiTabId mirrors the toolbar's
       // targeting; it equals the active tab in the normal case.
-      const { recordingUiTabId } = await chromeApi().storage.local.get([
-        "recordingUiTabId",
-      ]);
+      const { recordingUiTabId } = await chromeApi().storage.local.get(["recordingUiTabId"]);
       const targetTabId = Number(recordingUiTabId) || activeTab.id;
       const msg =
         command === "cancel-recording"
@@ -117,9 +111,7 @@ export const onCommandListener = (): void => {
         // recording; pause/cancel need the content-script pill UI, so they
         // have no direct fallback here (the user can stop via the toolbar).
         if (command === "stop-recording") {
-          await sendMessageRecord({ type: "stop-recording-tab" }).catch(
-            () => {},
-          );
+          await sendMessageRecord({ type: "stop-recording-tab" }).catch(() => {});
         }
       }
     } else if (command === "toggle-drawing-mode") {

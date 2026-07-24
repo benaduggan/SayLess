@@ -44,9 +44,7 @@ const chromeApi = (): TraceChromeApi =>
   (globalThis as typeof globalThis & { chrome: TraceChromeApi }).chrome;
 
 const readStoredTrace = (value: unknown): StartFlowTrace | null =>
-  typeof value === "object" && value !== null
-    ? (value as StartFlowTrace)
-    : null;
+  typeof value === "object" && value !== null ? (value as StartFlowTrace) : null;
 // Off in prod by default; set globalThis.SAYLESS_DEBUG_RECORDER for support.
 const DEBUG_FLOW =
   process.env.NODE_ENV !== "production" ||
@@ -65,7 +63,7 @@ const sanitize = (str: unknown): string | null => {
 /** Create a fresh trace for a new recording attempt. */
 export const initStartFlowTrace = async (
   attemptId?: string | null,
-  config: StartFlowConfig = {}
+  config: StartFlowConfig = {},
 ): Promise<StartFlowTrace> => {
   const trace: StartFlowTrace = {
     attemptId: attemptId || null,
@@ -112,7 +110,7 @@ export const initStartFlowTrace = async (
 /** Write a timestamp checkpoint. Merges extra fields without overwriting others. */
 export const traceStep = async (
   stepName: string,
-  extra: Record<string, unknown> = {}
+  extra: Record<string, unknown> = {},
 ): Promise<void> => {
   const now = Date.now();
   try {
@@ -145,7 +143,7 @@ export const traceStep = async (
         // eslint-disable-next-line no-console
         console.warn(
           `[start-flow T+${elapsedMs}ms] ${stepName}`,
-          Object.keys(extra).length ? extra : ""
+          Object.keys(extra).length ? extra : "",
         );
       } catch {}
     }
@@ -169,7 +167,7 @@ export const setStartFlowOutcome = async (
     error?: unknown;
     errorCode?: string | null;
     stuck?: StartFlowStuckState | null;
-  } = {}
+  } = {},
 ): Promise<void> => {
   try {
     const res = await chromeApi().storage.local.get(STORAGE_KEY);
@@ -202,9 +200,7 @@ export const getStartFlowTrace = async (): Promise<StartFlowTrace | null> => {
 };
 
 /** Format the trace as a compact human-readable timeline. */
-export const formatStartFlowTimeline = (
-  trace?: StartFlowTrace | null
-): string | null => {
+export const formatStartFlowTimeline = (trace?: StartFlowTrace | null): string | null => {
   if (!trace?.t) return null;
 
   const base = trace.t.startStreaming;
@@ -239,9 +235,7 @@ export const formatStartFlowTimeline = (
   const lastTs = trace.t.recordingStarted;
   const outcomeStr = trace.outcome || "unknown";
   if (lastTs) {
-    lines.push(
-      `  Outcome: ${outcomeStr} (${((lastTs - base) / 1000).toFixed(2)}s total)`
-    );
+    lines.push(`  Outcome: ${outcomeStr} (${((lastTs - base) / 1000).toFixed(2)}s total)`);
   } else {
     lines.push(`  Outcome: ${outcomeStr}`);
   }

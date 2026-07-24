@@ -40,13 +40,8 @@ interface RemuxFileHandle {
 }
 
 interface RemuxDirectoryHandle {
-  entries(): AsyncIterableIterator<
-    [string, RemuxFileHandle | FileSystemDirectoryHandle]
-  >;
-  getFileHandle(
-    name: string,
-    options?: FileSystemGetFileOptions,
-  ): Promise<RemuxFileHandle>;
+  entries(): AsyncIterableIterator<[string, RemuxFileHandle | FileSystemDirectoryHandle]>;
+  getFileHandle(name: string, options?: FileSystemGetFileOptions): Promise<RemuxFileHandle>;
   removeEntry(name: string): Promise<void>;
 }
 
@@ -58,8 +53,7 @@ const workerScope = self as unknown as {
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-const errorName = (error: unknown): string =>
-  error instanceof Error ? error.name : "Error";
+const errorName = (error: unknown): string => (error instanceof Error ? error.name : "Error");
 
 const getOpfsDirectory = async (): Promise<RemuxDirectoryHandle> =>
   (await navigator.storage.getDirectory()) as unknown as RemuxDirectoryHandle;
@@ -163,9 +157,7 @@ const remuxToOpfs = async ({
     // Pipe encoded packets through the muxer for bounded memory (~8 MiB
     // cache); the Conversion API buffers a full sample table upfront.
     const videoTrack = await input.getPrimaryVideoTrack();
-    const audioTrack = await input
-      .getPrimaryAudioTrack()
-      .catch(() => null);
+    const audioTrack = await input.getPrimaryAudioTrack().catch(() => null);
 
     if (!videoTrack) {
       throw new Error("remux-no-video-track");
@@ -212,11 +204,7 @@ const remuxToOpfs = async ({
       return typeof duration === "number" ? duration : undefined;
     };
     const totalDuration = (() => {
-      const candidates = [
-        durationOf(videoTrack),
-        durationOf(audioTrack),
-        durationOf(input),
-      ];
+      const candidates = [durationOf(videoTrack), durationOf(audioTrack), durationOf(input)];
       for (const v of candidates) {
         if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
       }

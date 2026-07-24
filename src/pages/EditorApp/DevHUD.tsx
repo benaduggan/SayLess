@@ -208,7 +208,7 @@ const DevHUD: React.FC<EditorDevHudProps> = ({
           chrome.i18n.getMessage("understoodButton"),
           null,
           () => {},
-          () => {}
+          () => {},
         );
       },
     },
@@ -221,7 +221,7 @@ const DevHUD: React.FC<EditorDevHudProps> = ({
           chrome.i18n.getMessage("restoreRecording"),
           chrome.i18n.getMessage("havingIssuesModalButton2"),
           () => {},
-          () => {}
+          () => {},
         );
       },
     },
@@ -294,13 +294,8 @@ const DevHUD: React.FC<EditorDevHudProps> = ({
           <div style={{ color: "#8f8" }}>{lastDownloadInfo.path}</div>
           <div style={{ color: "#aaa" }}>
             {Math.round(lastDownloadInfo.durationMs || 0)}ms / in{" "}
-            {Math.round(
-              (lastDownloadInfo.inputBytes || 0) / (1024 * 1024),
-            )}
-            MB / out{" "}
-            {Math.round(
-              (lastDownloadInfo.outputBytes || 0) / (1024 * 1024),
-            )}
+            {Math.round((lastDownloadInfo.inputBytes || 0) / (1024 * 1024))}
+            MB / out {Math.round((lastDownloadInfo.outputBytes || 0) / (1024 * 1024))}
             MB
           </div>
         </div>

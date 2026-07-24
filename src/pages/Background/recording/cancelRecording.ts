@@ -27,10 +27,7 @@ export const handleDismiss = async (): Promise<void> => {
   try {
     await chromeApi().storage.local.set({ restarting: true });
 
-    const { region, wasRegion } = await chromeApi().storage.local.get([
-      "region",
-      "wasRegion",
-    ]);
+    const { region, wasRegion } = await chromeApi().storage.local.get(["region", "wasRegion"]);
 
     if (wasRegion) {
       await chromeApi().storage.local.set({ wasRegion: false, region: true });
@@ -91,10 +88,7 @@ export const cancelRecording = async (): Promise<void> => {
             // distinguish benign "No tab with id" race from real failures
             const msg = errorMessage(removeErr);
             if (!/No tab with id/i.test(msg)) {
-              console.warn(
-                "[SayLess][BG] cancelRecording: removeTab failed",
-                { tabId, err: msg },
-              );
+              console.warn("[SayLess][BG] cancelRecording: removeTab failed", { tabId, err: msg });
             }
           }
         }
@@ -104,8 +98,7 @@ export const cancelRecording = async (): Promise<void> => {
     const candidateTabs = [activeTab, recordingUiTabId, tabRecordedID]
       .map(Number)
       .filter(
-        (id, idx, arr): id is number =>
-          Number.isInteger(id) && id > 0 && arr.indexOf(id) === idx,
+        (id, idx, arr): id is number => Number.isInteger(id) && id > 0 && arr.indexOf(id) === idx,
       );
     candidateTabs.forEach((id) => {
       sendMessageTab(id, { type: "stop-pending" }).catch(() => {});

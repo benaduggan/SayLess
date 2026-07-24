@@ -79,10 +79,7 @@ const writeFileAtomic = (path, bytes) => {
 const writeNonPassingPackageEvidence = ({ status, failedStep = null }) => {
   mkdirSync(EVIDENCE_DIR, { recursive: true });
   const evidence = {
-    kind:
-      status === "failed"
-        ? "sayless.releasePackageFailed"
-        : "sayless.releasePackageIncomplete",
+    kind: status === "failed" ? "sayless.releasePackageFailed" : "sayless.releasePackageIncomplete",
     status,
     generatedAt: new Date().toISOString(),
     remainingReleaseWork:

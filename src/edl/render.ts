@@ -47,11 +47,11 @@ export interface ApplyEdlDependencies {
  */
 export function planEdlOps(edl: Edl): EdlOp[] {
   const mutes = mergeRanges(
-    edl.edits.filter((e) => e.kind === "mute").map((e) => ({ start: e.start, end: e.end }))
+    edl.edits.filter((e) => e.kind === "mute").map((e) => ({ start: e.start, end: e.end })),
   ).sort((a, b) => a.start - b.start);
 
   const deletes = mergeRanges(
-    edl.edits.filter((e) => e.kind === "delete").map((e) => ({ start: e.start, end: e.end }))
+    edl.edits.filter((e) => e.kind === "delete").map((e) => ({ start: e.start, end: e.end })),
   ).sort((a, b) => b.start - a.start); // descending
 
   return [
@@ -88,8 +88,7 @@ export async function applyEdl(
   let done = 0;
 
   for (const op of ops) {
-    const stepProgress = (p: number) =>
-      deps.onProgress?.((done + (p || 0)) / ops.length);
+    const stepProgress = (p: number) => deps.onProgress?.((done + (p || 0)) / ops.length);
     if (op.type === "mute") {
       working = await deps.muteVideo(working, op.start, op.end, duration, stepProgress);
       // duration unchanged

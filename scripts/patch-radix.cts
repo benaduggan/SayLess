@@ -16,7 +16,7 @@ for (const rel of targets) {
     // Replace the concise optional-chaining one-liner with a guarded call
     const replaced = src.replace(
       /return\s+React\.useMemo\([\s\S]*?callbackRef\.current\?\.?\(\.\.\.args\),\s*\[\s*\]\s*\);/m,
-      `return React.useMemo(() => (...args) => {\n    var _callbackRef$current;\n    if (typeof (_callbackRef$current = callbackRef.current) === 'function') {\n      return _callbackRef$current.call(callbackRef, ...args);\n    }\n  }, []);`
+      `return React.useMemo(() => (...args) => {\n    var _callbackRef$current;\n    if (typeof (_callbackRef$current = callbackRef.current) === 'function') {\n      return _callbackRef$current.call(callbackRef, ...args);\n    }\n  }, []);`,
     );
 
     if (src !== replaced) {

@@ -12,9 +12,7 @@ import { contentStateContext } from "../../context/ContentState";
 const Settings = () => {
   const [open, setOpen] = useState(false);
   const [contentState, setContentState] = useContext(contentStateContext);
-  const [chromeVersion, setChromeVersion] = useState<number | false | null>(
-    null
-  );
+  const [chromeVersion, setChromeVersion] = useState<number | false | null>(null);
   // Check if Mac
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
   // Set shortcut to Option+Shift+E on Mac and Alt+Shift+E on Windows, using character codes
@@ -38,15 +36,10 @@ const Settings = () => {
   }, [open]);
 
   return (
-    <Collapsible.Root
-      className="CollapsibleRoot"
-      open={open}
-      onOpenChange={setOpen}
-    >
+    <Collapsible.Root className="CollapsibleRoot" open={open} onOpenChange={setOpen}>
       <Collapsible.Trigger className="CollapsibleTrigger">
         <div className="CollapsibleLabel">
-          ✨ {chrome.i18n.getMessage("showMoreOptionsLabel")}{" "}
-          <img src={DropdownIcon} />
+          ✨ {chrome.i18n.getMessage("showMoreOptionsLabel")} <img src={DropdownIcon} />
         </div>
       </Collapsible.Trigger>
       <Collapsible.Content>
@@ -61,11 +54,7 @@ const Settings = () => {
           name="countdown"
           value="countdown"
         />
-        <Switch
-          label={chrome.i18n.getMessage("alarmLabel")}
-          name="alarm"
-          value="alarm"
-        />
+        <Switch label={chrome.i18n.getMessage("alarmLabel")} name="alarm" value="alarm" />
         {contentState.alarm && <TimeSetter />}
         <Switch
           label={chrome.i18n.getMessage("micReminderPopup")}
@@ -74,9 +63,7 @@ const Settings = () => {
         />
         {contentState.recordingType != "camera" && (
           <Switch
-            label={
-              chrome.i18n.getMessage("zoomToPointPopup") + " (" + shortcut + ")"
-            }
+            label={chrome.i18n.getMessage("zoomToPointPopup") + " (" + shortcut + ")"}
             name="zoomEnabled"
             value="zoomEnabled"
             experimental={true}

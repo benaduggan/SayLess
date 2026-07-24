@@ -1,4 +1,4 @@
-import styles from "../../styles/player/_Nav.module.scss";
+import styles from "../../styles/player/_Nav.module.css";
 
 // Icons
 import { ReactSVG } from "react-svg";

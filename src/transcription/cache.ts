@@ -13,9 +13,7 @@ const CACHE_STORE = localforage.createInstance({
 const textEncoder = () => new TextEncoder();
 
 const toHex = (buffer: ArrayBuffer): string =>
-  [...new Uint8Array(buffer)]
-    .map((value) => value.toString(16).padStart(2, "0"))
-    .join("");
+  [...new Uint8Array(buffer)].map((value) => value.toString(16).padStart(2, "0")).join("");
 
 export const hashTranscriptSource = async (blob: Blob | null): Promise<string | null> => {
   if (!blob) return null;

@@ -43,10 +43,7 @@ test("project audio metadata normalizes portable bounded fields", () => {
 test("project audio metadata rejects unresolved or oversized assets", () => {
   assert.equal(normalizeProjectAudioTrack({ ...validTrack, sha256: "bad" }), null);
   assert.equal(normalizeProjectAudioTrack({ ...validTrack, byteSize: 0 }), null);
-  assert.equal(
-    normalizeProjectAudioTrack({ ...validTrack, byteSize: 50_000_001 }),
-    null,
-  );
+  assert.equal(normalizeProjectAudioTrack({ ...validTrack, byteSize: 50_000_001 }), null);
 });
 
 test("project audio preview wraps looping assets in output time", () => {
@@ -92,12 +89,12 @@ test("project audio preview follows reordered timeline output time", () => {
     ],
   };
 
-  assert.deepEqual(
-    resolveProjectAudioPreviewPosition(sourceToOutput(timeline, 6.5), 1.5, true),
-    { currentTime: 0.5, shouldPlay: true },
-  );
-  assert.deepEqual(
-    resolveProjectAudioPreviewPosition(sourceToOutput(timeline, 0.5), 1.5, true),
-    { currentTime: 1, shouldPlay: true },
-  );
+  assert.deepEqual(resolveProjectAudioPreviewPosition(sourceToOutput(timeline, 6.5), 1.5, true), {
+    currentTime: 0.5,
+    shouldPlay: true,
+  });
+  assert.deepEqual(resolveProjectAudioPreviewPosition(sourceToOutput(timeline, 0.5), 1.5, true), {
+    currentTime: 1,
+    shouldPlay: true,
+  });
 });

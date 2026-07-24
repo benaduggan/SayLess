@@ -31,18 +31,15 @@ interface TextCanvas {
   off(event: string, listener: (event: TextCanvasEvent) => void): void;
 }
 
-type SetTextToolState = (
-  update: (previous: TextToolState) => TextToolState
-) => void;
+type SetTextToolState = (update: (previous: TextToolState) => TextToolState) => void;
 
 const TextTool = (
   canvas: TextCanvas,
   contentStateRef: { current?: TextToolState | null },
   setContentState: SetTextToolState,
-  saveCanvas: (state: TextToolState, setter: SetTextToolState) => void
+  saveCanvas: (state: TextToolState, setter: SetTextToolState) => void,
 ): { removeEventListeners(): void } => {
-  const getState = (): TextToolState | null | undefined =>
-    contentStateRef.current;
+  const getState = (): TextToolState | null | undefined => contentStateRef.current;
 
   // Track the currently-created textbox so we can finalize it cleanly
   let activeCreatedText: TextboxCompat | null = null;

@@ -19,21 +19,19 @@ es.addEventListener(
   () => {
     logger("Connected to dev server");
   },
-  false
+  false,
 );
 
 es.addEventListener(
   "error",
   (event) => {
     if ((event.target as EventSource | null)?.readyState === 0) {
-      console.error(
-        "[Background] Dev server connection failed - is it running?"
-      );
+      console.error("[Background] Dev server connection failed - is it running?");
     } else {
       console.error("[Background] SSE error:", event);
     }
   },
-  false
+  false,
 );
 
 // Handle background script update events
@@ -43,7 +41,7 @@ es.addEventListener(
     logger("Background script updated, reloading extension...");
     chrome.runtime.reload();
   },
-  false
+  false,
 );
 
 // Handle content script update events
@@ -78,13 +76,13 @@ es.addEventListener(
                 } else {
                   resolve(false);
                 }
-              }
+              },
             );
           } catch (err) {
             logger(
               `Error sending message to tab ${tab.id}: ${
                 err instanceof Error ? err.message : String(err)
-              }`
+              }`,
             );
             resolve(false);
           }
@@ -105,5 +103,5 @@ es.addEventListener(
       });
     });
   },
-  false
+  false,
 );

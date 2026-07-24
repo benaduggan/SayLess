@@ -4,8 +4,7 @@ import { contentStateContext } from "../context/ContentState";
 import { lifecycle } from "../../utils/lifecycleLog";
 
 const COUNTDOWN_TIME = 3;
-const DEBUG_START_FLOW =
-  typeof window !== "undefined" ? !!window.SAYLESS_DEBUG_RECORDER : false;
+const DEBUG_START_FLOW = typeof window !== "undefined" ? !!window.SAYLESS_DEBUG_RECORDER : false;
 
 const Countdown = () => {
   const [contentState, setContentState] = useContext(contentStateContext);
@@ -59,7 +58,7 @@ const Countdown = () => {
     try {
       const update: Record<string, unknown> = {
         startFlowDebug: {
-          ...(data || {}),
+          ...data,
           event,
           ts: payload.ts,
         },
@@ -254,11 +253,14 @@ const Countdown = () => {
         }
       }, 10);
 
-      const transformId = setTimeout(() => {
-        if (!cancelledRef.current) {
-          setIsTransforming(false);
-        }
-      }, (COUNTDOWN_TIME * 1000) / 2);
+      const transformId = setTimeout(
+        () => {
+          if (!cancelledRef.current) {
+            setIsTransforming(false);
+          }
+        },
+        (COUNTDOWN_TIME * 1000) / 2,
+      );
 
       return () => {
         clearTimeout(rotateId);
@@ -282,9 +284,7 @@ const Countdown = () => {
 
   return (
     <div
-      className={`countdown ${
-        contentState.countdownActive ? "recording-countdown" : ""
-      }`}
+      className={`countdown ${contentState.countdownActive ? "recording-countdown" : ""}`}
       onClick={handleCancel}
     >
       {contentState.isCountdownVisible && (
@@ -325,9 +325,7 @@ const Countdown = () => {
             </div>
           </div>
 
-          <div className="countdown-info">
-            {chrome.i18n.getMessage("countdownMessage")}
-          </div>
+          <div className="countdown-info">{chrome.i18n.getMessage("countdownMessage")}</div>
           <div className="countdown-overlay"></div>
         </div>
       )}

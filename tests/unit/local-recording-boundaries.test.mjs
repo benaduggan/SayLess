@@ -15,7 +15,7 @@ test("local recording storage entries are normalized field by field", () => {
       thumbnailDataUrl: "https://example.test/thumbnail.png",
       recordingMeta: ["not", "a", "record"],
     },
-    "index-id"
+    "index-id",
   );
 
   assert.equal(entry.id, "index-id");
@@ -33,7 +33,7 @@ test("local recording storage accepts only a valid OPFS backend reference", () =
     {
       backendRef: { backend: "opfs", fileName: "recording-123.mp4" },
     },
-    "recording-123"
+    "recording-123",
   );
 
   assert.deepEqual(entry.backendRef, {

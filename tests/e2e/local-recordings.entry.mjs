@@ -24,35 +24,21 @@ globalThis.chrome = {
   },
 };
 
-const library = await import(
-  "../../src/pages/localRecordings/localRecordingLibrary.ts"
-);
+const library = await import("../../src/pages/localRecordings/localRecordingLibrary.ts");
 const transcriptCache = await import("../../src/transcription/cache.ts");
 const timeline = await import("../../src/edl/timeline.ts");
 const transcriptEdit = await import("../../src/edl/fromTranscript.ts");
 const suggestions = await import("../../src/edl/suggestions.ts");
-const renderTimeline = await import(
-  "../../src/pages/Editor/utils/renderTimeline.ts"
-);
-const renderTimelineAudio = await import(
-  "../../src/pages/Editor/utils/renderTimelineAudio.ts"
-);
-const mixProjectAudio = await import(
-  "../../src/pages/Editor/utils/mixProjectAudio.ts"
-);
-const validateProjectAudio = await import(
-  "../../src/pages/Editor/utils/validateProjectAudio.ts"
-);
-const projectAudioPreviewController = await import(
-  "../../src/pages/EditorApp/components/editor/projectAudioPreviewController.ts"
-);
+const renderTimeline = await import("../../src/pages/Editor/utils/renderTimeline.ts");
+const renderTimelineAudio = await import("../../src/pages/Editor/utils/renderTimelineAudio.ts");
+const mixProjectAudio = await import("../../src/pages/Editor/utils/mixProjectAudio.ts");
+const validateProjectAudio = await import("../../src/pages/Editor/utils/validateProjectAudio.ts");
+const projectAudioPreviewController =
+  await import("../../src/pages/EditorApp/components/editor/projectAudioPreviewController.ts");
 const audio = await import("../../src/transcription/audio.ts");
-const exportJobState = await import(
-  "../../src/pages/EditorApp/context/exportJobState.ts"
-);
-const exportPanelState = await import(
-  "../../src/pages/EditorApp/layout/player/exportPanelState.ts"
-);
+const exportJobState = await import("../../src/pages/EditorApp/context/exportJobState.ts");
+const exportPanelState =
+  await import("../../src/pages/EditorApp/layout/player/exportPanelState.ts");
 const editorOps = await import("../../src/pages/EditorApp/editorOps.ts");
 
 window.LOCAL_RECORDINGS = library;
@@ -64,8 +50,7 @@ window.RENDER_TIMELINE = renderTimeline.default;
 window.RENDER_TIMELINE_AUDIO = renderTimelineAudio.default;
 window.MIX_PROJECT_AUDIO = mixProjectAudio.default;
 window.VALIDATE_PROJECT_AUDIO = validateProjectAudio.validateProjectAudioBlob;
-window.ATTACH_PROJECT_AUDIO_PREVIEW =
-  projectAudioPreviewController.attachProjectAudioPreview;
+window.ATTACH_PROJECT_AUDIO_PREVIEW = projectAudioPreviewController.attachProjectAudioPreview;
 window.TRANSCRIPTION_AUDIO = audio;
 window.EXPORT_JOB_STATE = exportJobState;
 window.EXPORT_PANEL_STATE = exportPanelState;

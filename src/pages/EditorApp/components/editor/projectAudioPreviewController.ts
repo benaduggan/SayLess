@@ -57,27 +57,18 @@ export function attachProjectAudioPreview({
 
   const position = () => {
     const sourceTime = Number(video.currentTime) || 0;
-    const outputTime = timeline
-      ? sourceToOutput(timeline, sourceTime)
-      : sourceTime;
+    const outputTime = timeline ? sourceToOutput(timeline, sourceTime) : sourceTime;
     // Timeline preview will immediately snap deleted source gaps to a retained
     // clip. Preserve the current added-audio playhead during that transition.
     return outputTime == null
       ? null
-      : resolveProjectAudioPreviewPosition(
-          outputTime,
-          audio.duration,
-          audioTrack.loop,
-        );
+      : resolveProjectAudioPreviewPosition(outputTime, audio.duration, audioTrack.loop);
   };
 
   const sync = (force = false) => {
     const next = position();
     if (!next) return;
-    if (
-      force ||
-      Math.abs((Number(audio.currentTime) || 0) - next.currentTime) > 0.3
-    ) {
+    if (force || Math.abs((Number(audio.currentTime) || 0) - next.currentTime) > 0.3) {
       try {
         audio.currentTime = next.currentTime;
       } catch {

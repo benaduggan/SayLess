@@ -79,11 +79,7 @@ test("timeline preview applies muted clip state and restores audio on stop", () 
   harness.tick();
   preview.stop();
 
-  assert.deepEqual(harness.events, [
-    ["muted", true],
-    ["unsubscribe"],
-    ["muted", false],
-  ]);
+  assert.deepEqual(harness.events, [["muted", true], ["unsubscribe"], ["muted", false]]);
 });
 
 test("timeline preview pauses at the final clip end", () => {

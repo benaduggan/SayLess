@@ -35,16 +35,11 @@ export interface TrackSnapshot {
   capabilities: MediaTrackCapabilities;
 }
 
-export function buildTrackSnapshot(
-  track?: MediaStreamTrack | null,
-): TrackSnapshot | null {
+export function buildTrackSnapshot(track?: MediaStreamTrack | null): TrackSnapshot | null {
   if (!track) return null;
-  const settings =
-    typeof track.getSettings === "function" ? track.getSettings() : {};
-  const constraints =
-    typeof track.getConstraints === "function" ? track.getConstraints() : {};
-  const capabilities =
-    typeof track.getCapabilities === "function" ? track.getCapabilities() : {};
+  const settings = typeof track.getSettings === "function" ? track.getSettings() : {};
+  const constraints = typeof track.getConstraints === "function" ? track.getConstraints() : {};
+  const capabilities = typeof track.getCapabilities === "function" ? track.getCapabilities() : {};
   return {
     label: track.label,
     settings,

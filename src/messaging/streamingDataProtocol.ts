@@ -13,9 +13,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const optionalString = (value: unknown): string | null =>
   typeof value === "string" && value.length > 0 ? value : null;
 
-export const normalizeStreamingDataPayload = (
-  value: unknown
-): StreamingDataPayload | null => {
+export const normalizeStreamingDataPayload = (value: unknown): StreamingDataPayload | null => {
   if (!isRecord(value)) return null;
   return {
     micActive: value.micActive === true,
@@ -27,9 +25,7 @@ export const normalizeStreamingDataPayload = (
   };
 };
 
-export const parseStreamingDataPayload = (
-  serialized: unknown
-): StreamingDataPayload | null => {
+export const parseStreamingDataPayload = (serialized: unknown): StreamingDataPayload | null => {
   if (typeof serialized !== "string") return null;
   try {
     const parsed: unknown = JSON.parse(serialized);

@@ -52,9 +52,7 @@ export interface AudioDiagnosticsSnapshot {
 }
 
 const asRecord = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {};
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
 
 const numberOrNull = (value: unknown): NullableNumber => {
   if (value === null || value === undefined || value === "") return null;
@@ -70,8 +68,7 @@ const safeTrack = (value: unknown): SafeAudioTrack | null => {
   if (Object.keys(track).length === 0) return null;
   return {
     enabled: boolOrNull(track.enabled),
-    readyState:
-      typeof track.readyState === "string" ? track.readyState.slice(0, 24) : null,
+    readyState: typeof track.readyState === "string" ? track.readyState.slice(0, 24) : null,
     sampleRate: numberOrNull(track.sampleRate),
     channelCount: numberOrNull(track.channelCount),
     echoCancellation: boolOrNull(track.echoCancellation),
@@ -87,12 +84,8 @@ const safeRoute = (value: unknown): SafeAudioRoute | null => {
   return {
     at: numberOrNull(snapshot.at),
     mode: typeof snapshot.mode === "string" ? snapshot.mode.slice(0, 32) : null,
-    audioContextSampleRate: numberOrNull(
-      snapshot.audioContextSampleRate,
-    ),
-    liveStreamAudioTrackCount: numberOrNull(
-      snapshot.liveStreamAudioTrackCount,
-    ),
+    audioContextSampleRate: numberOrNull(snapshot.audioContextSampleRate),
+    liveStreamAudioTrackCount: numberOrNull(snapshot.liveStreamAudioTrackCount),
     route: {
       useDirectMicTrack: Boolean(route.useDirectMicTrack),
       connectMicToMixer: Boolean(route.connectMicToMixer),
@@ -138,25 +131,17 @@ const safeEncoder = (value: unknown): SafeEncoderSnapshot | null => {
     firstFrameSampleRate: numberOrNull(snapshot.firstFrameSampleRate),
     firstFrameChannels: numberOrNull(snapshot.firstFrameChannels),
     firstFrameFormat:
-      typeof snapshot.firstFrameFormat === "string"
-        ? snapshot.firstFrameFormat.slice(0, 32)
-        : null,
+      typeof snapshot.firstFrameFormat === "string" ? snapshot.firstFrameFormat.slice(0, 32) : null,
     paddedSilenceCount: numberOrNull(snapshot.paddedSilenceCount),
     finalAudioElapsedUs: numberOrNull(snapshot.finalAudioElapsedUs),
     finalAudioSamplesWritten: numberOrNull(snapshot.finalAudioSamplesWritten),
     finalAudioSampleRate: numberOrNull(snapshot.finalAudioSampleRate),
-    finalFirstAudioFrameSampleRate: numberOrNull(
-      snapshot.finalFirstAudioFrameSampleRate,
-    ),
+    finalFirstAudioFrameSampleRate: numberOrNull(snapshot.finalFirstAudioFrameSampleRate),
     finalAudioSampleRateMismatchRebuilds: numberOrNull(
       snapshot.finalAudioSampleRateMismatchRebuilds,
     ),
-    finalDroppedAudioForBackpressure: numberOrNull(
-      snapshot.finalDroppedAudioForBackpressure,
-    ),
-    finalPeakAudioEncodeQueueSize: numberOrNull(
-      snapshot.finalPeakAudioEncodeQueueSize,
-    ),
+    finalDroppedAudioForBackpressure: numberOrNull(snapshot.finalDroppedAudioForBackpressure),
+    finalPeakAudioEncodeQueueSize: numberOrNull(snapshot.finalPeakAudioEncodeQueueSize),
     finalAudioFlushMs: numberOrNull(snapshot.finalAudioFlushMs),
     finalMuxerFinalizeOk: boolOrNull(snapshot.finalMuxerFinalizeOk),
     finalFramesEncoded: numberOrNull(snapshot.finalFramesEncoded),
@@ -177,15 +162,10 @@ export const buildFinalWebCodecsAudioSnapshot = (
     finalAudioElapsedUs: numberOrNull(diag.audioElapsedUs),
     finalAudioSamplesWritten: numberOrNull(diag.audioSamplesWritten),
     finalAudioSampleRate: numberOrNull(diag.audioSampleRate),
-    finalFirstAudioFrameSampleRate: numberOrNull(
-      diag.firstAudioFrameSampleRate,
-    ),
-    finalAudioSampleRateMismatchRebuilds: numberOrNull(
-      diag.audioSampleRateMismatchRebuilds,
-    ),
+    finalFirstAudioFrameSampleRate: numberOrNull(diag.firstAudioFrameSampleRate),
+    finalAudioSampleRateMismatchRebuilds: numberOrNull(diag.audioSampleRateMismatchRebuilds),
     finalDroppedAudioForBackpressure: numberOrNull(
-      droppedForBackpressure.audio ??
-        diag.droppedAudioForBackpressure,
+      droppedForBackpressure.audio ?? diag.droppedAudioForBackpressure,
     ),
     finalPeakAudioEncodeQueueSize: numberOrNull(
       peakEncodeQueueSize.audio ?? diag.peakAudioEncodeQueueSize,
@@ -201,16 +181,18 @@ export const persistFinalWebCodecsAudioSnapshot = async (
 ): Promise<SafeEncoderSnapshot> => {
   const finalSnapshot = buildFinalWebCodecsAudioSnapshot(payload);
   try {
-    const chromeApi = (globalThis as typeof globalThis & {
-      chrome: {
-        storage: {
-          local: {
-            get: (keys: string[]) => Promise<Record<string, unknown>>;
-            set: (values: Record<string, unknown>) => Promise<void>;
+    const chromeApi = (
+      globalThis as typeof globalThis & {
+        chrome: {
+          storage: {
+            local: {
+              get: (keys: string[]) => Promise<Record<string, unknown>>;
+              set: (values: Record<string, unknown>) => Promise<void>;
+            };
           };
         };
-      };
-    }).chrome;
+      }
+    ).chrome;
     const res = await chromeApi.storage.local.get(["lastRecordingAudioSnapshot"]);
     await chromeApi.storage.local.set({
       lastRecordingAudioSnapshot: {
@@ -239,9 +221,7 @@ export const buildAudioDiagnosticsSnapshot = (
   return Object.keys(out).length ? out : null;
 };
 
-export const buildAudioDiagnosticsContext = (
-  store: unknown = {},
-): Record<string, string> => {
+export const buildAudioDiagnosticsContext = (store: unknown = {}): Record<string, string> => {
   const snapshot = buildAudioDiagnosticsSnapshot(store);
   if (!snapshot) return {};
 
@@ -271,9 +251,7 @@ export const buildAudioDiagnosticsContext = (
     ctx.padSilence = String(snapshot.encoder.paddedSilenceCount);
   }
   if (typeof snapshot.encoder?.finalAudioElapsedUs === "number") {
-    ctx.finalAudioMs = String(
-      Math.round(snapshot.encoder.finalAudioElapsedUs / 1000),
-    );
+    ctx.finalAudioMs = String(Math.round(snapshot.encoder.finalAudioElapsedUs / 1000));
   }
   if (snapshot.encoder?.finalDroppedAudioForBackpressure != null) {
     ctx.audioDrops = String(snapshot.encoder.finalDroppedAudioForBackpressure);
@@ -282,9 +260,7 @@ export const buildAudioDiagnosticsContext = (
     ctx.audioQPeak = String(snapshot.encoder.finalPeakAudioEncodeQueueSize);
   }
   if (snapshot.encoder?.finalAudioSampleRateMismatchRebuilds != null) {
-    ctx.audioRateRebuilds = String(
-      snapshot.encoder.finalAudioSampleRateMismatchRebuilds,
-    );
+    ctx.audioRateRebuilds = String(snapshot.encoder.finalAudioSampleRateMismatchRebuilds);
   }
   return ctx;
 };
@@ -301,9 +277,7 @@ export const formatAudioDiagnosticsLines = (store: unknown = {}): string[] => {
     );
   }
   if (ctx.encHz || ctx.firstAudioHz) {
-    lines.push(
-      `Encoder:  ${ctx.encHz || "?"}Hz first=${ctx.firstAudioHz || "?"}Hz`,
-    );
+    lines.push(`Encoder:  ${ctx.encHz || "?"}Hz first=${ctx.firstAudioHz || "?"}Hz`);
   }
   if (ctx.finalAudioMs || ctx.audioDrops || ctx.audioQPeak) {
     lines.push(

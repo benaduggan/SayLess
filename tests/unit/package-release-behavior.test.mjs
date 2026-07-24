@@ -77,7 +77,10 @@ const makeFixture = ({ invalidManualEvidence = false, leakedSecret = false } = {
   writeFileSync(join(buildDir, "manifest.json"), '{"version":"9.9.9"}\n');
   writeFileSync(join(buildDir, "nested", "asset.txt"), "offline asset bytes");
   if (leakedSecret) {
-    writeFileSync(join(buildDir, "nested", "secret.js"), 'const token = "sk_live_1234567890abcdef";\n');
+    writeFileSync(
+      join(buildDir, "nested", "secret.js"),
+      'const token = "sk_live_1234567890abcdef";\n',
+    );
   }
   writeCompleteReleaseEvidence({
     artifactsDir,
@@ -126,9 +129,16 @@ test("package release writes zip and traceable package evidence for a verified f
       .filter((entry) => !entry.dir)
       .map((entry) => entry.name)
       .sort();
-    assert.deepEqual(zipFilePaths, ["assets/whisper/model.bin", "manifest.json", "nested/asset.txt"]);
+    assert.deepEqual(zipFilePaths, [
+      "assets/whisper/model.bin",
+      "manifest.json",
+      "nested/asset.txt",
+    ]);
     assert.equal(await zip.file("manifest.json").async("string"), '{"version":"9.9.9"}\n');
-    assert.equal(await zip.file("assets/whisper/model.bin").async("string"), "bundled local whisper bytes");
+    assert.equal(
+      await zip.file("assets/whisper/model.bin").async("string"),
+      "bundled local whisper bytes",
+    );
     assert.equal(await zip.file("nested/asset.txt").async("string"), "offline asset bytes");
 
     const buildFingerprint = fingerprintFiles(walkFiles(fixture.buildDir));
@@ -155,7 +165,10 @@ test("package release writes zip and traceable package evidence for a verified f
     assert.equal(evidence.manualEvidence.status, "passed");
     assert.equal(evidence.manualEvidence.testedAt, manualEvidence.testedAt);
     assert.equal(evidence.build.path, "build");
-    assert.equal(evidence.build.bytes, walkFiles(fixture.buildDir).reduce((total, file) => total + file.size, 0));
+    assert.equal(
+      evidence.build.bytes,
+      walkFiles(fixture.buildDir).reduce((total, file) => total + file.size, 0),
+    );
     assert.equal(evidence.build.formattedBytes, formatBytes(evidence.build.bytes));
     assert.equal(evidence.build.fileCount, buildFingerprint.fileCount);
     assert.equal(evidence.build.sha256, buildFingerprint.sha256);

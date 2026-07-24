@@ -13,9 +13,7 @@ import { AlertIcon, TimeIcon } from "../../toolbar/components/SVG";
 
 type PermissionMediaType = "camera" | "microphone";
 
-const RecordingType = (props: {
-  shadowRef: React.RefObject<HTMLElement | null>;
-}) => {
+const RecordingType = (props: { shadowRef: React.RefObject<HTMLElement | null> }) => {
   const [contentState, setContentState] = useContext(contentStateContext);
   const [cropActive, setCropActive] = useState(false);
   const [time, setTime] = useState("0:00");
@@ -34,9 +32,7 @@ const RecordingType = (props: {
     if (typeof contentState.openModal !== "function") return;
     const isBlockedBySite = mediaTypes.some(
       (type: PermissionMediaType) =>
-        contentState[
-          `site${type[0].toUpperCase()}${type.slice(1)}PermissionBlocked`
-        ]
+        contentState[`site${type[0].toUpperCase()}${type.slice(1)}PermissionBlocked`],
     );
     if (isBlockedBySite) {
       contentState.openModal(
@@ -50,13 +46,12 @@ const RecordingType = (props: {
         null,
         null,
         true,
-        false
+        false,
       );
       return;
     }
     const hasDeniedPermission = mediaTypes.some(
-      (type: PermissionMediaType) =>
-        contentState[`${type}PermissionState`] === "denied"
+      (type: PermissionMediaType) => contentState[`${type}PermissionState`] === "denied",
     );
     const requestPermissions = () => {
       if (hasDeniedPermission) {
@@ -86,7 +81,7 @@ const RecordingType = (props: {
       chrome.i18n.getMessage("learnMoreDot"),
       URL2,
       true,
-      false
+      false,
     );
   };
 
@@ -159,42 +154,33 @@ const RecordingType = (props: {
           </div>
         </div>
       )}
-      {!cropActive &&
-        contentState.recordingType === "region" &&
-        !contentState.offline && (
-          <div className="popup-warning">
-            <div className="popup-warning-left">
-              <AlertIcon />
+      {!cropActive && contentState.recordingType === "region" && !contentState.offline && (
+        <div className="popup-warning">
+          <div className="popup-warning-left">
+            <AlertIcon />
+          </div>
+          <div className="popup-warning-middle">
+            <div className="popup-warning-title">
+              {chrome.i18n.getMessage("customAreaRecordingDisabledTitle")}
             </div>
-            <div className="popup-warning-middle">
-              <div className="popup-warning-title">
-                {chrome.i18n.getMessage("customAreaRecordingDisabledTitle")}
-              </div>
-              <div className="popup-warning-description">
-                {chrome.i18n.getMessage(
-                  "customAreaRecordingDisabledDescription"
-                )}
-              </div>
-            </div>
-            <div className="popup-warning-right">
-              <a href={URL} target="_blank">
-                {chrome.i18n.getMessage("customAreaRecordingDisabledAction")}
-              </a>
+            <div className="popup-warning-description">
+              {chrome.i18n.getMessage("customAreaRecordingDisabledDescription")}
             </div>
           </div>
-        )}
+          <div className="popup-warning-right">
+            <a href={URL} target="_blank">
+              {chrome.i18n.getMessage("customAreaRecordingDisabledAction")}
+            </a>
+          </div>
+        </div>
+      )}
       {!contentState.cameraPermission && (
-        <button
-          className="permission-button"
-          onClick={() => openPermissionsModal(["camera"])}
-        >
+        <button className="permission-button" onClick={() => openPermissionsModal(["camera"])}>
           <img src={CameraOffBlue} />
           <span>{chrome.i18n.getMessage("allowCameraAccessButton")}</span>
         </button>
       )}
-      {contentState.cameraPermission && (
-        <Dropdown type="camera" shadowRef={props.shadowRef} />
-      )}
+      {contentState.cameraPermission && <Dropdown type="camera" shadowRef={props.shadowRef} />}
       {contentState.cameraPermission &&
         contentState.defaultVideoInput != "none" &&
         contentState.cameraActive && (
@@ -217,17 +203,12 @@ const RecordingType = (props: {
         )}
 
       {!contentState.microphonePermission && (
-        <button
-          className="permission-button"
-          onClick={() => openPermissionsModal(["microphone"])}
-        >
+        <button className="permission-button" onClick={() => openPermissionsModal(["microphone"])}>
           <img src={MicOffBlue} />
           <span>{chrome.i18n.getMessage("allowMicrophoneAccessButton")}</span>
         </button>
       )}
-      {contentState.microphonePermission && (
-        <Dropdown type="mic" shadowRef={props.shadowRef} />
-      )}
+      {contentState.microphonePermission && <Dropdown type="mic" shadowRef={props.shadowRef} />}
       {((contentState.microphonePermission &&
         contentState.defaultAudioInput != "none" &&
         contentState.micActive) ||
@@ -288,15 +269,13 @@ const RecordingType = (props: {
           {contentState.pendingRecording
             ? chrome.i18n.getMessage("recordButtonInProgressLabel")
             : (!contentState.cameraPermission || !contentState.cameraActive) &&
-              contentState.recordingType === "camera"
-            ? chrome.i18n.getMessage("recordButtonNoCameraLabel")
-            : contentState.multiMode && contentState.multiSceneCount > 0
-            ? chrome.i18n.getMessage("recordButtonMultiLabel")
-            : chrome.i18n.getMessage("recordButtonLabel")}
+                contentState.recordingType === "camera"
+              ? chrome.i18n.getMessage("recordButtonNoCameraLabel")
+              : contentState.multiMode && contentState.multiSceneCount > 0
+                ? chrome.i18n.getMessage("recordButtonMultiLabel")
+                : chrome.i18n.getMessage("recordButtonLabel")}
         </span>
-        <span className="main-button-shortcut">
-          {contentState.recordingShortcut}
-        </span>
+        <span className="main-button-shortcut">{contentState.recordingShortcut}</span>
       </button>
       <Settings />
     </div>

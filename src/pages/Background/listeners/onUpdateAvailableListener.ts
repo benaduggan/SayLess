@@ -11,9 +11,7 @@ const RECHECK_INTERVAL_MS = 60_000;
 
 let pendingUpdateDetails: { version?: string | null } | null = null;
 let recheckTimer: ReturnType<typeof setInterval> | null = null;
-let storageListener:
-  | ((changes: Record<string, unknown>, area: string) => void)
-  | null = null;
+let storageListener: ((changes: Record<string, unknown>, area: string) => void) | null = null;
 
 const tryApplyUpdate = async (): Promise<void> => {
   if (!pendingUpdateDetails) return;

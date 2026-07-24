@@ -23,9 +23,7 @@ const isOpfsSyncSupported = (): boolean => {
   }
 };
 
-export const chooseWriter = async ({
-  preferOpfs = true,
-}: { preferOpfs?: boolean } = {}): Promise<{
+export const chooseWriter = async ({ preferOpfs = true }: { preferOpfs?: boolean } = {}): Promise<{
   writer: ChunkWriter;
   backend: "opfs" | "idb";
 }> => {

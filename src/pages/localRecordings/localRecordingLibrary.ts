@@ -1,11 +1,7 @@
 import localforage from "localforage";
 import type { NormalizedProject, UnknownRecord } from "./projectSchema";
 import type { CaptionProject, CaptionWord } from "../../edl/captions";
-import {
-  buildCaptionCues,
-  normalizeCaptionWords,
-  sanitizeCaptionText,
-} from "../../edl/captions";
+import { buildCaptionCues, normalizeCaptionWords, sanitizeCaptionText } from "../../edl/captions";
 import { createTimeline } from "../../edl/timeline";
 import {
   PROJECT_SCHEMA_VERSION,
@@ -20,10 +16,7 @@ import {
   computeThumbnailCaptureTime,
 } from "./thumbnail";
 import { normalizeLocalRecordingStorageFields } from "./localRecordingEntry";
-import {
-  MAX_PROJECT_AUDIO_BYTES,
-  normalizeProjectAudioTrack,
-} from "../../edl/projectAudio";
+import { MAX_PROJECT_AUDIO_BYTES, normalizeProjectAudioTrack } from "../../edl/projectAudio";
 import type { ProjectAudioMode, ProjectAudioTrack } from "../../edl/projectAudio";
 
 export interface LocalRecordingBackendRef {
@@ -99,21 +92,18 @@ const TRANSCRIPT_SIDECAR_SCHEMA_VERSION = 1;
 const TRANSCRIPT_SIDECAR_KIND = "sayless.localRecordingTranscript";
 const THUMBNAIL_TIMEOUT_MS = 5000;
 
-export const localRecordingAudioAssetKey = (
-  recordingId: string,
-  assetId: string,
-): string => `project-audio:${recordingId}:${assetId}`;
+export const localRecordingAudioAssetKey = (recordingId: string, assetId: string): string =>
+  `project-audio:${recordingId}:${assetId}`;
 
 const storageGet = (keys: string[]) => chrome.storage.local.get(keys);
-const storageSet = (value: Record<string, unknown>) =>
-  chrome.storage.local.set(value);
+const storageSet = (value: Record<string, unknown>) => chrome.storage.local.set(value);
 
 const now = () => Date.now();
 let entryWriteQueue: Promise<void> = Promise.resolve();
 
 export const localRecordingIdFromBackendRef = (
   backendRef: LocalRecordingBackendRef | null,
-  fallback: string | null = null
+  fallback: string | null = null,
 ): string => {
   if (backendRef?.backend === "opfs" && backendRef.fileName) {
     return backendRef.fileName.replace(/\.(mp4|webm)$/i, "");
@@ -124,9 +114,8 @@ export const localRecordingIdFromBackendRef = (
 const inferMimeFromName = (name: string | null | undefined): string =>
   /\.webm$/i.test(name || "") ? "video/webm" : "video/mp4";
 
-const extensionForMime = (
-  mimeType: string | null | undefined
-): "webm" | "mp4" => (/webm/i.test(mimeType || "") ? "webm" : "mp4");
+const extensionForMime = (mimeType: string | null | undefined): "webm" | "mp4" =>
+  /webm/i.test(mimeType || "") ? "webm" : "mp4";
 
 const safeFileBaseName = (name: unknown): string => {
   const cleaned = String(name || "recording")
@@ -138,9 +127,7 @@ const safeFileBaseName = (name: unknown): string => {
 };
 
 const titleFromFileName = (name: string): string =>
-  safeFileBaseName(
-    String(name || "Imported recording").replace(/\.[^.]+$/, "")
-  );
+  safeFileBaseName(String(name || "Imported recording").replace(/\.[^.]+$/, ""));
 
 const formatVttTimestamp = (seconds: unknown): string => {
   const totalMillis = Math.max(0, Math.round((Number(seconds) || 0) * 1000));
@@ -150,19 +137,16 @@ const formatVttTimestamp = (seconds: unknown): string => {
   const millis = totalMillis % 1000;
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
     2,
-    "0"
-  )}:${String(wholeSeconds).padStart(2, "0")}.${String(millis).padStart(
-    3,
-    "0"
-  )}`;
+    "0",
+  )}:${String(wholeSeconds).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
 };
 
 const buildWebVtt = (words: readonly CaptionWord[]): string => {
   const cues = buildCaptionCues(words).map(
     (cue) =>
       `${formatVttTimestamp(cue.start)} --> ${formatVttTimestamp(
-        cue.end
-      )}\n${sanitizeCaptionText(cue.text)}`
+        cue.end,
+      )}\n${sanitizeCaptionText(cue.text)}`,
   );
   return `WEBVTT\n\n${cues.join("\n\n")}${cues.length ? "\n" : ""}`;
 };
@@ -174,22 +158,17 @@ const referencedBlobKeys = (index: LocalRecordingIndex): Set<string> =>
         entry.blobKey,
         entry.editedBlobKey,
         entry.project?.audioTrack
-          ? localRecordingAudioAssetKey(
-              entry.id,
-              entry.project.audioTrack.assetId,
-            )
+          ? localRecordingAudioAssetKey(entry.id, entry.project.audioTrack.assetId)
           : null,
       ])
-      .filter((key): key is string => Boolean(key))
+      .filter((key): key is string => Boolean(key)),
   );
 
 const referencedOpfsFileNames = (index: LocalRecordingIndex): Set<string> =>
   new Set(
     Object.values(index)
-      .map((entry) =>
-        entry.backendRef?.backend === "opfs" ? entry.backendRef.fileName : null
-      )
-      .filter((name): name is string => Boolean(name))
+      .map((entry) => (entry.backendRef?.backend === "opfs" ? entry.backendRef.fileName : null))
+      .filter((name): name is string => Boolean(name)),
   );
 
 const listBlobStoreKeys = async () => {
@@ -201,10 +180,7 @@ const listBlobStoreKeys = async () => {
 };
 
 const listOpfsRecordingFiles = async () => {
-  if (
-    !navigator.storage ||
-    typeof navigator.storage.getDirectory !== "function"
-  ) {
+  if (!navigator.storage || typeof navigator.storage.getDirectory !== "function") {
     return [];
   }
   const dir = await navigator.storage.getDirectory();
@@ -232,12 +208,8 @@ const jsonClone = (value: unknown): unknown => {
 
 const sanitizeProject = (project: unknown): LocalRecordingProject | null => {
   if (!isPlainObject(project)) return null;
-  const timeline = isPlainObject(project.timeline)
-    ? jsonClone(project.timeline)
-    : null;
-  const transcript = isPlainObject(project.transcript)
-    ? jsonClone(project.transcript)
-    : null;
+  const timeline = isPlainObject(project.timeline) ? jsonClone(project.timeline) : null;
+  const transcript = isPlainObject(project.transcript) ? jsonClone(project.transcript) : null;
   const chapterMarkers = Array.isArray(project.chapterMarkers)
     ? jsonClone(project.chapterMarkers)
     : [];
@@ -248,7 +220,7 @@ const sanitizeProject = (project: unknown): LocalRecordingProject | null => {
   const audioTrack = normalizeProjectAudioTrack(project.audioTrack);
   const exportSettings = normalizeExportSettings(
     isPlainObject(project.exportSettings) ? project.exportSettings : {},
-    project.source
+    project.source,
   );
   return normalizeProjectSchema({
     version: PROJECT_SCHEMA_VERSION,
@@ -266,16 +238,14 @@ const sanitizeProject = (project: unknown): LocalRecordingProject | null => {
   }) as LocalRecordingProject | null;
 };
 
-export function normalizeLocalRecordingEntry(
-  entry: LocalRecordingEntryInput
-): LocalRecordingEntry;
+export function normalizeLocalRecordingEntry(entry: LocalRecordingEntryInput): LocalRecordingEntry;
 export function normalizeLocalRecordingEntry(
   entry: unknown,
-  fallbackId: string
+  fallbackId: string,
 ): LocalRecordingEntry;
 export function normalizeLocalRecordingEntry(
   entry: LocalRecordingEntryInput | unknown,
-  fallbackId?: string
+  fallbackId?: string,
 ): LocalRecordingEntry {
   const value = isPlainObject(entry) ? entry : {};
   const fields = normalizeLocalRecordingStorageFields(value, fallbackId);
@@ -296,7 +266,7 @@ const makeThumbnailFromBlob = async (
     maxHeight = DEFAULT_THUMBNAIL_MAX_HEIGHT,
     quality = DEFAULT_THUMBNAIL_QUALITY,
     timeoutMs = THUMBNAIL_TIMEOUT_MS,
-  }: ThumbnailOptions = {}
+  }: ThumbnailOptions = {},
 ): Promise<string | null> => {
   if (!blob || typeof document === "undefined" || typeof URL === "undefined") {
     return null;
@@ -335,7 +305,7 @@ const makeThumbnailFromBlob = async (
         new Promise<void>((_, reject) => {
           timeoutId = setTimeout(
             () => reject(new Error("local-recording-thumbnail-timeout")),
-            timeoutMs
+            timeoutMs,
           );
         }),
       ]).finally(() => {
@@ -359,7 +329,7 @@ const makeThumbnailFromBlob = async (
       video.videoWidth,
       video.videoHeight,
       maxWidth,
-      maxHeight
+      maxHeight,
     );
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -379,19 +349,18 @@ const makeThumbnailFromBlob = async (
   }
 };
 
-export const getLocalRecordingIndex =
-  async (): Promise<LocalRecordingIndex> => {
-    const result = await storageGet([INDEX_KEY]);
-    const raw = result?.[INDEX_KEY] || {};
-    return Object.fromEntries(
-      Object.entries(isPlainObject(raw) ? raw : {})
-        .filter(([, entry]) => isPlainObject(entry))
-        .map(([id, entry]) => [id, normalizeLocalRecordingEntry(entry, id)])
-    );
-  };
+export const getLocalRecordingIndex = async (): Promise<LocalRecordingIndex> => {
+  const result = await storageGet([INDEX_KEY]);
+  const raw = result?.[INDEX_KEY] || {};
+  return Object.fromEntries(
+    Object.entries(isPlainObject(raw) ? raw : {})
+      .filter(([, entry]) => isPlainObject(entry))
+      .map(([id, entry]) => [id, normalizeLocalRecordingEntry(entry, id)]),
+  );
+};
 
 export const saveLocalRecordingEntry = (
-  entry: LocalRecordingEntryInput
+  entry: LocalRecordingEntryInput,
 ): Promise<LocalRecordingEntry> => {
   const write = entryWriteQueue
     .catch(() => {})
@@ -399,10 +368,7 @@ export const saveLocalRecordingEntry = (
       if (!entry?.id) throw new Error("local-recording-entry-missing-id");
       const index = await getLocalRecordingIndex();
       const existing = index[entry.id] || {};
-      const writesMediaCheckpoint = Object.prototype.hasOwnProperty.call(
-        entry,
-        "editedBlobKey",
-      );
+      const writesMediaCheckpoint = Object.prototype.hasOwnProperty.call(entry, "editedBlobKey");
       const existingSource = existing.project?.source;
       const incomingSource = entry.project?.source;
       const staleProjectSource =
@@ -430,10 +396,7 @@ export const saveLocalRecordingEntry = (
   return write;
 };
 
-export const renameLocalRecording = async (
-  recordingId: string,
-  title: string
-) => {
+export const renameLocalRecording = async (recordingId: string, title: string) => {
   if (!recordingId) throw new Error("local-recording-rename-missing-id");
   const cleanTitle = String(title || "").trim();
   if (!cleanTitle) throw new Error("local-recording-rename-empty-title");
@@ -444,28 +407,17 @@ export const renameLocalRecording = async (
   });
 };
 
-export const deleteLocalRecording = async (
-  recordingId: string
-): Promise<boolean> => {
+export const deleteLocalRecording = async (recordingId: string): Promise<boolean> => {
   if (!recordingId) throw new Error("local-recording-delete-missing-id");
   const index = await getLocalRecordingIndex();
   const entry = index[recordingId];
   if (!entry) return false;
 
-  const keys = [entry.blobKey, entry.editedBlobKey].filter(
-    (key): key is string => Boolean(key)
-  );
+  const keys = [entry.blobKey, entry.editedBlobKey].filter((key): key is string => Boolean(key));
   if (entry.project?.audioTrack) {
-    keys.push(
-      localRecordingAudioAssetKey(
-        recordingId,
-        entry.project.audioTrack.assetId,
-      ),
-    );
+    keys.push(localRecordingAudioAssetKey(recordingId, entry.project.audioTrack.assetId));
   }
-  await Promise.all(
-    keys.map((key) => BLOB_STORE.removeItem(key).catch(() => {}))
-  );
+  await Promise.all(keys.map((key) => BLOB_STORE.removeItem(key).catch(() => {})));
 
   if (entry.backendRef?.backend === "opfs" && entry.backendRef.fileName) {
     try {
@@ -494,10 +446,7 @@ export const deleteLocalRecordings = async (recordingIds: string[] = []) => {
   };
 };
 
-export const duplicateLocalRecording = async (
-  recordingId: string,
-  title: string | null = null
-) => {
+export const duplicateLocalRecording = async (recordingId: string, title: string | null = null) => {
   if (!recordingId) throw new Error("local-recording-duplicate-missing-id");
   const index = await getLocalRecordingIndex();
   const entry = index[recordingId];
@@ -564,7 +513,7 @@ export const getLocalRecordingExport = async (recordingId: string) => {
 };
 
 export const buildDefaultProjectForEntry = (
-  entry: LocalRecordingEntryInput
+  entry: LocalRecordingEntryInput,
 ): LocalRecordingProject => {
   if (!entry?.id) throw new Error("local-recording-project-missing-entry");
   const sanitized = normalizeLocalRecordingEntry(entry);
@@ -600,14 +549,10 @@ export const ensureLocalRecordingProject = async (recordingId: string) => {
   });
 };
 
-export const migrateLocalRecordingProjects = async (
-  recordingIds: string[] | null = null
-) => {
+export const migrateLocalRecordingProjects = async (recordingIds: string[] | null = null) => {
   const index = await getLocalRecordingIndex();
   const ids =
-    recordingIds == null
-      ? Object.keys(index)
-      : [...new Set(recordingIds.filter(Boolean))];
+    recordingIds == null ? Object.keys(index) : [...new Set(recordingIds.filter(Boolean))];
   const migratedIds = [];
   for (const recordingId of ids) {
     const entry = index[recordingId];
@@ -622,11 +567,8 @@ export const migrateLocalRecordingProjects = async (
   };
 };
 
-export const buildLocalRecordingProjectSidecar = (
-  entry: LocalRecordingEntryInput
-) => {
-  if (!entry?.id)
-    throw new Error("local-recording-project-export-missing-entry");
+export const buildLocalRecordingProjectSidecar = (entry: LocalRecordingEntryInput) => {
+  if (!entry?.id) throw new Error("local-recording-project-export-missing-entry");
   const sanitized = normalizeLocalRecordingEntry(entry);
   return {
     kind: PROJECT_SIDECAR_KIND,
@@ -650,14 +592,11 @@ export const buildLocalRecordingProjectSidecar = (
 };
 
 export const getLocalRecordingProjectExport = async (recordingId: string) => {
-  if (!recordingId)
-    throw new Error("local-recording-project-export-missing-id");
+  if (!recordingId) throw new Error("local-recording-project-export-missing-id");
   const index = await getLocalRecordingIndex();
   const entry = index[recordingId];
   if (!entry) throw new Error("local-recording-not-found");
-  const projectEntry = entry.project
-    ? entry
-    : await ensureLocalRecordingProject(recordingId);
+  const projectEntry = entry.project ? entry : await ensureLocalRecordingProject(recordingId);
   const sidecar = buildLocalRecordingProjectSidecar(projectEntry);
   return {
     entry: projectEntry,
@@ -670,11 +609,8 @@ export const getLocalRecordingProjectExport = async (recordingId: string) => {
   };
 };
 
-export const buildLocalRecordingTranscriptSidecar = (
-  entry: LocalRecordingEntryInput
-) => {
-  if (!entry?.id)
-    throw new Error("local-recording-transcript-export-missing-entry");
+export const buildLocalRecordingTranscriptSidecar = (entry: LocalRecordingEntryInput) => {
+  if (!entry?.id) throw new Error("local-recording-transcript-export-missing-entry");
   const sanitized = normalizeLocalRecordingEntry(entry);
   if (!sanitized.project?.transcript) {
     throw new Error("local-recording-transcript-missing");
@@ -694,11 +630,8 @@ export const buildLocalRecordingTranscriptSidecar = (
   };
 };
 
-export const getLocalRecordingTranscriptExport = async (
-  recordingId: string
-) => {
-  if (!recordingId)
-    throw new Error("local-recording-transcript-export-missing-id");
+export const getLocalRecordingTranscriptExport = async (recordingId: string) => {
+  if (!recordingId) throw new Error("local-recording-transcript-export-missing-id");
   const index = await getLocalRecordingIndex();
   const entry = index[recordingId];
   if (!entry) throw new Error("local-recording-not-found");
@@ -715,13 +648,11 @@ export const getLocalRecordingTranscriptExport = async (
 };
 
 export const getLocalRecordingCaptionExport = async (recordingId: string) => {
-  if (!recordingId)
-    throw new Error("local-recording-caption-export-missing-id");
+  if (!recordingId) throw new Error("local-recording-caption-export-missing-id");
   const index = await getLocalRecordingIndex();
   const entry = index[recordingId];
   if (!entry) throw new Error("local-recording-not-found");
-  if (!entry.project?.transcript)
-    throw new Error("local-recording-transcript-missing");
+  if (!entry.project?.transcript) throw new Error("local-recording-transcript-missing");
   const words = normalizeCaptionWords(entry.project);
   const vtt = buildWebVtt(words);
   return {
@@ -742,9 +673,7 @@ export const getLocalRecordingExports = async (recordingIds: string[] = []) => {
   return exports;
 };
 
-export const getLocalRecordingProjectExports = async (
-  recordingIds: string[] = []
-) => {
+export const getLocalRecordingProjectExports = async (recordingIds: string[] = []) => {
   const uniqueIds = [...new Set(recordingIds.filter(Boolean))];
   const exports = [];
   for (const recordingId of uniqueIds) {
@@ -753,9 +682,7 @@ export const getLocalRecordingProjectExports = async (
   return exports;
 };
 
-export const getLocalRecordingTranscriptExports = async (
-  recordingIds: string[] = []
-) => {
+export const getLocalRecordingTranscriptExports = async (recordingIds: string[] = []) => {
   const uniqueIds = [...new Set(recordingIds.filter(Boolean))];
   const exports = [];
   for (const recordingId of uniqueIds) {
@@ -766,9 +693,7 @@ export const getLocalRecordingTranscriptExports = async (
   return exports;
 };
 
-export const getLocalRecordingCaptionExports = async (
-  recordingIds: string[] = []
-) => {
+export const getLocalRecordingCaptionExports = async (recordingIds: string[] = []) => {
   const uniqueIds = [...new Set(recordingIds.filter(Boolean))];
   const exports = [];
   for (const recordingId of uniqueIds) {
@@ -785,10 +710,7 @@ export const getLocalRecordingProject = async (recordingId: string) => {
   return index[recordingId]?.project || null;
 };
 
-export const saveLocalRecordingProject = async (
-  recordingId: string,
-  project: unknown = {}
-) => {
+export const saveLocalRecordingProject = async (recordingId: string, project: unknown = {}) => {
   if (!recordingId) throw new Error("local-recording-project-missing-id");
   const index = await getLocalRecordingIndex();
   if (!index[recordingId]) {
@@ -808,9 +730,7 @@ export const saveLocalRecordingProject = async (
 
 const sha256Blob = async (blob: Blob): Promise<string> => {
   const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
-  return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("");
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 };
 
 export const saveLocalRecordingAudioAsset = async (
@@ -840,9 +760,7 @@ export const saveLocalRecordingAudioAsset = async (
     assetId,
     fileName:
       options.fileName ||
-      (typeof File !== "undefined" && blob instanceof File
-        ? blob.name
-        : "Project audio"),
+      (typeof File !== "undefined" && blob instanceof File ? blob.name : "Project audio"),
     mimeType: blob.type || "audio/*",
     byteSize: blob.size,
     sha256,
@@ -877,9 +795,7 @@ export const deleteLocalRecordingAudioAsset = async (
 ): Promise<boolean> => {
   const track = normalizeProjectAudioTrack(audioTrack);
   if (!recordingId || !track) return false;
-  await BLOB_STORE.removeItem(
-    localRecordingAudioAssetKey(recordingId, track.assetId),
-  );
+  await BLOB_STORE.removeItem(localRecordingAudioAssetKey(recordingId, track.assetId));
   return true;
 };
 
@@ -887,10 +803,9 @@ export const clearLocalRecordingProject = async (recordingId: string) => {
   if (!recordingId) throw new Error("local-recording-project-missing-id");
   const index = await getLocalRecordingIndex();
   if (!index[recordingId]) return null;
-  await deleteLocalRecordingAudioAsset(
-    recordingId,
-    index[recordingId].project?.audioTrack,
-  ).catch(() => false);
+  await deleteLocalRecordingAudioAsset(recordingId, index[recordingId].project?.audioTrack).catch(
+    () => false,
+  );
   index[recordingId] = normalizeLocalRecordingEntry({
     ...index[recordingId],
     project: null,
@@ -900,9 +815,7 @@ export const clearLocalRecordingProject = async (recordingId: string) => {
   return index[recordingId];
 };
 
-export const listLocalRecordings = async ({
-  sortBy = "newest",
-}: { sortBy?: string } = {}) => {
+export const listLocalRecordings = async ({ sortBy = "newest" }: { sortBy?: string } = {}) => {
   const index = await getLocalRecordingIndex();
   const entries = Object.values(index);
   const titleSort = (a: LocalRecordingEntry, b: LocalRecordingEntry) =>
@@ -925,11 +838,7 @@ export const classifyLocalRecordingStoragePressure = ({
 }: { usage?: number | null; quota?: number | null } = {}) => {
   const numericUsage = Number(usage);
   const numericQuota = Number(quota);
-  if (
-    !Number.isFinite(numericUsage) ||
-    !Number.isFinite(numericQuota) ||
-    numericQuota <= 0
-  ) {
+  if (!Number.isFinite(numericUsage) || !Number.isFinite(numericQuota) || numericQuota <= 0) {
     return { level: "unknown", ratio: null };
   }
   const ratio = Math.max(0, Math.min(1, numericUsage / numericQuota));
@@ -942,10 +851,8 @@ export const estimateLocalRecordingStorage = async () => {
   const index = await getLocalRecordingIndex();
   const indexedBytes = Object.values(index).reduce(
     (total, entry) =>
-      total +
-      (Number(entry.byteSize) || 0) +
-      (Number(entry.project?.audioTrack?.byteSize) || 0),
-    0
+      total + (Number(entry.byteSize) || 0) + (Number(entry.project?.audioTrack?.byteSize) || 0),
+    0,
   );
   const estimate =
     navigator.storage && typeof navigator.storage.estimate === "function"
@@ -974,9 +881,7 @@ export const inspectLocalRecordingStorage = async () => {
   const blobRefs = referencedBlobKeys(index);
   const opfsRefs = referencedOpfsFileNames(index);
   const orphanBlobKeys = blobKeys.filter((key) => !blobRefs.has(key));
-  const orphanOpfsFileNames = opfsFileNames.filter(
-    (name) => !opfsRefs.has(name)
-  );
+  const orphanOpfsFileNames = opfsFileNames.filter((name) => !opfsRefs.has(name));
   return {
     ...summary,
     blobKeys,
@@ -1003,7 +908,7 @@ export const cleanupLocalRecordingStorage = async ({
       inspection.orphanBlobKeys.map(async (key) => {
         await BLOB_STORE.removeItem(key);
         removedBlobKeys.push(key);
-      })
+      }),
     );
   }
 
@@ -1018,7 +923,7 @@ export const cleanupLocalRecordingStorage = async ({
       inspection.orphanOpfsFileNames.map(async (name) => {
         await dir.removeEntry(name).catch(() => {});
         removedOpfsFileNames.push(name);
-      })
+      }),
     );
   }
 
@@ -1057,7 +962,7 @@ export const inspectLocalRecording = async (recordingId: string) => {
 
 export const repairLocalRecording = async (
   recordingId: string,
-  { action = "remove-stale-entry" }: { action?: string } = {}
+  { action = "remove-stale-entry" }: { action?: string } = {},
 ) => {
   if (!recordingId) throw new Error("local-recording-repair-missing-id");
   if (action !== "remove-stale-entry") {
@@ -1073,13 +978,10 @@ export const repairLocalRecording = async (
 
 export const saveLocalRecordingThumbnail = async (
   recordingId: string,
-  thumbnailDataUrl: string
+  thumbnailDataUrl: string,
 ) => {
   if (!recordingId) throw new Error("local-recording-thumbnail-missing-id");
-  if (
-    typeof thumbnailDataUrl !== "string" ||
-    !thumbnailDataUrl.startsWith("data:image/")
-  ) {
+  if (typeof thumbnailDataUrl !== "string" || !thumbnailDataUrl.startsWith("data:image/")) {
     throw new Error("local-recording-thumbnail-invalid");
   }
   return saveLocalRecordingEntry({
@@ -1092,7 +994,7 @@ export const saveLocalRecordingThumbnail = async (
 
 export const generateLocalRecordingThumbnail = async (
   recordingId: string,
-  options: ThumbnailOptions = {}
+  options: ThumbnailOptions = {},
 ) => {
   if (!recordingId) throw new Error("local-recording-thumbnail-missing-id");
   const index = await getLocalRecordingIndex();
@@ -1141,7 +1043,7 @@ export const importLocalRecordingFile = async (
     durationMs?: number;
     recordingMeta?: UnknownRecord;
     createdAt?: number;
-  } = {}
+  } = {},
 ) => {
   if (!file) throw new Error("local-recording-import-missing-file");
   const hasSupportedType =
@@ -1158,7 +1060,7 @@ export const importLocalRecordingFile = async (
       source: "import",
       fileName: file.name || null,
       importedAt: now(),
-      ...(options.recordingMeta || {}),
+      ...options.recordingMeta,
     },
     createdAt: options.createdAt || now(),
   });
@@ -1168,7 +1070,7 @@ export const importLocalRecordingFile = async (
 
 export const importLocalRecordingProjectSidecar = async (
   file: File,
-  options: { recordingId?: string } = {}
+  options: { recordingId?: string } = {},
 ) => {
   if (!file) throw new Error("local-recording-project-import-missing-file");
   const raw = await file.text();
@@ -1186,15 +1088,11 @@ export const importLocalRecordingProjectSidecar = async (
   ) {
     throw new Error("local-recording-project-import-invalid-sidecar");
   }
-  const sidecarRecording = isPlainObject(sidecar.recording)
-    ? sidecar.recording
-    : {};
+  const sidecarRecording = isPlainObject(sidecar.recording) ? sidecar.recording : {};
   const targetId =
     options.recordingId ||
     (typeof sidecarRecording.id === "string" ? sidecarRecording.id : null) ||
-    (typeof sidecar.project.recordingId === "string"
-      ? sidecar.project.recordingId
-      : null) ||
+    (typeof sidecar.project.recordingId === "string" ? sidecar.project.recordingId : null) ||
     null;
   if (!targetId) throw new Error("local-recording-project-import-missing-id");
   const index = await getLocalRecordingIndex();
@@ -1218,27 +1116,18 @@ export const importLocalRecordingProjectSidecar = async (
     ...(thumbnailDataUrl
       ? {
           thumbnailDataUrl,
-          thumbnailUpdatedAt:
-            Number(sidecarRecording.thumbnailUpdatedAt) || now(),
+          thumbnailUpdatedAt: Number(sidecarRecording.thumbnailUpdatedAt) || now(),
         }
       : {}),
     updatedAt: now(),
   });
-  if (
-    existingAudioTrack &&
-    existingAudioTrack.assetId !== project?.audioTrack?.assetId
-  ) {
-    await deleteLocalRecordingAudioAsset(targetId, existingAudioTrack).catch(
-      () => false,
-    );
+  if (existingAudioTrack && existingAudioTrack.assetId !== project?.audioTrack?.assetId) {
+    await deleteLocalRecordingAudioAsset(targetId, existingAudioTrack).catch(() => false);
   }
   return saved;
 };
 
-export const checkpointEditedLocalRecording = async (
-  recordingId: string,
-  blob: Blob
-) => {
+export const checkpointEditedLocalRecording = async (recordingId: string, blob: Blob) => {
   if (!recordingId || !blob) return null;
   const editedBlobKey = `edited:${recordingId}`;
   await BLOB_STORE.setItem(editedBlobKey, blob);
@@ -1291,14 +1180,9 @@ export const checkpointAppliedLocalRecording = async (
   return entry;
 };
 
-export const readOpfsRecordingBlob = async (
-  fileName: string
-): Promise<Blob> => {
+export const readOpfsRecordingBlob = async (fileName: string): Promise<Blob> => {
   if (!fileName) throw new Error("local-recording-opfs-missing-filename");
-  if (
-    !navigator.storage ||
-    typeof navigator.storage.getDirectory !== "function"
-  ) {
+  if (!navigator.storage || typeof navigator.storage.getDirectory !== "function") {
     throw new Error("local-recording-opfs-unavailable");
   }
   const dir = await navigator.storage.getDirectory();
@@ -1310,9 +1194,7 @@ export const readOpfsRecordingBlob = async (
   return new Blob([file], { type: inferMimeFromName(fileName) });
 };
 
-export const readLocalRecordingBlob = async (
-  entry: LocalRecordingEntry | null
-): Promise<Blob> => {
+export const readLocalRecordingBlob = async (entry: LocalRecordingEntry | null): Promise<Blob> => {
   if (!entry) throw new Error("local-recording-not-found");
   if (entry.editedBlobKey) {
     const edited = await BLOB_STORE.getItem<Blob>(entry.editedBlobKey);
@@ -1329,10 +1211,7 @@ export const readLocalRecordingBlob = async (
 };
 
 export const findMostRecentOpfsRecording = async () => {
-  if (
-    !navigator.storage ||
-    typeof navigator.storage.getDirectory !== "function"
-  ) {
+  if (!navigator.storage || typeof navigator.storage.getDirectory !== "function") {
     return null;
   }
   const dir = await navigator.storage.getDirectory();

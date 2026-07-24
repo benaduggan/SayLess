@@ -14,9 +14,7 @@ interface SaveFileHandleLike {
 }
 
 interface SavePickerWindow {
-  showSaveFilePicker?: (
-    options: SavePickerOptions,
-  ) => Promise<SaveFileHandleLike>;
+  showSaveFilePicker?: (options: SavePickerOptions) => Promise<SaveFileHandleLike>;
 }
 
 interface DownloadChromeApi {
@@ -54,10 +52,7 @@ const extensionFromFileName = (fileName: unknown): string => {
   return match ? match[1].toLowerCase() : "";
 };
 
-const mimeForFileName = (
-  fileName: unknown,
-  fallback = "application/octet-stream",
-): string => {
+const mimeForFileName = (fileName: unknown, fallback = "application/octet-stream"): string => {
   const ext = extensionFromFileName(fileName);
   if (ext === "mp4" || ext === "m4a") return "video/mp4";
   if (ext === "webm") return "video/webm";
@@ -68,10 +63,7 @@ const mimeForFileName = (
   return fallback;
 };
 
-export const buildSavePickerOptions = (
-  fileName: string,
-  blobType = "",
-): SavePickerOptions => {
+export const buildSavePickerOptions = (fileName: string, blobType = ""): SavePickerOptions => {
   const ext = extensionFromFileName(fileName);
   const mime = blobType || mimeForFileName(fileName);
   return {
@@ -99,9 +91,7 @@ export const saveBlobWithPicker = async (
   try {
     const showSaveFilePicker = pickerWindow()?.showSaveFilePicker;
     if (!showSaveFilePicker) return { saved: false, reason: "unsupported" };
-    const handle = await showSaveFilePicker(
-      buildSavePickerOptions(fileName, blob.type),
-    );
+    const handle = await showSaveFilePicker(buildSavePickerOptions(fileName, blob.type));
     const writable = await handle.createWritable();
     try {
       await writable.write(blob);
@@ -160,14 +150,9 @@ export const saveOrDownloadBlob = async (
         return pickerResult;
       }
     } catch (err) {
-      console.warn?.(
-        "[SayLess] Save picker failed, falling back to Chrome download.",
-        err,
-      );
+      console.warn?.("[SayLess] Save picker failed, falling back to Chrome download.", err);
     }
   }
   const downloadId = await downloadBlobWithChrome(blob, fileName);
-  return downloadId
-    ? { saved: true, downloadId, fileName }
-    : { saved: false, reason: "cancelled" };
+  return downloadId ? { saved: true, downloadId, fileName } : { saved: false, reason: "cancelled" };
 };

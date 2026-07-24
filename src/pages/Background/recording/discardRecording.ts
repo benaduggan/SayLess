@@ -34,14 +34,13 @@ export const discardRecording = async ({
   // Unknown projectId (legacy callers / pre-project dismiss) is honored.
   if (projectId) {
     try {
-      const { projectId: currentProjectId } = await chromeApi().storage.local.get([
-        "projectId",
-      ]);
+      const { projectId: currentProjectId } = await chromeApi().storage.local.get(["projectId"]);
       if (currentProjectId && currentProjectId !== projectId) {
-        console.warn(
-          "[SayLess][BG] discardRecording skipped: project mismatch",
-          { reason, target: projectId, current: currentProjectId },
-        );
+        console.warn("[SayLess][BG] discardRecording skipped: project mismatch", {
+          reason,
+          target: projectId,
+          current: currentProjectId,
+        });
         return;
       }
     } catch {}
@@ -49,9 +48,7 @@ export const discardRecording = async ({
 
   // Swallow rejection: if the recorder tab is already dead, the promise
   // rejects and MV3 treats unhandled rejections as SW health signals.
-  sendMessageRecord({ type: "dismiss-recording", reason, projectId }).catch(
-    () => {},
-  );
+  sendMessageRecord({ type: "dismiss-recording", reason, projectId }).catch(() => {});
   void chromeApi().action.setIcon({ path: "assets/icon-34.png" });
 
   // await teardown before recording:false; otherwise handleAlarm fires against torn-down offscreen
@@ -60,12 +57,11 @@ export const discardRecording = async ({
   } catch {}
   await resetWatchdogState();
 
-  const { multiMode, multiSceneCount, recordingTab } =
-    await chromeApi().storage.local.get([
-      "multiMode",
-      "multiSceneCount",
-      "recordingTab",
-    ]);
+  const { multiMode, multiSceneCount, recordingTab } = await chromeApi().storage.local.get([
+    "multiMode",
+    "multiSceneCount",
+    "recordingTab",
+  ]);
 
   if (recordingTab) {
     try {
@@ -81,10 +77,12 @@ export const discardRecording = async ({
   const multiState = multiMode
     ? {
         multiMode: true,
-        ...(Number(multiSceneCount) > 0 ? {} : {
-          multiProjectId: null,
-          multiLastSceneId: null,
-        }),
+        ...(Number(multiSceneCount) > 0
+          ? {}
+          : {
+              multiProjectId: null,
+              multiLastSceneId: null,
+            }),
       }
     : {
         multiMode: false,
@@ -117,10 +115,7 @@ export const handleDismissRecordingTab = async (
   message: Record<string, unknown> = {},
 ): Promise<void> => {
   await discardRecording({
-    reason:
-      typeof message.reason === "string"
-        ? message.reason
-        : "dismiss-recording-tab",
+    reason: typeof message.reason === "string" ? message.reason : "dismiss-recording-tab",
     projectId: typeof message.projectId === "string" ? message.projectId : null,
   });
 };

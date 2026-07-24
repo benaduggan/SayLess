@@ -90,9 +90,7 @@ const ZoomContainer = () => {
   const getCanvasWrapper = () => {
     const cached = canvasWrapperCache.current;
     if (cached && cached.isConnected) return cached;
-    const node = document.querySelector<HTMLElement>(
-      "#canvas-wrapper-screenity"
-    );
+    const node = document.querySelector<HTMLElement>("#canvas-wrapper-screenity");
     canvasWrapperCache.current = node;
     return node;
   };
@@ -170,10 +168,7 @@ const ZoomContainer = () => {
         if (firstChild instanceof Element && firstChild.id === "screenity-ui") {
           break;
         }
-        if (
-          !(firstChild instanceof Element) ||
-          firstChild.id !== "screenity-ui"
-        ) {
+        if (!(firstChild instanceof Element) || firstChild.id !== "screenity-ui") {
           div.appendChild(document.body.firstChild);
         }
       }
@@ -182,9 +177,7 @@ const ZoomContainer = () => {
 
       const screenityUi = document.getElementById("screenity-ui");
       if (screenityUi) document.body.appendChild(screenityUi);
-      zoomSelector.current = document.querySelector<HTMLElement>(
-        "#screenity-zoom-wrap"
-      );
+      zoomSelector.current = document.querySelector<HTMLElement>("#screenity-zoom-wrap");
 
       observer.current = new MutationObserver((mutations) => {
         if (!contentState.showExtension) {

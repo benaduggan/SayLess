@@ -11,16 +11,13 @@ const Camera = (props: { shadowRef: React.RefObject<HTMLElement | null> }) => {
     <div
       className="camera-page"
       style={{
-        visibility:
-          !contentState.recording || contentState.onboarding
-            ? "hidden"
-            : "visible",
-        pointerEvents:
-          !contentState.recording || contentState.onboarding ? "none" : "auto",
+        visibility: !contentState.recording || contentState.onboarding ? "hidden" : "visible",
+        pointerEvents: !contentState.recording || contentState.onboarding ? "none" : "auto",
       }}
     >
-      {contentState.defaultVideoInput != "none" &&
-        contentState.cameraActive && <CameraWrap shadowRef={props.shadowRef} />}
+      {contentState.defaultVideoInput != "none" && contentState.cameraActive && (
+        <CameraWrap shadowRef={props.shadowRef} />
+      )}
     </div>
   );
 };

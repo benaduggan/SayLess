@@ -16,10 +16,7 @@ export const VIDEO_DIM_HARD_CAP = 3840;
 // (e.g. BT HFP narrowband lands at rates the encoder claims to support
 // but chokes on at typical bitrates).
 export const AAC_SUPPORTED_RATES = Object.freeze(
-  new Set([
-    8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000, 64000,
-    88200, 96000,
-  ]),
+  new Set([8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000, 64000, 88200, 96000]),
 );
 
 // Chrome reports reclaim via message text, not a structured code.
@@ -30,9 +27,7 @@ export function isReclaimErrorMessage(errOrMessage: unknown): boolean {
   const msg =
     typeof errOrMessage === "string"
       ? errOrMessage
-      : String(
-          errOrMessage instanceof Error ? errOrMessage.message : errOrMessage || "",
-        );
+      : String(errOrMessage instanceof Error ? errOrMessage.message : errOrMessage || "");
   return RECLAIM_MESSAGE_RE.test(msg);
 }
 
@@ -51,8 +46,7 @@ export function advanceAudioClock({
 }): { timestampUs: number; durationUs: number; nextElapsedUs: number } {
   const safeElapsedUs = Number.isFinite(elapsedUs) ? elapsedUs : 0;
   const safeFrames = Number.isFinite(frames) && frames > 0 ? frames : 0;
-  const safeSampleRate =
-    Number.isFinite(sampleRate) && sampleRate > 0 ? sampleRate : 48000;
+  const safeSampleRate = Number.isFinite(sampleRate) && sampleRate > 0 ? sampleRate : 48000;
   const exactDurationUs = (safeFrames * 1_000_000) / safeSampleRate;
   const durationUs = Math.round(exactDurationUs);
   const timestampUs = Math.round(safeElapsedUs);
@@ -63,10 +57,7 @@ export function advanceAudioClock({
   };
 }
 
-export function shouldDropAudioForBackpressure(
-  queueSize: number,
-  maxQueueSize: number,
-): boolean {
+export function shouldDropAudioForBackpressure(queueSize: number, maxQueueSize: number): boolean {
   if (!Number.isFinite(queueSize) || queueSize < 0) return false;
   if (!Number.isFinite(maxQueueSize) || maxQueueSize < 0) return false;
   return queueSize > maxQueueSize;
@@ -175,9 +166,6 @@ export function shouldTriggerSleepRecovery(
 
 // Flush resolved but no chunks were emitted: a header-only file plays
 // silently as a corrupt blob. Caller swaps to MediaRecorder.
-export function shouldFailZeroChunksAtStop(
-  firstChunkSeen: boolean,
-  frameCount: number,
-): boolean {
+export function shouldFailZeroChunksAtStop(firstChunkSeen: boolean, frameCount: number): boolean {
   return !firstChunkSeen || frameCount === 0;
 }

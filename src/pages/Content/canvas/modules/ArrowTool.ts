@@ -41,16 +41,13 @@ interface ArrowToolState {
 
 type SetArrowToolState = (state: ArrowToolState) => void;
 type GetArrowToolState = () => ArrowToolState | null | undefined;
-type SaveArrowCanvas = (
-  state: ArrowToolState,
-  setter: SetArrowToolState
-) => void;
+type SaveArrowCanvas = (state: ArrowToolState, setter: SetArrowToolState) => void;
 
 const createArrowLine = (
   x: number,
   y: number,
   color: string,
-  strokeWidth?: number
+  strokeWidth?: number,
 ): ArrowObject => {
   return new fabric.Line([x, y, x, y], {
     strokeWidth: (strokeWidth || 2) * 6,
@@ -68,7 +65,7 @@ const createArrowHead = (
   x: number,
   y: number,
   color: string,
-  strokeWidth?: number
+  strokeWidth?: number,
 ): ArrowObject => {
   const size = (strokeWidth || 2) * 16;
   return new fabric.Triangle({
@@ -120,7 +117,7 @@ const ArrowTool = (
   canvas: ArrowCanvas,
   contentStateRef: { current?: ArrowToolState | null },
   setContentState: SetArrowToolState,
-  saveCanvas: SaveArrowCanvas
+  saveCanvas: SaveArrowCanvas,
 ): { removeEventListeners(): void } => {
   const getState: GetArrowToolState = () => contentStateRef.current;
 
@@ -141,7 +138,7 @@ const ArrowTool = (
     if (!state?.drawingMode) return;
 
     const hit = e.subTargets.find(
-      (obj) => obj?.id === "arrowCircle1" || obj?.id === "arrowCircle2"
+      (obj) => obj?.id === "arrowCircle1" || obj?.id === "arrowCircle2",
     );
     if (!hit) return;
 
@@ -153,7 +150,7 @@ const ArrowTool = (
     arrowCircle: ArrowObject,
     readState: GetArrowToolState,
     persistCanvas: SaveArrowCanvas,
-    setState: SetArrowToolState
+    setState: SetArrowToolState,
   ): void => {
     let isDown = true;
 
@@ -165,18 +162,9 @@ const ArrowTool = (
     const arrowCircle2 = items.find((item) => item.id === "arrowCircle2");
     const arrowLine = items.find((item) => item.id === "arrowLine");
     const arrowHead = items.find((item) => item.id === "arrowHead");
-    const arrowLineControl = items.find(
-      (item) => item.id === "arrowLineControl"
-    );
+    const arrowLineControl = items.find((item) => item.id === "arrowLineControl");
 
-    if (
-      !arrowCircle1 ||
-      !arrowCircle2 ||
-      !arrowLine ||
-      !arrowHead ||
-      !arrowLineControl
-    )
-      return;
+    if (!arrowCircle1 || !arrowCircle2 || !arrowLine || !arrowHead || !arrowLineControl) return;
 
     arrowLineControl.set({ opacity: 0 });
 
@@ -242,7 +230,7 @@ const ArrowTool = (
           originX: "left",
           originY: "top",
           perPixelTargetFind: true,
-        } as ConstructorParameters<typeof fabric.Group>[1]
+        } as ConstructorParameters<typeof fabric.Group>[1],
       ) as unknown as ArrowObject;
 
       targetCanvas.add(newGroup);
@@ -300,14 +288,7 @@ const ArrowTool = (
     if (!state?.drawingMode) return;
     if (state.tool !== "arrow") return;
     if (!arrowPoints.length) return;
-    if (
-      !arrowLine ||
-      !arrowHead ||
-      !arrowCircle1 ||
-      !arrowCircle2 ||
-      !arrowLineControl
-    )
-      return;
+    if (!arrowLine || !arrowHead || !arrowCircle1 || !arrowCircle2 || !arrowLineControl) return;
 
     const { x, y } = canvas.getPointer(o.e);
     const startX = arrowPoints[0].x;
@@ -338,14 +319,7 @@ const ArrowTool = (
     if (!state?.drawingMode) return;
     if (state.tool !== "arrow") return;
     if (!arrowPoints.length) return;
-    if (
-      !arrowLine ||
-      !arrowHead ||
-      !arrowCircle1 ||
-      !arrowCircle2 ||
-      !arrowLineControl
-    )
-      return;
+    if (!arrowLine || !arrowHead || !arrowCircle1 || !arrowCircle2 || !arrowLineControl) return;
 
     canvas.selection = true;
     arrowPoints = [];
@@ -373,7 +347,7 @@ const ArrowTool = (
         originX: "left",
         originY: "top",
         perPixelTargetFind: true,
-      } as ConstructorParameters<typeof fabric.Group>[1]
+      } as ConstructorParameters<typeof fabric.Group>[1],
     ) as unknown as ArrowObject;
 
     canvas.add(group);

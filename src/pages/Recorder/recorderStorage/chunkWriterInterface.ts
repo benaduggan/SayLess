@@ -23,7 +23,7 @@ export interface ChunkWriterCloseResult {
 export interface ChunkWriter {
   open: (
     recordingId: string,
-    options?: { extension?: "mp4" | "webm" }
+    options?: { extension?: "mp4" | "webm" },
   ) => Promise<{ backendRef: RecordingBackendRef }>;
   write: (record: ChunkRecord) => Promise<void>;
   close: () => Promise<ChunkWriterCloseResult>;
@@ -38,8 +38,6 @@ export interface ChunkReadResult {
 
 export interface ChunkReader {
   open: (backendRef: RecordingBackendRef) => Promise<void>;
-  readBlob: (options?: {
-    onSlowFinalize?: () => void;
-  }) => Promise<ChunkReadResult>;
+  readBlob: (options?: { onSlowFinalize?: () => void }) => Promise<ChunkReadResult>;
   close: () => Promise<void>;
 }

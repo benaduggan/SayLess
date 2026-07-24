@@ -2,15 +2,10 @@
 // the user enables background effects on the camera. Eager import was
 // adding the cost to every camera-bubble mount even for users who
 // never touch effects.
-import type {
-  ImageSegmenter,
-  ImageSegmenterResult,
-} from "@mediapipe/tasks-vision";
+import type { ImageSegmenter, ImageSegmenterResult } from "@mediapipe/tasks-vision";
 
 type MediapipeModule = typeof import("@mediapipe/tasks-vision");
-type VisionFileset = Awaited<
-  ReturnType<MediapipeModule["FilesetResolver"]["forVisionTasks"]>
->;
+type VisionFileset = Awaited<ReturnType<MediapipeModule["FilesetResolver"]["forVisionTasks"]>>;
 type SegmentationResultWithMask = ImageSegmenterResult & {
   categoryMask: NonNullable<ImageSegmenterResult["categoryMask"]>;
 };
@@ -64,18 +59,30 @@ function getReusableCanvases(): {
     _personCtx = _personCanvas.getContext("2d");
   }
   if (
-    !_frameCanvas || !_frameCtx || !_blurCanvas || !_blurCtx ||
-    !_maskCanvas || !_maskCtx || !_smoothMaskCanvas || !_smoothMaskCtx ||
-    !_personCanvas || !_personCtx
+    !_frameCanvas ||
+    !_frameCtx ||
+    !_blurCanvas ||
+    !_blurCtx ||
+    !_maskCanvas ||
+    !_maskCtx ||
+    !_smoothMaskCanvas ||
+    !_smoothMaskCtx ||
+    !_personCanvas ||
+    !_personCtx
   ) {
     throw new Error("background-effect-canvas-context-unavailable");
   }
   return {
-    frameCanvas: _frameCanvas, frameCtx: _frameCtx,
-    blurCanvas: _blurCanvas, blurCtx: _blurCtx,
-    maskCanvas: _maskCanvas, maskCtx: _maskCtx,
-    smoothMaskCanvas: _smoothMaskCanvas, smoothMaskCtx: _smoothMaskCtx,
-    personCanvas: _personCanvas, personCtx: _personCtx,
+    frameCanvas: _frameCanvas,
+    frameCtx: _frameCtx,
+    blurCanvas: _blurCanvas,
+    blurCtx: _blurCtx,
+    maskCanvas: _maskCanvas,
+    maskCtx: _maskCtx,
+    smoothMaskCanvas: _smoothMaskCanvas,
+    smoothMaskCtx: _smoothMaskCtx,
+    personCanvas: _personCanvas,
+    personCtx: _personCtx,
   };
 }
 
@@ -100,11 +107,7 @@ function getOrCreateMaskImageData(
 // networks, blocked CDNs, or corrupted bundles.
 const MODEL_LOAD_TIMEOUT_MS = 12000;
 
-const withTimeout = <T>(
-  promise: Promise<T>,
-  ms: number,
-  label: string,
-): Promise<T> =>
+const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
   Promise.race([
     promise,
     new Promise<never>((_, reject) =>
@@ -157,10 +160,7 @@ export const loadSegmentationModel = async (): Promise<ImageSegmenter | null> =>
       } catch {}
       return gpu;
     } catch (gpuErr) {
-      console.warn(
-        "[SayLess] GPU segmenter failed, falling back to CPU:",
-        gpuErr,
-      );
+      console.warn("[SayLess] GPU segmenter failed, falling back to CPU:", gpuErr);
       try {
         chrome.runtime.sendMessage({
           type: "diag-forward",
@@ -298,8 +298,11 @@ export const renderBlurFromVideo = (
     blurCtx.drawImage(frameCanvas, 0, 0);
     blurCtx.filter = "none";
 
-    const { smoothMaskCanvas, maskW, maskH } =
-      buildSmoothedMask(segmentationResult, edgeBlurAmount, true);
+    const { smoothMaskCanvas, maskW, maskH } = buildSmoothedMask(
+      segmentationResult,
+      edgeBlurAmount,
+      true,
+    );
 
     const ratio = vw / vh;
     const outW = Math.round(window.innerHeight * ratio);
@@ -358,8 +361,11 @@ export const renderPersonCutoutFromVideo = (
 
     frameCtx.drawImage(videoElement, 0, 0);
 
-    const { smoothMaskCanvas, maskW, maskH } =
-      buildSmoothedMask(segmentationResult, edgeBlurAmount, true);
+    const { smoothMaskCanvas, maskW, maskH } = buildSmoothedMask(
+      segmentationResult,
+      edgeBlurAmount,
+      true,
+    );
 
     const canvas = canvasRef.current;
     const ctx = canvasContextRef.current;
@@ -410,8 +416,7 @@ export const renderEffectBackground = (
   bottomCanvasRef: MutableRef<HTMLCanvasElement>,
   bottomCanvasContextRef: MutableRef<CanvasRenderingContext2D>,
 ): boolean => {
-  if (!effectImg || !bottomCanvasRef.current || !bottomCanvasContextRef.current)
-    return false;
+  if (!effectImg || !bottomCanvasRef.current || !bottomCanvasContextRef.current) return false;
 
   try {
     const canvas = bottomCanvasRef.current;

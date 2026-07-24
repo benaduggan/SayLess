@@ -28,8 +28,7 @@ export const setPipMode = (mode: boolean): void => {
 };
 
 export const setBackgroundEffects = (active: boolean): boolean => {
-  const { videoRef, setBackgroundEffects: contextSetBackgroundEffects } =
-    getContextRefs();
+  const { videoRef, setBackgroundEffects: contextSetBackgroundEffects } = getContextRefs();
 
   if (contextSetBackgroundEffects) {
     contextSetBackgroundEffects(active);

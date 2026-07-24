@@ -98,10 +98,7 @@ export class MkvMuxerWrapper {
     if (this._writeBufferBytes >= FLUSH_BYTES) {
       this.flushWriteBuffer();
     } else if (!this._writeBufferTimer) {
-      this._writeBufferTimer = setTimeout(
-        () => this.flushWriteBuffer(),
-        FLUSH_INTERVAL_MS,
-      );
+      this._writeBufferTimer = setTimeout(() => this.flushWriteBuffer(), FLUSH_INTERVAL_MS);
     }
   }
 
@@ -202,7 +199,7 @@ export class MkvMuxerWrapper {
   private buildPacket(
     chunk: EncodedVideoChunk | EncodedAudioChunk,
     meta: any,
-    type: "video" | "audio"
+    type: "video" | "audio",
   ) {
     const data = new Uint8Array(chunk.byteLength);
     chunk.copyTo(data);
@@ -213,11 +210,7 @@ export class MkvMuxerWrapper {
     return new EncodedPacket(data, chunk.type, tsUs / 1e6, durSec);
   }
 
-  private normalizeTimestamp(
-    type: "video" | "audio",
-    timestampUs?: number,
-    durationUs = 0
-  ) {
+  private normalizeTimestamp(type: "video" | "audio", timestampUs?: number, durationUs = 0) {
     const key = type === "video" ? "lastVideoTimestampUs" : "lastAudioTimestampUs";
     const last = (this as any)[key] ?? 0;
 
@@ -238,10 +231,7 @@ export class MkvMuxerWrapper {
       this.videoTimestampOffsetUs = timestampUs;
     }
 
-    const relative = Math.max(
-      0,
-      timestampUs - this.videoTimestampOffsetUs
-    );
+    const relative = Math.max(0, timestampUs - this.videoTimestampOffsetUs);
 
     (this as any)[key] = relative;
     return relative;

@@ -26,9 +26,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const clamp = (value: unknown, fallback: number, min: number, max: number) => {
   const number = Number(value);
-  return Number.isFinite(number)
-    ? Math.max(min, Math.min(max, number))
-    : fallback;
+  return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : fallback;
 };
 
 const cleanText = (value: unknown, fallback: string, maxLength = 255): string => {
@@ -39,21 +37,17 @@ const cleanText = (value: unknown, fallback: string, maxLength = 255): string =>
   return cleaned || fallback;
 };
 
-export function normalizeProjectAudioTrack(
-  value: unknown,
-): ProjectAudioTrack | null {
+export function normalizeProjectAudioTrack(value: unknown): ProjectAudioTrack | null {
   if (!isRecord(value)) return null;
   const assetId = cleanText(value.assetId, "", 160);
   const rawByteSize = Number(value.byteSize);
-  if (
-    !Number.isFinite(rawByteSize) ||
-    rawByteSize <= 0 ||
-    rawByteSize > MAX_PROJECT_AUDIO_BYTES
-  ) {
+  if (!Number.isFinite(rawByteSize) || rawByteSize <= 0 || rawByteSize > MAX_PROJECT_AUDIO_BYTES) {
     return null;
   }
   const byteSize = Math.round(rawByteSize);
-  const sha256 = String(value.sha256 || "").trim().toLowerCase();
+  const sha256 = String(value.sha256 || "")
+    .trim()
+    .toLowerCase();
   if (!assetId || !byteSize || !/^[a-f0-9]{64}$/.test(sha256)) return null;
   const rawMimeType = cleanText(value.mimeType, "audio/*", 120).toLowerCase();
   const mimeType = rawMimeType.startsWith("audio/") ? rawMimeType : "audio/*";

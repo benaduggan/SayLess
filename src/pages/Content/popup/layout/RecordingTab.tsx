@@ -16,9 +16,7 @@ import TooltipWrap from "../components/TooltipWrap";
 // Context
 import { contentStateContext } from "../../context/ContentState";
 
-const RecordingTab = (props: {
-  shadowRef: React.RefObject<HTMLElement | null>;
-}) => {
+const RecordingTab = (props: { shadowRef: React.RefObject<HTMLElement | null> }) => {
   const [contentState, setContentState] = useContext(contentStateContext);
 
   const [tabRecordingDisabled, setTabRecordingDisabled] = useState(false);
@@ -32,10 +30,7 @@ const RecordingTab = (props: {
         ...prev,
         recordingType: "screen",
       }));
-      contentState.openToast?.(
-        chrome.i18n.getMessage("tabRecordingDisabledToast"),
-        4000
-      );
+      contentState.openToast?.(chrome.i18n.getMessage("tabRecordingDisabledToast"), 4000);
     }
   }, [tabRecordingDisabled]);
 
@@ -50,10 +45,7 @@ const RecordingTab = (props: {
         recordingType: "screen",
       }));
       // Same rationale as above; no storage write, just content-state.
-      contentState.openToast?.(
-        chrome.i18n.getMessage("tabRecordingDisabledToast"),
-        4000
-      );
+      contentState.openToast?.(chrome.i18n.getMessage("tabRecordingDisabledToast"), 4000);
     }
   }, [contentState.recordingType]);
 
@@ -77,11 +69,7 @@ const RecordingTab = (props: {
         className="TabsRoot"
         defaultValue="screen"
         onValueChange={onValueChange}
-        value={
-          contentState.recordingType === "tab"
-            ? "region"
-            : contentState.recordingType
-        }
+        value={contentState.recordingType === "tab" ? "region" : contentState.recordingType}
       >
         {contentState.recordingToScene && (
           <div className="projectActiveBanner">
@@ -118,7 +106,7 @@ const RecordingTab = (props: {
 
                   contentState.openToast(
                     chrome.i18n.getMessage("projectRecordingCancelledToast"),
-                    3000
+                    3000,
                   );
                 }}
               >
@@ -127,21 +115,11 @@ const RecordingTab = (props: {
             </div>
           </div>
         )}
-        <Tabs.List
-          className={"TabsList"}
-          aria-label="Choose recording mode"
-          tabIndex={0}
-        >
+        <Tabs.List className={"TabsList"} aria-label="Choose recording mode" tabIndex={0}>
           <Tabs.Trigger className="TabsTrigger" value="screen" tabIndex={0}>
             <div className="TabsTriggerLabel">
               <div className="TabsTriggerIcon">
-                <img
-                  src={
-                    contentState.recordingType === "screen"
-                      ? ScreenTabOn
-                      : ScreenTabOff
-                  }
-                />
+                <img src={contentState.recordingType === "screen" ? ScreenTabOn : ScreenTabOff} />
               </div>
               <span>{chrome.i18n.getMessage("screenType")}</span>
             </div>
@@ -166,21 +144,11 @@ const RecordingTab = (props: {
                   e.stopPropagation();
                 }
               }}
-              style={
-                tabRecordingDisabled
-                  ? { cursor: "not-allowed", opacity: 0.5 }
-                  : {}
-              }
+              style={tabRecordingDisabled ? { cursor: "not-allowed", opacity: 0.5 } : {}}
             >
               <div className="TabsTriggerLabel">
                 <div className="TabsTriggerIcon">
-                  <img
-                    src={
-                      contentState.recordingType === "region"
-                        ? RegionTabOn
-                        : RegionTabOff
-                    }
-                  />
+                  <img src={contentState.recordingType === "region" ? RegionTabOn : RegionTabOff} />
                 </div>
                 <span>{chrome.i18n.getMessage("tabType")}</span>
               </div>
@@ -190,11 +158,7 @@ const RecordingTab = (props: {
             <div className="TabsTriggerLabel">
               <div className="TabsTriggerIcon">
                 <img
-                  src={
-                    contentState.recordingType === "camera"
-                      ? CameraTabIconOn
-                      : CameraTabIconOff
-                  }
+                  src={contentState.recordingType === "camera" ? CameraTabIconOn : CameraTabIconOff}
                 />
               </div>
               <span>{chrome.i18n.getMessage("cameraType")}</span>

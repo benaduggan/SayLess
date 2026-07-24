@@ -17,20 +17,10 @@ import test from "node:test";
 
 const ROOT = new URL("../..", import.meta.url).pathname;
 const VERIFIER = join(ROOT, "scripts", "verify-manual-qa-evidence.mjs");
-const AUTOMATED_EVIDENCE = join(
-  ROOT,
-  "release-artifacts",
-  "release-qa-automated.json"
-);
-const packageJson = JSON.parse(
-  readFileSync(join(ROOT, "package.json"), "utf8")
-);
-const packageLock = JSON.parse(
-  readFileSync(join(ROOT, "package-lock.json"), "utf8")
-);
-const manifest = JSON.parse(
-  readFileSync(join(ROOT, "src", "manifest.json"), "utf8")
-);
+const AUTOMATED_EVIDENCE = join(ROOT, "release-artifacts", "release-qa-automated.json");
+const packageJson = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
+const packageLock = JSON.parse(readFileSync(join(ROOT, "package-lock.json"), "utf8"));
+const manifest = JSON.parse(readFileSync(join(ROOT, "src", "manifest.json"), "utf8"));
 const emptyGitWorkingTree = {
   sha256: createHash("sha256").digest("hex"),
   fileCount: 0,
@@ -38,6 +28,8 @@ const emptyGitWorkingTree = {
 };
 
 const REQUIRED_COMMANDS = [
+  "lint",
+  "format:check",
   "typecheck",
   "test:unit",
   "test:e2e:offline-whisper-assets",
@@ -69,31 +61,14 @@ const CHECK_RECORDING_REFS = {
     "qa-tab-demo-20260716-a",
     "qa-desktop-terminal-20260716-b",
   ],
-  offline_transcription_real_speakers: [
-    "qa-tab-demo-20260716-a",
-    "qa-desktop-terminal-20260716-b",
-  ],
+  offline_transcription_real_speakers: ["qa-tab-demo-20260716-a", "qa-desktop-terminal-20260716-b"],
   timeline_editing_persistence: ["qa-tab-demo-20260716-a"],
-  export_cancel_retry_reveal_real_recordings: [
-    "qa-desktop-terminal-20260716-b",
-  ],
-  audio_silence_real_codecs_and_noise: [
-    "qa-tab-demo-20260716-a",
-    "qa-desktop-terminal-20260716-b",
-  ],
-  zoom_preview_export_real_recordings: [
-    "qa-tab-demo-20260716-a",
-    "qa-region-zoom-20260716-c",
-  ],
-  crop_preview_export_real_recordings: [
-    "qa-tab-demo-20260716-a",
-    "qa-region-zoom-20260716-c",
-  ],
+  export_cancel_retry_reveal_real_recordings: ["qa-desktop-terminal-20260716-b"],
+  audio_silence_real_codecs_and_noise: ["qa-tab-demo-20260716-a", "qa-desktop-terminal-20260716-b"],
+  zoom_preview_export_real_recordings: ["qa-tab-demo-20260716-a", "qa-region-zoom-20260716-c"],
+  crop_preview_export_real_recordings: ["qa-tab-demo-20260716-a", "qa-region-zoom-20260716-c"],
   project_audio_real_inputs_and_long_sync: ["qa-desktop-terminal-20260716-b"],
-  local_library_recovery: [
-    "qa-tab-demo-20260716-a",
-    "qa-desktop-terminal-20260716-b",
-  ],
+  local_library_recovery: ["qa-tab-demo-20260716-a", "qa-desktop-terminal-20260716-b"],
   final_surface_no_paid_cloud_or_remote_claims: [],
 };
 
@@ -108,8 +83,7 @@ const EXPORT_FORMATS = [
   "sayless-project-json",
 ];
 const exportFileNameForFormat = (format, index) => {
-  if (format === "transcript-json")
-    return `sayless-qa-transcript-${index + 1}.transcript.json`;
+  if (format === "transcript-json") return `sayless-qa-transcript-${index + 1}.transcript.json`;
   if (format === "sayless-project-json")
     return `sayless-qa-project-${index + 1}.sayless-project.json`;
   return `sayless-qa-${format}-${index + 1}.${format}`;
@@ -144,8 +118,7 @@ const dirFingerprint = (dir) => {
   return { sha256: hash.digest("hex"), fileCount: files.length };
 };
 
-const dirSize = (dir) =>
-  walkFiles(dir).reduce((total, file) => total + file.size, 0);
+const dirSize = (dir) => walkFiles(dir).reduce((total, file) => total + file.size, 0);
 
 const formatBytes = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -218,7 +191,7 @@ const makeFixture = () => {
   mkdirSync(join(dir, "src"), { recursive: true });
   writeFileSync(
     join(dir, "package.json"),
-    `${JSON.stringify({ version: packageJson.version }, null, 2)}\n`
+    `${JSON.stringify({ version: packageJson.version }, null, 2)}\n`,
   );
   writeFileSync(
     join(dir, "package-lock.json"),
@@ -232,17 +205,14 @@ const makeFixture = () => {
         },
       },
       null,
-      2
-    )}\n`
+      2,
+    )}\n`,
   );
   writeFileSync(
     join(dir, "src", "manifest.json"),
-    `${JSON.stringify({ version: manifest.version }, null, 2)}\n`
+    `${JSON.stringify({ version: manifest.version }, null, 2)}\n`,
   );
-  writeFileSync(
-    join(buildDir, "manifest.json"),
-    JSON.stringify({ version: packageJson.version })
-  );
+  writeFileSync(join(buildDir, "manifest.json"), JSON.stringify({ version: packageJson.version }));
   writeFileSync(join(buildDir, "editor.html"), "<html>SayLess</html>");
   writeFileSync(join(assetsDir, "model.bin"), "local model bytes");
 
@@ -392,9 +362,7 @@ const makeFixture = () => {
     automatedEvidenceGeneratedAt: generatedAt,
     manualSession: {
       kind: "sayless.manualQaSessionProvenance",
-      profileCreatedAt: new Date(
-        Date.parse(generatedAt) + 10_000
-      ).toISOString(),
+      profileCreatedAt: new Date(Date.parse(generatedAt) + 10_000).toISOString(),
       releaseVersion: packageJson.version,
       automatedEvidenceGeneratedAt: generatedAt,
       buildSha256: build.sha256,
@@ -528,8 +496,7 @@ const makeFixture = () => {
           recordingId: recordingB,
           startSeconds: 142.2,
           endSeconds: 146.1,
-          observation:
-            "Suggested a quiet pause after command output in the MP4 desktop recording.",
+          observation: "Suggested a quiet pause after command output in the MP4 desktop recording.",
         },
       ],
       ignoredNoiseRanges: [
@@ -541,8 +508,7 @@ const makeFixture = () => {
             "Keyboard clicks and fan noise remained audible and were not suggested as silence.",
         },
       ],
-      notes:
-        "Quiet pauses were suggested while keyboard and fan noise were not marked as silence.",
+      notes: "Quiet pauses were suggested while keyboard and fan noise were not marked as silence.",
     },
     zoom: {
       recordingIds: [recordingA, recordingC],
@@ -632,8 +598,7 @@ const makeFixture = () => {
           sampleRate: 48000,
           decodeVerified: true,
           audiblePreviewVerified: true,
-          notes:
-            "Decoded stereo 48 kHz WAV metadata and heard the real music bed in preview.",
+          notes: "Decoded stereo 48 kHz WAV metadata and heard the real music bed in preview.",
         },
         {
           format: "m4a",
@@ -645,8 +610,7 @@ const makeFixture = () => {
           sampleRate: 44100,
           decodeVerified: true,
           audiblePreviewVerified: true,
-          notes:
-            "Decoded mono 44.1 kHz M4A metadata and heard the real voice note in preview.",
+          notes: "Decoded mono 44.1 kHz M4A metadata and heard the real voice note in preview.",
         },
         {
           format: "mp3",
@@ -754,8 +718,7 @@ const makeFixture = () => {
           ],
           notes:
             "Reviewed copy for paid tiers, cloud upload, remote transcription, and overclaims.",
-          residualRisk:
-            "No residual release-note risk found after the forbidden-claim search.",
+          residualRisk: "No residual release-note risk found after the forbidden-claim search.",
         },
         {
           type: "screenshots",
@@ -825,22 +788,20 @@ const makeFixture = () => {
           }: observed release checklist behavior on named recordings with local files only.`,
           evidence: [
             {
-              artifact: `qa-evidence-${
-                index + 1
-              }.png plus checklist report for ${id}`,
+              artifact: `qa-evidence-${index + 1}.png plus checklist report for ${id}`,
               recordingIds: CHECK_RECORDING_REFS[id],
               observation: `Observed ${id} on the required release checklist path and recorded concrete local-only evidence.`,
             },
           ],
         },
-      ])
+      ]),
     ),
   };
 
   const mediaReportFiles = [
     ...recordingProbeFiles,
     ...exportProbeFiles.filter((file) =>
-      ["mp4", "webm", "gif", "wav", "m4a"].includes(file.format)
+      ["mp4", "webm", "gif", "wav", "m4a"].includes(file.format),
     ),
     ...projectAudioProbeFiles,
   ];
@@ -862,13 +823,11 @@ const makeFixture = () => {
         files: mediaReportFiles,
       },
       null,
-      2
-    )}\n`
+      2,
+    )}\n`,
   );
   const sidecarReportFiles = exportProbeFiles
-    .filter((file) =>
-      ["vtt", "transcript-json", "sayless-project-json"].includes(file.format)
-    )
+    .filter((file) => ["vtt", "transcript-json", "sayless-project-json"].includes(file.format))
     .map((file) => ({
       ...file,
       exportFields: {
@@ -892,8 +851,8 @@ const makeFixture = () => {
         files: sidecarReportFiles,
       },
       null,
-      2
-    )}\n`
+      2,
+    )}\n`,
   );
   writeFileSync(automatedPath, `${JSON.stringify(automated, null, 2)}\n`);
   writeFileSync(manualPath, `${JSON.stringify(manual, null, 2)}\n`);
@@ -953,7 +912,7 @@ test("manual QA evidence requires tester attribution without contact data", () =
     delete tester.email;
     writeFileSync(
       fixture.manualPath,
-      `${JSON.stringify({ ...fixture.manual, tester }, null, 2)}\n`
+      `${JSON.stringify({ ...fixture.manual, tester }, null, 2)}\n`,
     );
 
     const result = runVerifier(fixture.manualPath);
@@ -969,49 +928,35 @@ test("manual QA evidence verifier requires canonical strict probe reports", () =
   const fixture = makeFixture();
   try {
     fixture.manual.probeReports.media = "alternate-media-report.json";
-    writeFileSync(
-      fixture.manualPath,
-      `${JSON.stringify(fixture.manual, null, 2)}\n`
-    );
+    writeFileSync(fixture.manualPath, `${JSON.stringify(fixture.manual, null, 2)}\n`);
     const alternatePath = runVerifier(fixture.manualPath);
     assert.equal(alternatePath.status, 1);
     assert.match(
       alternatePath.stderr,
-      /probeReports\.media must point to release-artifacts\/manual-qa-media-probe\.json/
+      /probeReports\.media must point to release-artifacts\/manual-qa-media-probe\.json/,
     );
 
-    fixture.manual.probeReports.media =
-      "release-artifacts/manual-qa-media-probe.json";
-    const mediaReportPath = join(
-      fixture.dir,
-      "release-artifacts",
-      "manual-qa-media-probe.json"
-    );
+    fixture.manual.probeReports.media = "release-artifacts/manual-qa-media-probe.json";
+    const mediaReportPath = join(fixture.dir, "release-artifacts", "manual-qa-media-probe.json");
     const mediaReport = JSON.parse(readFileSync(mediaReportPath, "utf8"));
     mediaReport.requireComplete = false;
     mediaReport.releaseCoverage.status = "incomplete";
     mediaReport.generatedAt = new Date(
-      Date.parse(fixture.automated.generatedAt) - 1_000
+      Date.parse(fixture.automated.generatedAt) - 1_000,
     ).toISOString();
     writeFileSync(mediaReportPath, `${JSON.stringify(mediaReport, null, 2)}\n`);
-    writeFileSync(
-      fixture.manualPath,
-      `${JSON.stringify(fixture.manual, null, 2)}\n`
-    );
+    writeFileSync(fixture.manualPath, `${JSON.stringify(fixture.manual, null, 2)}\n`);
     const incompleteReport = runVerifier(fixture.manualPath);
     assert.equal(incompleteReport.status, 1);
     assert.match(
       incompleteReport.stderr,
-      /manual QA media probe report requireComplete must be true/
+      /manual QA media probe report requireComplete must be true/,
     );
     assert.match(
       incompleteReport.stderr,
-      /releaseCoverage\.status must be "measurable-set-complete"/
+      /releaseCoverage\.status must be "measurable-set-complete"/,
     );
-    assert.match(
-      incompleteReport.stderr,
-      /must be generated after automated QA evidence/
-    );
+    assert.match(incompleteReport.stderr, /must be generated after automated QA evidence/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -1023,23 +968,14 @@ test("manual QA evidence measurable fields must match probe reports", () => {
     fixture.manual.recordings[0].byteSize += 1;
     fixture.manual.exports.files[0].sha256 = "f".repeat(64);
     fixture.manual.projectAudio.inputs[0].sampleRate = 44100;
-    writeFileSync(
-      fixture.manualPath,
-      `${JSON.stringify(fixture.manual, null, 2)}\n`
-    );
+    writeFileSync(fixture.manualPath, `${JSON.stringify(fixture.manual, null, 2)}\n`);
     const result = runVerifier(fixture.manualPath);
     assert.equal(result.status, 1);
+    assert.match(result.stderr, /recordings\[0\]\.byteSize must match probeReports\.media/);
+    assert.match(result.stderr, /exports\.files\[0\]\.sha256 must match probeReports\.media/);
     assert.match(
       result.stderr,
-      /recordings\[0\]\.byteSize must match probeReports\.media/
-    );
-    assert.match(
-      result.stderr,
-      /exports\.files\[0\]\.sha256 must match probeReports\.media/
-    );
-    assert.match(
-      result.stderr,
-      /projectAudio\.inputs\[0\]\.sampleRate must match probeReports\.media/
+      /projectAudio\.inputs\[0\]\.sampleRate must match probeReports\.media/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -1052,17 +988,12 @@ test("manual QA progress routes machine-owned fields to measurement import", () 
     fixture.manual.recordings[0].byteSize += 1;
     fixture.manual.exports.files[0].sha256 = "f".repeat(64);
     fixture.manual.projectAudio.inputs[0].sampleRate = 44100;
-    writeFileSync(
-      fixture.manualPath,
-      `${JSON.stringify(fixture.manual, null, 2)}\n`
-    );
+    writeFileSync(fixture.manualPath, `${JSON.stringify(fixture.manual, null, 2)}\n`);
 
     const result = runProgress(fixture.manualPath, ["--json"]);
     assert.equal(result.status, 0, result.stderr);
     const report = JSON.parse(result.stdout);
-    const sections = new Map(
-      report.sections.map((section) => [section.id, section])
-    );
+    const sections = new Map(report.sections.map((section) => [section.id, section]));
 
     assert.equal(sections.get("recordings").status, "complete");
     assert.equal(sections.get("exports").status, "complete");
@@ -1093,17 +1024,12 @@ test("manual QA progress keeps tester-owned formats in human sections", () => {
   try {
     fixture.manual.exports.files[0].format = "webm";
     fixture.manual.projectAudio.inputs[0].format = "m4a";
-    writeFileSync(
-      fixture.manualPath,
-      `${JSON.stringify(fixture.manual, null, 2)}\n`
-    );
+    writeFileSync(fixture.manualPath, `${JSON.stringify(fixture.manual, null, 2)}\n`);
 
     const result = runProgress(fixture.manualPath, ["--json"]);
     assert.equal(result.status, 0, result.stderr);
     const report = JSON.parse(result.stdout);
-    const sections = new Map(
-      report.sections.map((section) => [section.id, section])
-    );
+    const sections = new Map(report.sections.map((section) => [section.id, section]));
 
     assert.ok(sections.get("exports").errorCount > 0);
     assert.ok(sections.get("projectAudio").errorCount > 0);
@@ -1124,10 +1050,7 @@ test("manual QA progress groups the authoritative verifier errors by section", (
     assert.equal(completeReport.totalErrorCount, 0);
     assert.equal(completeReport.nextSection, null);
     assert.equal(completeReport.selectedSection, null);
-    assert.equal(
-      completeReport.completedSectionCount,
-      completeReport.totalSectionCount
-    );
+    assert.equal(completeReport.completedSectionCount, completeReport.totalSectionCount);
 
     writeFileSync(
       fixture.manualPath,
@@ -1140,17 +1063,15 @@ test("manual QA progress groups the authoritative verifier errors by section", (
           zoom: { ...fixture.manual.zoom, observations: [] },
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
     const incompleteResult = runProgress(fixture.manualPath, ["--json"]);
     assert.equal(incompleteResult.status, 0, incompleteResult.stderr);
     const incompleteReport = JSON.parse(incompleteResult.stdout);
     assert.equal(incompleteReport.status, "incomplete");
     assert.ok(incompleteReport.totalErrorCount > 0);
-    const sections = new Map(
-      incompleteReport.sections.map((section) => [section.id, section])
-    );
+    const sections = new Map(incompleteReport.sections.map((section) => [section.id, section]));
     assert.ok(sections.get("metadata").errorCount > 0);
     assert.ok(sections.get("recordings").errorCount > 0);
     assert.ok(sections.get("zoom").errorCount > 0);
@@ -1171,17 +1092,13 @@ test("manual QA progress groups the authoritative verifier errors by section", (
       command: "npm run qa:release:manual:progress -- --section=metadata",
     });
     assert.equal(
-      incompleteReport.sections.reduce(
-        (total, section) => total + section.errorCount,
-        0
-      ),
-      incompleteReport.totalErrorCount
+      incompleteReport.sections.reduce((total, section) => total + section.errorCount, 0),
+      incompleteReport.totalErrorCount,
     );
     assert.ok(
       incompleteReport.sections.every(
-        (section) =>
-          section.errorSamples.length <= 3 && section.workTargets.length > 0
-      )
+        (section) => section.errorSamples.length <= 3 && section.workTargets.length > 0,
+      ),
     );
 
     const humanResult = runProgress(fixture.manualPath);
@@ -1193,17 +1110,14 @@ test("manual QA progress groups the authoritative verifier errors by section", (
     assert.match(humanResult.stdout, /Next section: Release and environment/);
     assert.match(
       humanResult.stdout,
-      /Work targets: kind, version, releaseVersion, automatedEvidencePath/
+      /Work targets: kind, version, releaseVersion, automatedEvidencePath/,
     );
     assert.match(
       humanResult.stdout,
-      /Next command: npm run qa:release:manual:progress -- --section=metadata/
+      /Next command: npm run qa:release:manual:progress -- --section=metadata/,
     );
 
-    const focusedResult = runProgress(fixture.manualPath, [
-      "--json",
-      "--section=recordings",
-    ]);
+    const focusedResult = runProgress(fixture.manualPath, ["--json", "--section=recordings"]);
     assert.equal(focusedResult.status, 0, focusedResult.stderr);
     const focusedReport = JSON.parse(focusedResult.stdout);
     assert.equal(focusedReport.selectedSection.id, "recordings");
@@ -1212,30 +1126,20 @@ test("manual QA progress groups the authoritative verifier errors by section", (
     assert.equal(focusedReport.selectedSection.status, "incomplete");
     assert.equal(
       focusedReport.selectedSection.errors.length,
-      focusedReport.selectedSection.errorCount
+      focusedReport.selectedSection.errorCount,
     );
     assert.ok(focusedReport.selectedSection.errors.length > 3);
-    assert.equal(
-      focusedReport.sections.length,
-      focusedReport.totalSectionCount
-    );
+    assert.equal(focusedReport.sections.length, focusedReport.totalSectionCount);
 
-    const focusedHumanResult = runProgress(fixture.manualPath, [
-      "--section=recordings",
-    ]);
+    const focusedHumanResult = runProgress(fixture.manualPath, ["--section=recordings"]);
     assert.equal(focusedHumanResult.status, 0, focusedHumanResult.stderr);
     assert.match(focusedHumanResult.stdout, /Focused section: Real recordings/);
     assert.match(focusedHumanResult.stdout, /Work targets: recordings/);
     assert.doesNotMatch(focusedHumanResult.stdout, /Zoom: \d+ issues/);
 
-    const unknownSectionResult = runProgress(fixture.manualPath, [
-      "--section=not-a-section",
-    ]);
+    const unknownSectionResult = runProgress(fixture.manualPath, ["--section=not-a-section"]);
     assert.equal(unknownSectionResult.status, 1);
-    assert.match(
-      unknownSectionResult.stderr,
-      /unknown manual QA progress section: not-a-section/
-    );
+    assert.match(unknownSectionResult.stderr, /unknown manual QA progress section: not-a-section/);
     assert.match(unknownSectionResult.stderr, /Available sections: automation/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -1245,19 +1149,13 @@ test("manual QA progress groups the authoritative verifier errors by section", (
 test("manual QA progress routes missing probe reports to their strict collection commands", () => {
   const fixture = makeFixture();
   try {
-    rmSync(
-      join(fixture.dir, "release-artifacts", "manual-qa-media-probe.json")
-    );
-    rmSync(
-      join(fixture.dir, "release-artifacts", "manual-qa-sidecar-probe.json")
-    );
+    rmSync(join(fixture.dir, "release-artifacts", "manual-qa-media-probe.json"));
+    rmSync(join(fixture.dir, "release-artifacts", "manual-qa-sidecar-probe.json"));
 
     const result = runProgress(fixture.manualPath, ["--json"]);
     assert.equal(result.status, 0, result.stderr);
     const report = JSON.parse(result.stdout);
-    const sections = new Map(
-      report.sections.map((section) => [section.id, section])
-    );
+    const sections = new Map(report.sections.map((section) => [section.id, section]));
 
     assert.equal(sections.get("automation").status, "complete");
     assert.equal(sections.get("mediaProbe").errorCount, 1);
@@ -1265,19 +1163,13 @@ test("manual QA progress routes missing probe reports to their strict collection
     assert.deepEqual(report.nextSection, {
       id: "mediaProbe",
       label: "Media probe report",
-      workTargets: [
-        "probeReports.media",
-        "release-artifacts/manual-qa-media-probe.json",
-      ],
+      workTargets: ["probeReports.media", "release-artifacts/manual-qa-media-probe.json"],
       errorCount: 1,
       command:
         "npm run qa:release:manual:media -- --json --require-complete --output=release-artifacts/manual-qa-media-probe.json /path/to/all-source-export-and-project-audio-files",
     });
 
-    const focusedResult = runProgress(fixture.manualPath, [
-      "--json",
-      "--section=sidecarProbe",
-    ]);
+    const focusedResult = runProgress(fixture.manualPath, ["--json", "--section=sidecarProbe"]);
     assert.equal(focusedResult.status, 0, focusedResult.stderr);
     const focusedReport = JSON.parse(focusedResult.stdout);
     assert.equal(focusedReport.selectedSection.id, "sidecarProbe");
@@ -1305,16 +1197,14 @@ test("manual QA progress defers status and testedAt until final verification", (
           testedAt: "YYYY-MM-DDTHH:mm:ss.sssZ",
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
 
     const result = runProgress(fixture.manualPath, ["--json"]);
     assert.equal(result.status, 0, result.stderr);
     const report = JSON.parse(result.stdout);
-    const sections = new Map(
-      report.sections.map((section) => [section.id, section])
-    );
+    const sections = new Map(report.sections.map((section) => [section.id, section]));
 
     assert.equal(sections.get("metadata").status, "complete");
     assert.equal(sections.get("mediaProbe").status, "complete");
@@ -1349,16 +1239,14 @@ test("manual QA progress routes network isolation to offline transcription", () 
           },
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
 
     const result = runProgress(fixture.manualPath, ["--json"]);
     assert.equal(result.status, 0, result.stderr);
     const report = JSON.parse(result.stdout);
-    const sections = new Map(
-      report.sections.map((section) => [section.id, section])
-    );
+    const sections = new Map(report.sections.map((section) => [section.id, section]));
 
     assert.equal(sections.get("metadata").status, "complete");
     assert.deepEqual(sections.get("offlineTranscription").errorSamples, [
@@ -1367,13 +1255,9 @@ test("manual QA progress routes network isolation to offline transcription", () 
     assert.deepEqual(report.nextSection, {
       id: "offlineTranscription",
       label: "Offline transcription",
-      workTargets: [
-        "environment.networkDisabledForOfflineTranscription",
-        "offlineTranscription",
-      ],
+      workTargets: ["environment.networkDisabledForOfflineTranscription", "offlineTranscription"],
       errorCount: 1,
-      command:
-        "npm run qa:release:manual:progress -- --section=offlineTranscription",
+      command: "npm run qa:release:manual:progress -- --section=offlineTranscription",
     });
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -1383,11 +1267,7 @@ test("manual QA progress routes network isolation to offline transcription", () 
 test("manual QA evidence template pre-fills current automated evidence when present", () => {
   if (!existsSync(AUTOMATED_EVIDENCE)) return;
   const automated = JSON.parse(readFileSync(AUTOMATED_EVIDENCE, "utf8"));
-  if (
-    automated.kind !== "sayless.releaseQaAutomated" ||
-    automated.status !== "passed"
-  )
-    return;
+  if (automated.kind !== "sayless.releaseQaAutomated" || automated.status !== "passed") return;
   const result = printTemplate();
 
   assert.equal(result.status, 0, result.stderr);
@@ -1396,45 +1276,32 @@ test("manual QA evidence template pre-fills current automated evidence when pres
   if (template.automatedEvidenceGeneratedAt === automated.generatedAt) {
     assert.equal(template.environment.extensionSource, automated.build.path);
   } else {
-    assert.equal(
-      template.automatedEvidenceGeneratedAt,
-      "YYYY-MM-DDTHH:mm:ss.sssZ"
-    );
+    assert.equal(template.automatedEvidenceGeneratedAt, "YYYY-MM-DDTHH:mm:ss.sssZ");
     assert.equal(template.environment.extensionSource, "build");
   }
   assert.equal(template.environment.cleanChromeProfile, false);
-  assert.equal(
-    template.environment.networkDisabledForOfflineTranscription,
-    false
-  );
+  assert.equal(template.environment.networkDisabledForOfflineTranscription, false);
   assert.equal(template.exports.workflow.captionBurnInVerified, false);
   assert.equal(template.offlineTranscription.bundledModelReadyObserved, false);
   assert.equal(template.zoom.observations.length, 2);
   assert.equal(
-    template.zoom.observations.every(
-      (observation) => observation.previewVerified === false
-    ),
-    true
+    template.zoom.observations.every((observation) => observation.previewVerified === false),
+    true,
   );
   assert.equal(template.crop.observations.length, 2);
   assert.equal(
-    template.crop.observations.every(
-      (observation) => observation.edgeCropVerified === false
-    ),
-    true
+    template.crop.observations.every((observation) => observation.edgeCropVerified === false),
+    true,
   );
   assert.deepEqual(
     template.projectAudio.inputs.map((input) => input.format),
-    ["wav", "m4a", "mp3"]
+    ["wav", "m4a", "mp3"],
   );
   assert.equal(template.projectAudio.playback.longRecordingSyncVerified, false);
   assert.equal(template.projectAudio.persistence.relinkHashMatched, false);
   assert.equal(template.localLibraryRecovery.duplicateReopenVerified, false);
   assert.equal(template.publicationSurface.noPaidOrAccountGateClaims, false);
-  assert.equal(
-    template.checks.fresh_install_no_account_or_paid_gates.status,
-    "template"
-  );
+  assert.equal(template.checks.fresh_install_no_account_or_paid_gates.status, "template");
   assert.equal(template.testedAt, "YYYY-MM-DDTHH:mm:ss.sssZ");
 });
 
@@ -1447,10 +1314,7 @@ test("manual QA evidence template honors alternate release root", () => {
     const template = JSON.parse(result.stdout);
     assert.equal(template.status, "template");
     assert.equal(template.releaseVersion, packageJson.version);
-    assert.equal(
-      template.automatedEvidenceGeneratedAt,
-      fixture.automated.generatedAt
-    );
+    assert.equal(template.automatedEvidenceGeneratedAt, fixture.automated.generatedAt);
     assert.equal(template.environment.extensionSource, "build");
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -1460,11 +1324,7 @@ test("manual QA evidence template honors alternate release root", () => {
 test("manual QA evidence template writer is atomic and refuses accidental overwrite", () => {
   const fixture = makeFixture();
   try {
-    const manualPath = join(
-      fixture.dir,
-      "release-artifacts",
-      "manual-qa-evidence.json"
-    );
+    const manualPath = join(fixture.dir, "release-artifacts", "manual-qa-evidence.json");
     const first = writeTemplateForRoot(fixture.dir);
 
     assert.equal(first.status, 0, first.stderr);
@@ -1474,10 +1334,7 @@ test("manual QA evidence template writer is atomic and refuses accidental overwr
     const template = JSON.parse(readFileSync(manualPath, "utf8"));
     assert.equal(template.status, "template");
     assert.equal(template.releaseVersion, packageJson.version);
-    assert.equal(
-      template.automatedEvidenceGeneratedAt,
-      fixture.automated.generatedAt
-    );
+    assert.equal(template.automatedEvidenceGeneratedAt, fixture.automated.generatedAt);
     assert.equal(template.environment.extensionSource, "build");
 
     const second = writeTemplateForRoot(fixture.dir);
@@ -1493,10 +1350,7 @@ test("manual QA evidence template writer is atomic and refuses accidental overwr
     const forcedTemplate = JSON.parse(readFileSync(manualPath, "utf8"));
     assert.equal(forcedTemplate.kind, "sayless.manualQaEvidence");
     assert.equal(forcedTemplate.status, "template");
-    assert.equal(
-      forcedTemplate.automatedEvidenceGeneratedAt,
-      fixture.automated.generatedAt
-    );
+    assert.equal(forcedTemplate.automatedEvidenceGeneratedAt, fixture.automated.generatedAt);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -1507,7 +1361,7 @@ test("manual QA evidence template does not prefill stale automated evidence", ()
   try {
     writeFileSync(
       join(fixture.buildDir, "editor.html"),
-      "<html>SayLess changed after automated QA</html>"
+      "<html>SayLess changed after automated QA</html>",
     );
 
     const result = printTemplateForRoot(fixture.dir);
@@ -1515,10 +1369,7 @@ test("manual QA evidence template does not prefill stale automated evidence", ()
     assert.equal(result.status, 0, result.stderr);
     const template = JSON.parse(result.stdout);
     assert.equal(template.status, "template");
-    assert.equal(
-      template.automatedEvidenceGeneratedAt,
-      "YYYY-MM-DDTHH:mm:ss.sssZ"
-    );
+    assert.equal(template.automatedEvidenceGeneratedAt, "YYYY-MM-DDTHH:mm:ss.sssZ");
     assert.equal(template.environment.extensionSource, "build");
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -1533,7 +1384,7 @@ test("manual QA evidence template ignores non-passing automated evidence", () =>
     mkdirSync(join(dir, "release-artifacts"), { recursive: true });
     writeFileSync(
       join(dir, "package.json"),
-      `${JSON.stringify({ version: packageVersion }, null, 2)}\n`
+      `${JSON.stringify({ version: packageVersion }, null, 2)}\n`,
     );
     writeFileSync(
       join(dir, "package-lock.json"),
@@ -1543,12 +1394,12 @@ test("manual QA evidence template ignores non-passing automated evidence", () =>
           packages: { "": { version: packageVersion } },
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
     writeFileSync(
       join(dir, "src", "manifest.json"),
-      `${JSON.stringify({ version: packageVersion }, null, 2)}\n`
+      `${JSON.stringify({ version: packageVersion }, null, 2)}\n`,
     );
     writeFileSync(
       join(dir, "release-artifacts", "release-qa-automated.json"),
@@ -1560,8 +1411,8 @@ test("manual QA evidence template ignores non-passing automated evidence", () =>
           build: { path: "stale-build" },
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
 
     const result = printTemplateForRoot(dir);
@@ -1570,10 +1421,7 @@ test("manual QA evidence template ignores non-passing automated evidence", () =>
     const template = JSON.parse(result.stdout);
     assert.equal(template.status, "template");
     assert.equal(template.releaseVersion, packageVersion);
-    assert.equal(
-      template.automatedEvidenceGeneratedAt,
-      "YYYY-MM-DDTHH:mm:ss.sssZ"
-    );
+    assert.equal(template.automatedEvidenceGeneratedAt, "YYYY-MM-DDTHH:mm:ss.sssZ");
     assert.equal(template.environment.extensionSource, "build");
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -1587,18 +1435,12 @@ test("manual QA evidence verifier rejects non-passing automated status", () => {
       ...fixture.automated,
       status: "failed",
     };
-    writeFileSync(
-      fixture.automatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(fixture.automatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
 
     const result = runVerifier(fixture.manualPath);
 
     assert.notEqual(result.status, 0);
-    assert.match(
-      result.stderr,
-      /automated QA evidence status must be "passed"/
-    );
+    assert.match(result.stderr, /automated QA evidence status must be "passed"/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -1616,8 +1458,8 @@ test("manual QA evidence verifier rejects non-passing manual status", () => {
           status: "failed",
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
 
     const result = runVerifier(badManualPath);
@@ -1653,18 +1495,9 @@ test("manual QA evidence verifier rejects placeholders and detached export sourc
     const result = runVerifier(badPath);
 
     assert.notEqual(result.status, 0);
-    assert.match(
-      result.stderr,
-      /tester\.name still contains template or fixture placeholder text/
-    );
-    assert.match(
-      result.stderr,
-      /exports\.files\[0\]\.fileName must match the mp4 export format/
-    );
-    assert.match(
-      result.stderr,
-      /exports\.files\[0\]\.sourceRecordingId must reference/
-    );
+    assert.match(result.stderr, /tester\.name still contains template or fixture placeholder text/);
+    assert.match(result.stderr, /exports\.files\[0\]\.fileName must match the mp4 export format/);
+    assert.match(result.stderr, /exports\.files\[0\]\.sourceRecordingId must reference/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -1682,8 +1515,7 @@ test("manual QA evidence verifier rejects duplicate export filenames and vague e
             return {
               ...exportedFile,
               fileName: fixture.manual.exports.files[0].fileName,
-              notes:
-                "Release QA confirms this artifact matched the project state.",
+              notes: "Release QA confirms this artifact matched the project state.",
             };
           }
           return exportedFile;
@@ -1698,12 +1530,9 @@ test("manual QA evidence verifier rejects duplicate export filenames and vague e
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /exports\.files\[1\]\.fileName must be unique within exports\.files/
+      /exports\.files\[1\]\.fileName must be unique within exports\.files/,
     );
-    assert.match(
-      result.stderr,
-      /exports\.files\[1\]\.notes must describe opening/
-    );
+    assert.match(result.stderr, /exports\.files\[1\]\.notes must describe opening/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -1751,7 +1580,7 @@ test("manual QA evidence verifier rejects weak recording metadata", () => {
               height: 1.5,
               notes: "Release QA covered this scenario.",
             }
-          : recording
+          : recording,
       ),
     };
     const badPath = join(fixture.dir, "bad-weak-recording-metadata.json");
@@ -1761,23 +1590,17 @@ test("manual QA evidence verifier rejects weak recording metadata", () => {
 
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /recordings\[0\]\.source must describe a tab/);
-    assert.match(
-      result.stderr,
-      /recordings\[0\]\.container must identify an MP4 or WebM/
-    );
-    assert.match(
-      result.stderr,
-      /recordings\[0\]\.notes must describe observed/
-    );
+    assert.match(result.stderr, /recordings\[0\]\.container must identify an MP4 or WebM/);
+    assert.match(result.stderr, /recordings\[0\]\.notes must describe observed/);
     assert.match(result.stderr, /recordings\[0\]\.microphone is required/);
     assert.match(result.stderr, /recordings\[0\]\.noiseProfile is required/);
     assert.match(
       result.stderr,
-      /recordings\[0\]\.width must be a positive integer source-video dimension/
+      /recordings\[0\]\.width must be a positive integer source-video dimension/,
     );
     assert.match(
       result.stderr,
-      /recordings\[0\]\.height must be a positive integer source-video dimension/
+      /recordings\[0\]\.height must be a positive integer source-video dimension/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -1790,7 +1613,7 @@ test("manual QA evidence verifier requires exact positive recording byte sizes",
     const badManual = {
       ...fixture.manual,
       recordings: fixture.manual.recordings.map((recording, index) =>
-        index === 0 ? { ...recording, byteSize: 12.5 } : recording
+        index === 0 ? { ...recording, byteSize: 12.5 } : recording,
       ),
     };
     const badPath = join(fixture.dir, "bad-recording-byte-size.json");
@@ -1801,7 +1624,7 @@ test("manual QA evidence verifier requires exact positive recording byte sizes",
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /recordings\[0\]\.byteSize must be a positive integer source-file byte count/
+      /recordings\[0\]\.byteSize must be a positive integer source-file byte count/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -1816,7 +1639,7 @@ test("manual QA evidence verifier requires one recording to be both long and lar
       recordings: fixture.manual.recordings.map((recording, index) =>
         index === 0
           ? { ...recording, byteSize: 75_000_000 }
-          : { ...recording, byteSize: 20_000_000 }
+          : { ...recording, byteSize: 20_000_000 },
       ),
     };
     const badPath = join(fixture.dir, "bad-split-long-large-recordings.json");
@@ -1827,7 +1650,7 @@ test("manual QA evidence verifier requires one recording to be both long and lar
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /recordings must include at least one recording that is both 180 seconds or longer and at least 25 MiB/
+      /recordings must include at least one recording that is both 180 seconds or longer and at least 25 MiB/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -1855,7 +1678,7 @@ test("manual QA cancel and retry must use the long large recording", () => {
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /exports\.workflow\.cancelRetryRecordingId must reference a listed recording that is both 180 seconds or longer and at least 25 MiB/
+      /exports\.workflow\.cancelRetryRecordingId must reference a listed recording that is both 180 seconds or longer and at least 25 MiB/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -1871,10 +1694,7 @@ test("manual QA evidence verifier rejects stale timestamps and lockfile mismatch
     };
     const badAutomatedPath = join(fixture.dir, "bad-automated.json");
     const badManualPath = join(fixture.dir, "bad-timing.json");
-    writeFileSync(
-      badAutomatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(badAutomatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
     writeFileSync(
       badManualPath,
       `${JSON.stringify(
@@ -1884,21 +1704,15 @@ test("manual QA evidence verifier rejects stale timestamps and lockfile mismatch
           testedAt: "2020-01-01T00:00:00.000Z",
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
 
     const result = runVerifier(badManualPath);
 
     assert.notEqual(result.status, 0);
-    assert.match(
-      result.stderr,
-      /testedAt must be at or after automatedEvidenceGeneratedAt/
-    );
-    assert.match(
-      result.stderr,
-      /packageLockVersion must match package-lock\.json version/
-    );
+    assert.match(result.stderr, /testedAt must be at or after automatedEvidenceGeneratedAt/);
+    assert.match(result.stderr, /packageLockVersion must match package-lock\.json version/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -1913,10 +1727,7 @@ test("manual QA evidence verifier rejects incomplete automated run timing", () =
       generatedAt: "2026-01-01T00:00:00.000Z",
       durationMs: 0,
     };
-    writeFileSync(
-      fixture.automatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(fixture.automatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
     const badManual = {
       ...fixture.manual,
       automatedEvidenceGeneratedAt: badAutomated.generatedAt,
@@ -1927,18 +1738,9 @@ test("manual QA evidence verifier rejects incomplete automated run timing", () =
     const result = runVerifier(badManualPath);
 
     assert.notEqual(result.status, 0);
-    assert.match(
-      result.stderr,
-      /automated QA evidence generatedAt must be at or after startedAt/
-    );
-    assert.match(
-      result.stderr,
-      /automated QA evidence startedAt must not be in the future/
-    );
-    assert.match(
-      result.stderr,
-      /automated QA evidence durationMs must be a positive number/
-    );
+    assert.match(result.stderr, /automated QA evidence generatedAt must be at or after startedAt/);
+    assert.match(result.stderr, /automated QA evidence startedAt must not be in the future/);
+    assert.match(result.stderr, /automated QA evidence durationMs must be a positive number/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -1953,26 +1755,20 @@ test("manual QA evidence verifier rejects inconsistent automated run duration", 
       generatedAt: "2026-07-16T10:00:10.000Z",
       durationMs: 120_000,
     };
-    writeFileSync(
-      fixture.automatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(fixture.automatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
     const badManual = {
       ...fixture.manual,
       automatedEvidenceGeneratedAt: badAutomated.generatedAt,
       testedAt: "2026-07-16T10:01:00.000Z",
     };
-    writeFileSync(
-      fixture.manualPath,
-      `${JSON.stringify(badManual, null, 2)}\n`
-    );
+    writeFileSync(fixture.manualPath, `${JSON.stringify(badManual, null, 2)}\n`);
 
     const result = runVerifier(fixture.manualPath);
 
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /automated QA evidence durationMs must match the startedAt\/generatedAt run window/
+      /automated QA evidence durationMs must match the startedAt\/generatedAt run window/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -1990,30 +1786,18 @@ test("manual QA evidence verifier rejects missing automated git provenance", () 
         dirty: "no",
       },
     };
-    writeFileSync(
-      fixture.automatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(fixture.automatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
 
     const result = runVerifier(fixture.manualPath);
 
     assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /automated QA evidence git\.branch is required/);
     assert.match(
       result.stderr,
-      /automated QA evidence git\.branch is required/
+      /automated QA evidence git\.commit must be a 40-character SHA-1 commit/,
     );
-    assert.match(
-      result.stderr,
-      /automated QA evidence git\.commit must be a 40-character SHA-1 commit/
-    );
-    assert.match(
-      result.stderr,
-      /automated QA evidence git\.dirty must be a boolean/
-    );
-    assert.match(
-      result.stderr,
-      /automated QA evidence git\.workingTree is required/
-    );
+    assert.match(result.stderr, /automated QA evidence git\.dirty must be a boolean/);
+    assert.match(result.stderr, /automated QA evidence git\.workingTree is required/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -2032,17 +1816,14 @@ test("manual QA evidence verifier rejects automated git worktree drift", () => {
         },
       },
     };
-    writeFileSync(
-      fixture.automatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(fixture.automatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
 
     const result = runVerifier(fixture.manualPath);
 
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /automated QA evidence git\.workingTree\.sha256 must match the current git worktree/
+      /automated QA evidence git\.workingTree\.sha256 must match the current git worktree/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2057,18 +1838,12 @@ test("manual QA evidence verifier rejects weak automated command evidence", () =
       commands: fixture.automated.commands.map((command) =>
         command.label === "verify:release"
           ? { label: command.label, status: "failed", durationMs: -1 }
-          : command
+          : command,
       ),
     };
     const badAutomatedPath = join(fixture.dir, "bad-automated-command.json");
-    const badManualPath = join(
-      fixture.dir,
-      "bad-automated-command-manual.json"
-    );
-    writeFileSync(
-      badAutomatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    const badManualPath = join(fixture.dir, "bad-automated-command-manual.json");
+    writeFileSync(badAutomatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
     writeFileSync(
       badManualPath,
       `${JSON.stringify(
@@ -2077,8 +1852,8 @@ test("manual QA evidence verifier rejects weak automated command evidence", () =
           automatedEvidencePath: badAutomatedPath,
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
 
     const result = runVerifier(badManualPath);
@@ -2086,15 +1861,15 @@ test("manual QA evidence verifier rejects weak automated command evidence", () =
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /automated QA evidence command verify:release must have status "passed"/
+      /automated QA evidence command verify:release must have status "passed"/,
     );
     assert.match(
       result.stderr,
-      /automated QA evidence command verify:release must include the executed command/
+      /automated QA evidence command verify:release must include the executed command/,
     );
     assert.match(
       result.stderr,
-      /automated QA evidence command verify:release must include a non-negative durationMs/
+      /automated QA evidence command verify:release must include a non-negative durationMs/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2109,20 +1884,17 @@ test("manual QA evidence verifier rejects substituted automated command strings"
       commands: fixture.automated.commands.map((command) =>
         command.label === "build:release"
           ? { ...command, command: "node scripts/fake-release-build.mjs" }
-          : command
+          : command,
       ),
     };
-    writeFileSync(
-      fixture.automatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(fixture.automatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
 
     const result = runVerifier(fixture.manualPath);
 
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /automated QA evidence command build:release must be "npm run build:release"/
+      /automated QA evidence command build:release must be "npm run build:release"/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2146,21 +1918,15 @@ test("manual QA evidence verifier rejects duplicate and unexpected automated com
         },
       ],
     };
-    writeFileSync(
-      fixture.automatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(fixture.automatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
 
     const result = runVerifier(fixture.manualPath);
 
     assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /automated QA evidence contains duplicate command: lint/);
     assert.match(
       result.stderr,
-      /automated QA evidence contains duplicate command: typecheck/
-    );
-    assert.match(
-      result.stderr,
-      /automated QA evidence contains unexpected command: test:e2e:hosted-dashboard/
+      /automated QA evidence contains unexpected command: test:e2e:hosted-dashboard/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2174,22 +1940,17 @@ test("manual QA evidence verifier rejects command durations longer than the auto
       ...fixture.automated,
       durationMs: 1_000,
       commands: fixture.automated.commands.map((command) =>
-        command.label === "test:unit"
-          ? { ...command, durationMs: 10_000 }
-          : command
+        command.label === "test:unit" ? { ...command, durationMs: 10_000 } : command,
       ),
     };
-    writeFileSync(
-      fixture.automatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(fixture.automatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
 
     const result = runVerifier(fixture.manualPath);
 
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /automated QA evidence command durations must not exceed total durationMs/
+      /automated QA evidence command durations must not exceed total durationMs/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2199,10 +1960,7 @@ test("manual QA evidence verifier rejects command durations longer than the auto
 test("manual QA evidence verifier rejects alternate automated evidence paths", () => {
   const fixture = makeFixture();
   try {
-    const alternateAutomatedPath = join(
-      fixture.dir,
-      "alternate-automated.json"
-    );
+    const alternateAutomatedPath = join(fixture.dir, "alternate-automated.json");
     writeFileSync(alternateAutomatedPath, readFileSync(fixture.automatedPath));
     const badManual = {
       ...fixture.manual,
@@ -2216,7 +1974,7 @@ test("manual QA evidence verifier rejects alternate automated evidence paths", (
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /automatedEvidencePath must point to release-artifacts\/release-qa-automated\.json/
+      /automatedEvidencePath must point to release-artifacts\/release-qa-automated\.json/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2237,10 +1995,7 @@ test("manual QA evidence verifier rejects absolute automated evidence and build 
         path: join(fixture.buildDir, "assets", "whisper"),
       },
     };
-    writeFileSync(
-      fixture.automatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(fixture.automatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
     const badManual = {
       ...fixture.manual,
       automatedEvidencePath: fixture.automatedPath,
@@ -2257,19 +2012,19 @@ test("manual QA evidence verifier rejects absolute automated evidence and build 
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /automatedEvidencePath must point to release-artifacts\/release-qa-automated\.json/
+      /automatedEvidencePath must point to release-artifacts\/release-qa-automated\.json/,
     );
     assert.match(
       result.stderr,
-      /automated QA evidence build\.path must be the canonical relative build path/
+      /automated QA evidence build\.path must be the canonical relative build path/,
     );
     assert.match(
       result.stderr,
-      /automated QA evidence bundledWhisper\.path must be the canonical relative build\/assets\/whisper path/
+      /automated QA evidence bundledWhisper\.path must be the canonical relative build\/assets\/whisper path/,
     );
     assert.match(
       result.stderr,
-      /environment\.extensionSource must reference the automated QA build path/
+      /environment\.extensionSource must reference the automated QA build path/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2295,7 +2050,7 @@ test("manual QA evidence verifier rejects forbidden automated release manifest s
     };
     writeFileSync(
       join(fixture.buildDir, "manifest.json"),
-      `${JSON.stringify(badManifest, null, 2)}\n`
+      `${JSON.stringify(badManifest, null, 2)}\n`,
     );
     const badBuild = dirFingerprint(fixture.buildDir);
     const bad = {
@@ -2316,8 +2071,7 @@ test("manual QA evidence verifier rejects forbidden automated release manifest s
         hasIdentityPermission: true,
         hasGoogleDrivePermission: true,
         hasRemoteConnectSrc: true,
-        contentSecurityPolicyExtensionPages:
-          badManifest.content_security_policy.extension_pages,
+        contentSecurityPolicyExtensionPages: badManifest.content_security_policy.extension_pages,
       },
     };
     writeFileSync(fixture.automatedPath, `${JSON.stringify(bad, null, 2)}\n`);
@@ -2325,25 +2079,22 @@ test("manual QA evidence verifier rejects forbidden automated release manifest s
     const result = runVerifier(fixture.manualPath);
 
     assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /automated QA evidence releaseSurface\.hasOauth2 must be false/);
     assert.match(
       result.stderr,
-      /automated QA evidence releaseSurface\.hasOauth2 must be false/
+      /automated QA evidence releaseSurface\.hasExternallyConnectable must be false/,
     );
     assert.match(
       result.stderr,
-      /automated QA evidence releaseSurface\.hasExternallyConnectable must be false/
+      /automated QA evidence releaseSurface\.hasIdentityPermission must be false/,
     );
     assert.match(
       result.stderr,
-      /automated QA evidence releaseSurface\.hasIdentityPermission must be false/
+      /automated QA evidence releaseSurface\.hasGoogleDrivePermission must be false/,
     );
     assert.match(
       result.stderr,
-      /automated QA evidence releaseSurface\.hasGoogleDrivePermission must be false/
-    );
-    assert.match(
-      result.stderr,
-      /automated QA evidence releaseSurface\.hasRemoteConnectSrc must be false/
+      /automated QA evidence releaseSurface\.hasRemoteConnectSrc must be false/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2364,18 +2115,9 @@ test("manual QA evidence verifier rejects ambiguous generated-speech automation 
       commands: [...fixture.automated.commands, speechCommand],
       skippedCommands: [{ label: speechCommand.label, reason: "" }],
     };
-    const badAutomatedPath = join(
-      fixture.dir,
-      "bad-generated-speech-command.json"
-    );
-    const badManualPath = join(
-      fixture.dir,
-      "bad-generated-speech-command-manual.json"
-    );
-    writeFileSync(
-      badAutomatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    const badAutomatedPath = join(fixture.dir, "bad-generated-speech-command.json");
+    const badManualPath = join(fixture.dir, "bad-generated-speech-command-manual.json");
+    writeFileSync(badAutomatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
     writeFileSync(
       badManualPath,
       `${JSON.stringify(
@@ -2384,8 +2126,8 @@ test("manual QA evidence verifier rejects ambiguous generated-speech automation 
           automatedEvidencePath: badAutomatedPath,
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
 
     const result = runVerifier(badManualPath);
@@ -2393,7 +2135,7 @@ test("manual QA evidence verifier rejects ambiguous generated-speech automation 
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /automated QA evidence command test:e2e:offline-transcription-speech cannot be both completed and skipped/
+      /automated QA evidence command test:e2e:offline-transcription-speech cannot be both completed and skipped/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2405,22 +2147,11 @@ test("manual QA evidence verifier rejects skipped generated-speech evidence with
   try {
     const badAutomated = {
       ...fixture.automated,
-      skippedCommands: [
-        { label: "test:e2e:offline-transcription-speech", reason: "" },
-      ],
+      skippedCommands: [{ label: "test:e2e:offline-transcription-speech", reason: "" }],
     };
-    const badAutomatedPath = join(
-      fixture.dir,
-      "bad-generated-speech-skip.json"
-    );
-    const badManualPath = join(
-      fixture.dir,
-      "bad-generated-speech-skip-manual.json"
-    );
-    writeFileSync(
-      badAutomatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    const badAutomatedPath = join(fixture.dir, "bad-generated-speech-skip.json");
+    const badManualPath = join(fixture.dir, "bad-generated-speech-skip-manual.json");
+    writeFileSync(badAutomatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
     writeFileSync(
       badManualPath,
       `${JSON.stringify(
@@ -2429,8 +2160,8 @@ test("manual QA evidence verifier rejects skipped generated-speech evidence with
           automatedEvidencePath: badAutomatedPath,
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
 
     const result = runVerifier(badManualPath);
@@ -2438,7 +2169,7 @@ test("manual QA evidence verifier rejects skipped generated-speech evidence with
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /automated QA evidence skipped command test:e2e:offline-transcription-speech must include a useful reason/
+      /automated QA evidence skipped command test:e2e:offline-transcription-speech must include a useful reason/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2459,10 +2190,7 @@ test("manual QA evidence verifier rejects stale bundled Whisper evidence", () =>
     };
     const badAutomatedPath = join(fixture.dir, "bad-bundled-whisper.json");
     const badManualPath = join(fixture.dir, "bad-bundled-whisper-manual.json");
-    writeFileSync(
-      badAutomatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(badAutomatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
     writeFileSync(
       badManualPath,
       `${JSON.stringify(
@@ -2471,25 +2199,16 @@ test("manual QA evidence verifier rejects stale bundled Whisper evidence", () =>
           automatedEvidencePath: badAutomatedPath,
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
 
     const result = runVerifier(badManualPath);
 
     assert.notEqual(result.status, 0);
-    assert.match(
-      result.stderr,
-      /current bundled Whisper fingerprint does not match/
-    );
-    assert.match(
-      result.stderr,
-      /current bundled Whisper file count .* does not match/
-    );
-    assert.match(
-      result.stderr,
-      /current bundled Whisper byte size .* does not match/
-    );
+    assert.match(result.stderr, /current bundled Whisper fingerprint does not match/);
+    assert.match(result.stderr, /current bundled Whisper file count .* does not match/);
+    assert.match(result.stderr, /current bundled Whisper byte size .* does not match/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -2508,10 +2227,7 @@ test("manual QA evidence verifier rejects stale automated build size evidence", 
     };
     const badAutomatedPath = join(fixture.dir, "bad-build-size.json");
     const badManualPath = join(fixture.dir, "bad-build-size-manual.json");
-    writeFileSync(
-      badAutomatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(badAutomatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
     writeFileSync(
       badManualPath,
       `${JSON.stringify(
@@ -2520,8 +2236,8 @@ test("manual QA evidence verifier rejects stale automated build size evidence", 
           automatedEvidencePath: badAutomatedPath,
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
 
     const result = runVerifier(badManualPath);
@@ -2549,10 +2265,7 @@ test("manual QA evidence verifier rejects stale automated formatted sizes", () =
     };
     const badAutomatedPath = join(fixture.dir, "bad-formatted-sizes.json");
     const badManualPath = join(fixture.dir, "bad-formatted-sizes-manual.json");
-    writeFileSync(
-      badAutomatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(badAutomatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
     writeFileSync(
       badManualPath,
       `${JSON.stringify(
@@ -2561,8 +2274,8 @@ test("manual QA evidence verifier rejects stale automated formatted sizes", () =
           automatedEvidencePath: badAutomatedPath,
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
 
     const result = runVerifier(badManualPath);
@@ -2570,11 +2283,11 @@ test("manual QA evidence verifier rejects stale automated formatted sizes", () =
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /automated QA evidence build\.formattedBytes must match build\.bytes/
+      /automated QA evidence build\.formattedBytes must match build\.bytes/,
     );
     assert.match(
       result.stderr,
-      /automated QA evidence bundledWhisper\.formattedBytes must match bundledWhisper\.bytes/
+      /automated QA evidence bundledWhisper\.formattedBytes must match bundledWhisper\.bytes/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2601,12 +2314,12 @@ test("manual QA evidence verifier rejects non-clean-profile or wrong build sourc
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /environment\.extensionSource must reference the automated QA build path/
+      /environment\.extensionSource must reference the automated QA build path/,
     );
     assert.match(result.stderr, /environment\.cleanChromeProfile must be true/);
     assert.match(
       result.stderr,
-      /environment\.unpackedExtensionId must be a 32-character Chrome extension id/
+      /environment\.unpackedExtensionId must be a 32-character Chrome extension id/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2631,7 +2344,7 @@ test("manual QA evidence verifier requires the browser-observed automated extens
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /environment\.unpackedExtensionId must match the browser-observed automated extension id/
+      /environment\.unpackedExtensionId must match the browser-observed automated extension id/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2655,14 +2368,8 @@ test("manual QA evidence verifier requires matching launched-session provenance"
     const result = runVerifier(badPath);
 
     assert.notEqual(result.status, 0);
-    assert.match(
-      result.stderr,
-      /manualSession\.buildSha256 must match automated QA build\.sha256/
-    );
-    assert.match(
-      result.stderr,
-      /manualSession\.operatingSystem must match environment\.os/
-    );
+    assert.match(result.stderr, /manualSession\.buildSha256 must match automated QA build\.sha256/);
+    assert.match(result.stderr, /manualSession\.operatingSystem must match environment\.os/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -2681,15 +2388,9 @@ test("manual QA evidence verifier rejects malformed built-extension browser prov
         summaryCount: 0,
       },
     };
-    const badAutomatedPath = join(
-      fixture.dir,
-      "bad-built-extension-evidence.json"
-    );
+    const badAutomatedPath = join(fixture.dir, "bad-built-extension-evidence.json");
     const badManualPath = join(fixture.dir, "bad-built-extension-manual.json");
-    writeFileSync(
-      badAutomatedPath,
-      `${JSON.stringify(badAutomated, null, 2)}\n`
-    );
+    writeFileSync(badAutomatedPath, `${JSON.stringify(badAutomated, null, 2)}\n`);
     writeFileSync(
       badManualPath,
       `${JSON.stringify(
@@ -2698,30 +2399,21 @@ test("manual QA evidence verifier rejects malformed built-extension browser prov
           automatedEvidencePath: badAutomatedPath,
         },
         null,
-        2
-      )}\n`
+        2,
+      )}\n`,
     );
 
     const result = runVerifier(badManualPath);
 
     assert.notEqual(result.status, 0);
-    assert.match(
-      result.stderr,
-      /builtExtension\.id must be a browser-observed/
-    );
+    assert.match(result.stderr, /builtExtension\.id must be a browser-observed/);
     assert.match(result.stderr, /builtExtension\.buildPath must be/);
+    assert.match(result.stderr, /builtExtension\.cleanChromeProfile must be true/);
     assert.match(
       result.stderr,
-      /builtExtension\.cleanChromeProfile must be true/
+      /builtExtension\.observedAt must fall within the automated QA run window/,
     );
-    assert.match(
-      result.stderr,
-      /builtExtension\.observedAt must fall within the automated QA run window/
-    );
-    assert.match(
-      result.stderr,
-      /builtExtension\.summaryCount must be a positive integer/
-    );
+    assert.match(result.stderr, /builtExtension\.summaryCount must be a positive integer/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -2754,39 +2446,36 @@ test("manual QA evidence verifier rejects weak offline transcription proof", () 
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /offlineTranscription\.externalNetworkProbe\.url must be an external http\(s\) URL/
+      /offlineTranscription\.externalNetworkProbe\.url must be an external http\(s\) URL/,
     );
     assert.match(
       result.stderr,
-      /offlineTranscription\.networkDisabledMethod must describe disabled/
+      /offlineTranscription\.networkDisabledMethod must describe disabled/,
     );
     assert.match(
       result.stderr,
-      /offlineTranscription\.externalNetworkProbe\.result must be "failed"/
+      /offlineTranscription\.externalNetworkProbe\.result must be "failed"/,
     );
     assert.match(
       result.stderr,
-      /offlineTranscription\.externalNetworkProbe\.observedError must include/
+      /offlineTranscription\.externalNetworkProbe\.observedError must include/,
     );
     assert.match(
       result.stderr,
-      /offlineTranscription\.externalNetworkProbe\.sameChromeProfile must be true/
+      /offlineTranscription\.externalNetworkProbe\.sameChromeProfile must be true/,
     );
     assert.match(
       result.stderr,
-      /offlineTranscription\.networkProbeResult must include the failed external probe/
+      /offlineTranscription\.networkProbeResult must include the failed external probe/,
     );
     assert.match(
       result.stderr,
-      /offlineTranscription\.networkProbeResult must mention that the bundled\/local Whisper model stayed ready/
+      /offlineTranscription\.networkProbeResult must mention that the bundled\/local Whisper model stayed ready/,
     );
+    assert.match(result.stderr, /offlineTranscription\.bundledModelReadyObserved must be true/);
     assert.match(
       result.stderr,
-      /offlineTranscription\.bundledModelReadyObserved must be true/
-    );
-    assert.match(
-      result.stderr,
-      /offlineTranscription\.transcriptQualityNotes must mention real-speaker/
+      /offlineTranscription\.transcriptQualityNotes must mention real-speaker/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2804,10 +2493,7 @@ test("manual QA evidence verifier requires unique offline transcription recordin
         recordingIds: [duplicateRecordingId, duplicateRecordingId],
       },
     };
-    const badPath = join(
-      fixture.dir,
-      "bad-offline-duplicate-recording-refs.json"
-    );
+    const badPath = join(fixture.dir, "bad-offline-duplicate-recording-refs.json");
     writeFileSync(badPath, `${JSON.stringify(bad, null, 2)}\n`);
 
     const result = runVerifier(badPath);
@@ -2815,11 +2501,11 @@ test("manual QA evidence verifier requires unique offline transcription recordin
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /offlineTranscription\.recordingIds\[1\] must be a unique recording id/
+      /offlineTranscription\.recordingIds\[1\] must be a unique recording id/,
     );
     assert.match(
       result.stderr,
-      /offlineTranscription\.recordingIds must reference at least 2 unique listed recording ids/
+      /offlineTranscription\.recordingIds must reference at least 2 unique listed recording ids/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2838,8 +2524,7 @@ test("manual QA evidence verifier rejects weak export workflow proof", () => {
           cancelRetryRecordingId: "missing-recording",
           cancelledExportFormat: "wav",
           retryCompletedExportFormat: "m4a",
-          revealDownloadIdObserved:
-            "Reveal button was visible in the export panel.",
+          revealDownloadIdObserved: "Reveal button was visible in the export panel.",
           notes: "Long export retry was observed in the panel.",
         },
       },
@@ -2850,29 +2535,17 @@ test("manual QA evidence verifier rejects weak export workflow proof", () => {
     const result = runVerifier(badPath);
 
     assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /exports\.workflow\.cancelRetryRecordingId must reference/);
+    assert.match(result.stderr, /exports\.workflow\.cancelledExportFormat must be one of/);
+    assert.match(result.stderr, /exports\.workflow\.retryCompletedExportFormat must be one of/);
     assert.match(
       result.stderr,
-      /exports\.workflow\.cancelRetryRecordingId must reference/
+      /exports\.workflow\.revealDownloadIdObserved must mention a completed/,
     );
+    assert.match(result.stderr, /exports\.workflow\.notes must describe the verified Save to file/);
     assert.match(
       result.stderr,
-      /exports\.workflow\.cancelledExportFormat must be one of/
-    );
-    assert.match(
-      result.stderr,
-      /exports\.workflow\.retryCompletedExportFormat must be one of/
-    );
-    assert.match(
-      result.stderr,
-      /exports\.workflow\.revealDownloadIdObserved must mention a completed/
-    );
-    assert.match(
-      result.stderr,
-      /exports\.workflow\.notes must describe the verified Save to file/
-    );
-    assert.match(
-      result.stderr,
-      /exports\.workflow\.notes must describe the save dialog cancellation/
+      /exports\.workflow\.notes must describe the save dialog cancellation/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2903,26 +2576,20 @@ test("manual QA evidence verifier rejects weak silence suggestion proof", () => 
     const result = runVerifier(badPath);
 
     assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /silenceSuggestions\.suggestedQuietRanges must include at least 2/);
     assert.match(
       result.stderr,
-      /silenceSuggestions\.suggestedQuietRanges must include at least 2/
+      /silenceSuggestions\.suggestedQuietRanges\[0\]\.recordingId must reference/,
     );
     assert.match(
       result.stderr,
-      /silenceSuggestions\.suggestedQuietRanges\[0\]\.recordingId must reference/
+      /silenceSuggestions\.suggestedQuietRanges\[0\]\.endSeconds must be greater/,
     );
     assert.match(
       result.stderr,
-      /silenceSuggestions\.suggestedQuietRanges\[0\]\.endSeconds must be greater/
+      /silenceSuggestions\.suggestedQuietRanges\[0\]\.observation must describe/,
     );
-    assert.match(
-      result.stderr,
-      /silenceSuggestions\.suggestedQuietRanges\[0\]\.observation must describe/
-    );
-    assert.match(
-      result.stderr,
-      /silenceSuggestions\.ignoredNoiseRanges must include at least 1/
-    );
+    assert.match(result.stderr, /silenceSuggestions\.ignoredNoiseRanges must include at least 1/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -2939,10 +2606,7 @@ test("manual QA evidence verifier requires unique silence suggestion recording r
         recordingIds: [duplicateRecordingId, duplicateRecordingId],
       },
     };
-    const badPath = join(
-      fixture.dir,
-      "bad-silence-duplicate-recording-refs.json"
-    );
+    const badPath = join(fixture.dir, "bad-silence-duplicate-recording-refs.json");
     writeFileSync(badPath, `${JSON.stringify(bad, null, 2)}\n`);
 
     const result = runVerifier(badPath);
@@ -2950,11 +2614,11 @@ test("manual QA evidence verifier requires unique silence suggestion recording r
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /silenceSuggestions\.recordingIds\[1\] must be a unique recording id/
+      /silenceSuggestions\.recordingIds\[1\] must be a unique recording id/,
     );
     assert.match(
       result.stderr,
-      /silenceSuggestions\.recordingIds must reference at least 2 unique listed recording ids/
+      /silenceSuggestions\.recordingIds must reference at least 2 unique listed recording ids/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -2979,15 +2643,13 @@ test("manual QA silence evidence is linked to real container and noise diversity
       silenceSuggestions: {
         ...fixture.manual.silenceSuggestions,
         codecsOrContainers: ["webm", "mp4", "m4a"],
-        suggestedQuietRanges:
-          fixture.manual.silenceSuggestions.suggestedQuietRanges.map(
-            (range) => ({ ...range, recordingId: recordingA.id })
-          ),
-        ignoredNoiseRanges:
-          fixture.manual.silenceSuggestions.ignoredNoiseRanges.map((range) => ({
-            ...range,
-            recordingId: recordingA.id,
-          })),
+        suggestedQuietRanges: fixture.manual.silenceSuggestions.suggestedQuietRanges.map(
+          (range) => ({ ...range, recordingId: recordingA.id }),
+        ),
+        ignoredNoiseRanges: fixture.manual.silenceSuggestions.ignoredNoiseRanges.map((range) => ({
+          ...range,
+          recordingId: recordingA.id,
+        })),
       },
     };
     const badPath = join(fixture.dir, "bad-unlinked-silence-diversity.json");
@@ -2998,17 +2660,17 @@ test("manual QA silence evidence is linked to real container and noise diversity
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /silenceSuggestions\.recordingIds must reference at least one listed MP4 recording/
+      /silenceSuggestions\.recordingIds must reference at least one listed MP4 recording/,
     );
     assert.match(
       result.stderr,
-      /silenceSuggestions\.recordingIds must reference recordings with at least two distinct noise profiles/
+      /silenceSuggestions\.recordingIds must reference recordings with at least two distinct noise profiles/,
     );
     assert.match(
       result.stderr,
       new RegExp(
-        `silenceSuggestions\\.suggestedQuietRanges must include an observed range for referenced recording ${recordingB.id}`
-      )
+        `silenceSuggestions\\.suggestedQuietRanges must include an observed range for referenced recording ${recordingB.id}`,
+      ),
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -3025,19 +2687,16 @@ test("manual QA silence ranges must belong to the declared recording set", () =>
       id: "real-tab-speaker-c",
       speakerProfile: "third QA narrator",
       noiseProfile: "quiet treated room",
-      notes:
-        "Recorded and opened this local tab recording for an additional transcript check.",
+      notes: "Recorded and opened this local tab recording for an additional transcript check.",
     };
     const bad = {
       ...fixture.manual,
       recordings: [recordingA, recordingB, recordingC],
       silenceSuggestions: {
         ...fixture.manual.silenceSuggestions,
-        suggestedQuietRanges:
-          fixture.manual.silenceSuggestions.suggestedQuietRanges.map(
-            (range, index) =>
-              index === 0 ? { ...range, recordingId: recordingC.id } : range
-          ),
+        suggestedQuietRanges: fixture.manual.silenceSuggestions.suggestedQuietRanges.map(
+          (range, index) => (index === 0 ? { ...range, recordingId: recordingC.id } : range),
+        ),
       },
     };
     const badPath = join(fixture.dir, "bad-silence-range-recording-set.json");
@@ -3048,13 +2707,13 @@ test("manual QA silence ranges must belong to the declared recording set", () =>
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /silenceSuggestions\.suggestedQuietRanges\[0\]\.recordingId must also appear in silenceSuggestions\.recordingIds/
+      /silenceSuggestions\.suggestedQuietRanges\[0\]\.recordingId must also appear in silenceSuggestions\.recordingIds/,
     );
     assert.match(
       result.stderr,
       new RegExp(
-        `silenceSuggestions\\.suggestedQuietRanges must include an observed range for referenced recording ${recordingA.id}`
-      )
+        `silenceSuggestions\\.suggestedQuietRanges must include an observed range for referenced recording ${recordingA.id}`,
+      ),
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -3068,16 +2727,15 @@ test("manual QA evidence verifier rejects weak zoom proof", () => {
       ...fixture.manual,
       zoom: {
         ...fixture.manual.zoom,
-        observations: fixture.manual.zoom.observations.map(
-          (observation, index) =>
-            index === 0
-              ? {
-                  ...observation,
-                  sourceHadClickMetadata: false,
-                  persistedAfterReopen: false,
-                  exportInspection: "",
-                }
-              : observation
+        observations: fixture.manual.zoom.observations.map((observation, index) =>
+          index === 0
+            ? {
+                ...observation,
+                sourceHadClickMetadata: false,
+                persistedAfterReopen: false,
+                exportInspection: "",
+              }
+            : observation,
         ),
       },
     };
@@ -3087,18 +2745,9 @@ test("manual QA evidence verifier rejects weak zoom proof", () => {
     const result = runVerifier(badPath);
 
     assert.notEqual(result.status, 0);
-    assert.match(
-      result.stderr,
-      /zoom\.observations\[0\]\.sourceHadClickMetadata must be true/
-    );
-    assert.match(
-      result.stderr,
-      /zoom\.observations\[0\]\.persistedAfterReopen must be true/
-    );
-    assert.match(
-      result.stderr,
-      /zoom\.observations\[0\]\.exportInspection must describe/
-    );
+    assert.match(result.stderr, /zoom\.observations\[0\]\.sourceHadClickMetadata must be true/);
+    assert.match(result.stderr, /zoom\.observations\[0\]\.persistedAfterReopen must be true/);
+    assert.match(result.stderr, /zoom\.observations\[0\]\.exportInspection must describe/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -3118,18 +2767,17 @@ test("manual QA zoom evidence requires eligible varied sources and one observati
               width: 1920,
               height: 1080,
             }
-          : recording
+          : recording,
       ),
       zoom: {
         ...fixture.manual.zoom,
-        observations: fixture.manual.zoom.observations.map(
-          (observation, index) =>
-            index === 1
-              ? {
-                  ...observation,
-                  recordingId: fixture.manual.zoom.recordingIds[0],
-                }
-              : observation
+        observations: fixture.manual.zoom.observations.map((observation, index) =>
+          index === 1
+            ? {
+                ...observation,
+                recordingId: fixture.manual.zoom.recordingIds[0],
+              }
+            : observation,
         ),
       },
     };
@@ -3141,21 +2789,19 @@ test("manual QA zoom evidence requires eligible varied sources and one observati
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /zoom\.recordingIds must reference tab, browser, or region recordings/
+      /zoom\.recordingIds must reference tab, browser, or region recordings/,
     );
     assert.match(
       result.stderr,
-      /zoom\.recordingIds must reference recordings with at least two distinct dimension pairs and aspect ratios/
+      /zoom\.recordingIds must reference recordings with at least two distinct dimension pairs and aspect ratios/,
     );
     assert.match(
       result.stderr,
-      /zoom\.observations\[1\]\.recordingId must be unique within zoom\.observations/
+      /zoom\.observations\[1\]\.recordingId must be unique within zoom\.observations/,
     );
     assert.match(
       result.stderr,
-      new RegExp(
-        `zoom\\.observations must include referenced recording ${zoomRecordingId}`
-      )
+      new RegExp(`zoom\\.observations must include referenced recording ${zoomRecordingId}`),
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -3169,25 +2815,24 @@ test("manual QA crop evidence requires edge bounds matching inspected output", (
       ...fixture.manual,
       crop: {
         ...fixture.manual.crop,
-        observations: fixture.manual.crop.observations.map(
-          (observation, index) =>
-            index === 0
-              ? {
-                  ...observation,
-                  crop: {
-                    xRatio: 0.1,
-                    yRatio: 0.1,
-                    widthRatio: 0.5,
-                    heightRatio: 0.5,
-                  },
-                  exportWidth: 1000,
-                  exportHeight: 720,
-                  nativePlaybackControlsVerified: false,
-                  edgeCropVerified: false,
-                  sourceBlobUnchanged: false,
-                  exportInspection: "",
-                }
-              : observation
+        observations: fixture.manual.crop.observations.map((observation, index) =>
+          index === 0
+            ? {
+                ...observation,
+                crop: {
+                  xRatio: 0.1,
+                  yRatio: 0.1,
+                  widthRatio: 0.5,
+                  heightRatio: 0.5,
+                },
+                exportWidth: 1000,
+                exportHeight: 720,
+                nativePlaybackControlsVerified: false,
+                edgeCropVerified: false,
+                sourceBlobUnchanged: false,
+                exportInspection: "",
+              }
+            : observation,
         ),
       },
     };
@@ -3199,28 +2844,19 @@ test("manual QA crop evidence requires edge bounds matching inspected output", (
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /crop\.observations\[0\]\.crop must exercise at least one source edge/
+      /crop\.observations\[0\]\.crop must exercise at least one source edge/,
     );
     assert.match(
       result.stderr,
-      /crop\.observations\[0\] exported dimensions must match the normalized crop aspect ratio within 3%/
+      /crop\.observations\[0\] exported dimensions must match the normalized crop aspect ratio within 3%/,
     );
     assert.match(
       result.stderr,
-      /crop\.observations\[0\]\.nativePlaybackControlsVerified must be true/
+      /crop\.observations\[0\]\.nativePlaybackControlsVerified must be true/,
     );
-    assert.match(
-      result.stderr,
-      /crop\.observations\[0\]\.edgeCropVerified must be true/
-    );
-    assert.match(
-      result.stderr,
-      /crop\.observations\[0\]\.sourceBlobUnchanged must be true/
-    );
-    assert.match(
-      result.stderr,
-      /crop\.observations\[0\]\.exportInspection must describe/
-    );
+    assert.match(result.stderr, /crop\.observations\[0\]\.edgeCropVerified must be true/);
+    assert.match(result.stderr, /crop\.observations\[0\]\.sourceBlobUnchanged must be true/);
+    assert.match(result.stderr, /crop\.observations\[0\]\.exportInspection must describe/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -3233,20 +2869,17 @@ test("manual QA crop evidence requires varied sources and one observation each",
     const bad = {
       ...fixture.manual,
       recordings: fixture.manual.recordings.map((recording) =>
-        recording.id === cropRecordingId
-          ? { ...recording, width: 1920, height: 1080 }
-          : recording
+        recording.id === cropRecordingId ? { ...recording, width: 1920, height: 1080 } : recording,
       ),
       crop: {
         ...fixture.manual.crop,
-        observations: fixture.manual.crop.observations.map(
-          (observation, index) =>
-            index === 1
-              ? {
-                  ...observation,
-                  recordingId: fixture.manual.crop.recordingIds[0],
-                }
-              : observation
+        observations: fixture.manual.crop.observations.map((observation, index) =>
+          index === 1
+            ? {
+                ...observation,
+                recordingId: fixture.manual.crop.recordingIds[0],
+              }
+            : observation,
         ),
       },
     };
@@ -3258,17 +2891,15 @@ test("manual QA crop evidence requires varied sources and one observation each",
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /crop\.recordingIds must reference recordings with at least two distinct dimension pairs and aspect ratios/
+      /crop\.recordingIds must reference recordings with at least two distinct dimension pairs and aspect ratios/,
     );
     assert.match(
       result.stderr,
-      /crop\.observations\[1\]\.recordingId must be unique within crop\.observations/
+      /crop\.observations\[1\]\.recordingId must be unique within crop\.observations/,
     );
     assert.match(
       result.stderr,
-      new RegExp(
-        `crop\\.observations must include referenced recording ${cropRecordingId}`
-      )
+      new RegExp(`crop\\.observations must include referenced recording ${cropRecordingId}`),
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -3296,7 +2927,7 @@ test("manual QA project audio requires valid real WAV M4A and MP3 inputs", () =>
                 audiblePreviewVerified: false,
                 notes: "",
               }
-            : input
+            : input,
         ),
       },
     };
@@ -3308,20 +2939,14 @@ test("manual QA project audio requires valid real WAV M4A and MP3 inputs", () =>
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /projectAudio\.inputs\[2\]\.format must be unique within projectAudio\.inputs/
+      /projectAudio\.inputs\[2\]\.format must be unique within projectAudio\.inputs/,
     );
     assert.match(
       result.stderr,
-      /projectAudio\.inputs\[2\]\.fileName must match its declared wav format/
+      /projectAudio\.inputs\[2\]\.fileName must match its declared wav format/,
     );
-    assert.match(
-      result.stderr,
-      /projectAudio\.inputs\[2\]\.byteSize must be at least 1/
-    );
-    assert.match(
-      result.stderr,
-      /projectAudio\.inputs\[2\]\.decodeVerified must be true/
-    );
+    assert.match(result.stderr, /projectAudio\.inputs\[2\]\.byteSize must be at least 1/);
+    assert.match(result.stderr, /projectAudio\.inputs\[2\]\.decodeVerified must be true/);
     assert.match(result.stderr, /projectAudio\.inputs must include mp3/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -3360,28 +2985,19 @@ test("manual QA project audio is tied to long sync cancellation and cleanup", ()
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /projectAudio\.recordingId must reference a listed recording that is both 180 seconds or longer and at least 25 MiB/
+      /projectAudio\.recordingId must reference a listed recording that is both 180 seconds or longer and at least 25 MiB/,
     );
     assert.match(
       result.stderr,
-      /projectAudio\.recordingId must match exports\.workflow\.cancelRetryRecordingId/
+      /projectAudio\.recordingId must match exports\.workflow\.cancelRetryRecordingId/,
     );
+    assert.match(result.stderr, /projectAudio\.playback\.longRecordingSyncVerified must be true/);
     assert.match(
       result.stderr,
-      /projectAudio\.playback\.longRecordingSyncVerified must be true/
+      /projectAudio\.playback\.gainPerceptionNotes must mention mix or replace behavior/,
     );
-    assert.match(
-      result.stderr,
-      /projectAudio\.playback\.gainPerceptionNotes must mention mix or replace behavior/
-    );
-    assert.match(
-      result.stderr,
-      /projectAudio\.persistence\.relinkHashMatched must be true/
-    );
-    assert.match(
-      result.stderr,
-      /projectAudio\.persistence\.notes must describe reopen/
-    );
+    assert.match(result.stderr, /projectAudio\.persistence\.relinkHashMatched must be true/);
+    assert.match(result.stderr, /projectAudio\.persistence\.notes must describe reopen/);
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
@@ -3414,33 +3030,21 @@ test("manual QA evidence verifier rejects weak local library recovery proof", ()
     const result = runVerifier(badPath);
 
     assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /localLibraryRecovery\.operations must include duplicate-reopen/);
     assert.match(
       result.stderr,
-      /localLibraryRecovery\.operations must include duplicate-reopen/
+      /localLibraryRecovery\.operations\[0\]\.recordingIds\[0\] must reference/,
     );
+    assert.match(result.stderr, /localLibraryRecovery\.operations\[0\]\.observation must describe/);
     assert.match(
       result.stderr,
-      /localLibraryRecovery\.operations\[0\]\.recordingIds\[0\] must reference/
+      /localLibraryRecovery\.operations\[1\]\.recordingIds must include at least 2/,
     );
+    assert.match(result.stderr, /localLibraryRecovery\.operations must include sidecar-import/);
+    assert.match(result.stderr, /localLibraryRecovery\.operations must include orphan-cleanup/);
     assert.match(
       result.stderr,
-      /localLibraryRecovery\.operations\[0\]\.observation must describe/
-    );
-    assert.match(
-      result.stderr,
-      /localLibraryRecovery\.operations\[1\]\.recordingIds must include at least 2/
-    );
-    assert.match(
-      result.stderr,
-      /localLibraryRecovery\.operations must include sidecar-import/
-    );
-    assert.match(
-      result.stderr,
-      /localLibraryRecovery\.operations must include orphan-cleanup/
-    );
-    assert.match(
-      result.stderr,
-      /localLibraryRecovery\.operations must include missing-media-repair/
+      /localLibraryRecovery\.operations must include missing-media-repair/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -3455,21 +3059,17 @@ test("manual QA evidence verifier requires unique bulk recovery recording refere
       ...fixture.manual,
       localLibraryRecovery: {
         ...fixture.manual.localLibraryRecovery,
-        operations: fixture.manual.localLibraryRecovery.operations.map(
-          (operation) =>
-            operation.type === "bulk-export-delete"
-              ? {
-                  ...operation,
-                  recordingIds: [duplicateRecordingId, duplicateRecordingId],
-                }
-              : operation
+        operations: fixture.manual.localLibraryRecovery.operations.map((operation) =>
+          operation.type === "bulk-export-delete"
+            ? {
+                ...operation,
+                recordingIds: [duplicateRecordingId, duplicateRecordingId],
+              }
+            : operation,
         ),
       },
     };
-    const badPath = join(
-      fixture.dir,
-      "bad-recovery-duplicate-recording-refs.json"
-    );
+    const badPath = join(fixture.dir, "bad-recovery-duplicate-recording-refs.json");
     writeFileSync(badPath, `${JSON.stringify(bad, null, 2)}\n`);
 
     const result = runVerifier(badPath);
@@ -3477,11 +3077,11 @@ test("manual QA evidence verifier requires unique bulk recovery recording refere
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /localLibraryRecovery\.operations\[2\]\.recordingIds\[1\] must be unique within this operation/
+      /localLibraryRecovery\.operations\[2\]\.recordingIds\[1\] must be unique within this operation/,
     );
     assert.match(
       result.stderr,
-      /localLibraryRecovery\.operations\[2\]\.recordingIds must reference at least 2 unique listed recording ids/
+      /localLibraryRecovery\.operations\[2\]\.recordingIds must reference at least 2 unique listed recording ids/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -3495,16 +3095,15 @@ test("manual QA evidence verifier rejects weak publication surface proof", () =>
       ...fixture.manual,
       publicationSurface: {
         ...fixture.manual.publicationSurface,
-        reviewedArtifacts:
-          fixture.manual.publicationSurface.reviewedArtifacts.map(
-            (artifact, index) => ({
-              ...artifact,
-              name: index === 2 ? "Reviewed artifact" : artifact.name,
-              notes: index === 0 ? "Reviewed the artifact." : artifact.notes,
-              searchedTerms: index === 0 ? ["cloud"] : artifact.searchedTerms,
-              residualRisk: index === 1 ? "Looks fine." : artifact.residualRisk,
-            })
-          ),
+        reviewedArtifacts: fixture.manual.publicationSurface.reviewedArtifacts.map(
+          (artifact, index) => ({
+            ...artifact,
+            name: index === 2 ? "Reviewed artifact" : artifact.name,
+            notes: index === 0 ? "Reviewed the artifact." : artifact.notes,
+            searchedTerms: index === 0 ? ["cloud"] : artifact.searchedTerms,
+            residualRisk: index === 1 ? "Looks fine." : artifact.residualRisk,
+          }),
+        ),
       },
     };
     const badPath = join(fixture.dir, "bad-publication-surface.json");
@@ -3515,23 +3114,23 @@ test("manual QA evidence verifier rejects weak publication surface proof", () =>
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /publicationSurface\.reviewedArtifacts\[0\]\.searchedTerms must include paid\/subscription, premium\/trial\/entitlement\/license\/upgrade, plan\/membership\/locked-feature, locked-behind\/pay-to-unlock\/upgrade-required gates, account-tier\/license-key\/activation\/contact-sales gates/
+      /publicationSurface\.reviewedArtifacts\[0\]\.searchedTerms must include paid\/subscription, premium\/trial\/entitlement\/license\/upgrade, plan\/membership\/locked-feature, locked-behind\/pay-to-unlock\/upgrade-required gates, account-tier\/license-key\/activation\/contact-sales gates/,
     );
     assert.match(
       result.stderr,
-      /publicationSurface\.reviewedArtifacts\[0\]\.notes must describe reviewing/
+      /publicationSurface\.reviewedArtifacts\[0\]\.notes must describe reviewing/,
     );
     assert.match(
       result.stderr,
-      /publicationSurface\.reviewedArtifacts\[1\]\.residualRisk must explicitly state no residual risk/
+      /publicationSurface\.reviewedArtifacts\[1\]\.residualRisk must explicitly state no residual risk/,
     );
     assert.match(
       result.stderr,
-      /publicationSurface\.reviewedArtifacts\[2\]\.name must identify the store-text artifact reviewed/
+      /publicationSurface\.reviewedArtifacts\[2\]\.name must identify the store-text artifact reviewed/,
     );
     assert.match(
       result.stderr,
-      /publicationSurface\.reviewedArtifacts\[2\]\.name must include docs\/STORE_LISTING\.md/
+      /publicationSurface\.reviewedArtifacts\[2\]\.name must include docs\/STORE_LISTING\.md/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -3570,27 +3169,27 @@ test("manual QA evidence verifier rejects weak checklist evidence", () => {
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /checks\.fresh_install_no_account_or_paid_gates\.evidence\[0\] must be an object/
+      /checks\.fresh_install_no_account_or_paid_gates\.evidence\[0\] must be an object/,
     );
     assert.match(
       result.stderr,
-      /checks\.offline_transcription_real_speakers\.evidence\[0\]\.recordingIds\[0\] must reference/
+      /checks\.offline_transcription_real_speakers\.evidence\[0\]\.recordingIds\[0\] must reference/,
     );
     assert.match(
       result.stderr,
-      /checks\.offline_transcription_real_speakers\.notes must describe observed/
+      /checks\.offline_transcription_real_speakers\.notes must describe observed/,
     );
     assert.match(
       result.stderr,
-      /checks\.offline_transcription_real_speakers\.evidence\[0\]\.artifact must identify a screenshot/
+      /checks\.offline_transcription_real_speakers\.evidence\[0\]\.artifact must identify a screenshot/,
     );
     assert.match(
       result.stderr,
-      /checks\.offline_transcription_real_speakers\.evidence\[0\]\.observation must describe observed/
+      /checks\.offline_transcription_real_speakers\.evidence\[0\]\.observation must describe observed/,
     );
     assert.match(
       result.stderr,
-      /checks\.offline_transcription_real_speakers\.evidence must reference at least 2 listed recording ids/
+      /checks\.offline_transcription_real_speakers\.evidence must reference at least 2 listed recording ids/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
@@ -3618,10 +3217,7 @@ test("manual QA evidence verifier requires unique checklist recording references
         },
       },
     };
-    const badPath = join(
-      fixture.dir,
-      "bad-checklist-duplicate-recording-refs.json"
-    );
+    const badPath = join(fixture.dir, "bad-checklist-duplicate-recording-refs.json");
     writeFileSync(badPath, `${JSON.stringify(bad, null, 2)}\n`);
 
     const result = runVerifier(badPath);
@@ -3629,7 +3225,7 @@ test("manual QA evidence verifier requires unique checklist recording references
     assert.notEqual(result.status, 0);
     assert.match(
       result.stderr,
-      /checks\.offline_transcription_real_speakers\.evidence must reference at least 2 unique listed recording ids/
+      /checks\.offline_transcription_real_speakers\.evidence must reference at least 2 unique listed recording ids/,
     );
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });

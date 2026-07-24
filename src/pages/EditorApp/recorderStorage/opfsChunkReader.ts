@@ -2,11 +2,7 @@
 // (MP4 ftyp box alone is 28 bytes).
 export const MIN_VALID_RECORDING_BYTES = 4096;
 
-import type {
-  ChunkReader,
-  ChunkReadResult,
-  RecordingBackendRef,
-} from "./chunkReaderInterface.ts";
+import type { ChunkReader, ChunkReadResult, RecordingBackendRef } from "./chunkReaderInterface.ts";
 
 interface ReaderChromeApi {
   runtime: {
@@ -37,14 +33,13 @@ const SLOW_FINALIZE_NOTIFY_MS = 600;
 
 const diagForward = (event: string, data: Record<string, unknown>): void => {
   try {
-    chromeApi().runtime
-      .sendMessage({ type: "diag-forward", event, data })
+    chromeApi()
+      .runtime.sendMessage({ type: "diag-forward", event, data })
       .catch(() => {});
   } catch {}
 };
 
-const wait = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export class OpfsChunkReader implements ChunkReader {
   private _fileName: string | null;
@@ -139,8 +134,7 @@ export class OpfsChunkReader implements ChunkReader {
         const elapsed = Date.now() - startedAt;
         // only time out once the size stops changing; a still-growing file
         // keeps waiting up to the ceiling.
-        const growthStalled =
-          sizeStableSince > 0 && Date.now() - sizeStableSince >= SIZE_STABLE_MS;
+        const growthStalled = sizeStableSince > 0 && Date.now() - sizeStableSince >= SIZE_STABLE_MS;
         if (
           elapsed > FINALIZE_HARD_TIMEOUT_MS &&
           (growthStalled || elapsed > FINALIZE_ABSOLUTE_TIMEOUT_MS)
@@ -174,8 +168,8 @@ export class OpfsChunkReader implements ChunkReader {
       }
       if (timedOut || writerDead) {
         try {
-          chromeApi().runtime
-            .sendMessage({
+          chromeApi()
+            .runtime.sendMessage({
               type: "diag-forward",
               event: writerDead
                 ? "sandbox-opfs-writer-dead-detected"
@@ -194,9 +188,7 @@ export class OpfsChunkReader implements ChunkReader {
     const file = await handle.getFile();
     if (file.size < MIN_VALID_RECORDING_BYTES) {
       const err = Object.assign(
-        new Error(
-          `opfs-file-too-small: ${file.size} bytes < ${MIN_VALID_RECORDING_BYTES}`,
-        ),
+        new Error(`opfs-file-too-small: ${file.size} bytes < ${MIN_VALID_RECORDING_BYTES}`),
         { code: "opfs-file-too-small" },
       );
       throw err;

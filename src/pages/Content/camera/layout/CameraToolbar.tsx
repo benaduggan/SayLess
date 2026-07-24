@@ -26,9 +26,7 @@ const CameraToolbar = () => {
         <CameraCloseIcon />
       </Toolbar.Button>
       {contentState.recording && contentState.surface === "monitor" && (
-        <TooltipWrap
-          content={chrome.i18n.getMessage("togglePictureinPictureModeTooltip")}
-        >
+        <TooltipWrap content={chrome.i18n.getMessage("togglePictureinPictureModeTooltip")}>
           <Toolbar.Button
             className="CameraToolbarButton CameraMore"
             onClick={() => {

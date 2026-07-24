@@ -42,24 +42,18 @@ export const getCameraStream = async (
   }
 
   if (!offScreenCanvasRef) {
-    console.warn(
-      "⚠️ offScreenCanvasRef is undefined. Creating a new reference.",
-    );
+    console.warn("⚠️ offScreenCanvasRef is undefined. Creating a new reference.");
     offScreenCanvasRef = { current: null };
   }
 
   if (!offScreenCanvasContextRef) {
-    console.warn(
-      "⚠️ offScreenCanvasContextRef is undefined. Creating a new reference.",
-    );
+    console.warn("⚠️ offScreenCanvasContextRef is undefined. Creating a new reference.");
     offScreenCanvasContextRef = { current: null };
   }
 
   try {
     const videoConstraints =
-      constraints.video && typeof constraints.video === "object"
-        ? constraints.video
-        : null;
+      constraints.video && typeof constraints.video === "object" ? constraints.video : null;
     const deviceIdConstraint = videoConstraints?.deviceId;
     const desiredVideoId =
       deviceIdConstraint &&
@@ -72,21 +66,19 @@ export const getCameraStream = async (
     let desiredVideoLabel = "";
 
     if (desiredVideoId) {
-      const { defaultVideoInputLabel, videoinput, videoInput } =
-        await chrome.storage.local.get([
-          "defaultVideoInputLabel",
-          "videoinput",
-          "videoInput",
-        ]);
+      const { defaultVideoInputLabel, videoinput, videoInput } = await chrome.storage.local.get([
+        "defaultVideoInputLabel",
+        "videoinput",
+        "videoInput",
+      ]);
       const storedDevices = Array.isArray(videoinput)
         ? videoinput
         : Array.isArray(videoInput)
-        ? videoInput
-        : [];
+          ? videoInput
+          : [];
       desiredVideoLabel =
         defaultVideoInputLabel ||
-        storedDevices.find((device) => device.deviceId === desiredVideoId)
-          ?.label ||
+        storedDevices.find((device) => device.deviceId === desiredVideoId)?.label ||
         "";
     }
 
@@ -279,18 +271,14 @@ export const getCameraStream = async (
     // 2. tab+camera with bubble failure mid-recording: stay silent;
     //    propagating a recording-error tears down the live recording.
     try {
-      const { recording, pendingRecording, recordingType } =
-        await chrome.storage.local.get([
-          "recording",
-          "pendingRecording",
-          "recordingType",
-        ]);
-      const errorName = err instanceof DOMException || err instanceof Error
-        ? err.name
-        : "";
+      const { recording, pendingRecording, recordingType } = await chrome.storage.local.get([
+        "recording",
+        "pendingRecording",
+        "recordingType",
+      ]);
+      const errorName = err instanceof DOMException || err instanceof Error ? err.name : "";
       const isPermissionDenial =
-        errorName === "NotAllowedError" ||
-        errorName === "PermissionDeniedError";
+        errorName === "NotAllowedError" || errorName === "PermissionDeniedError";
       // For camera-only recordings the webcam is the recording, so a
       // setup failure is fatal. For screen/tab/region it's just a PIP
       // bubble; its failure must not tear down the recording.
@@ -312,17 +300,11 @@ export const getCameraStream = async (
           },
         });
       } catch {}
-      if (
-        isCameraOnlyRecording &&
-        pendingRecording === true &&
-        recording !== true
-      ) {
+      if (isCameraOnlyRecording && pendingRecording === true && recording !== true) {
         // Camera-only setup failure: fatal. BG must clear pendingRecording.
         chrome.runtime.sendMessage({
           type: "recording-error",
-          error: isPermissionDenial
-            ? "camera-permission-denied"
-            : "camera-stream-error",
+          error: isPermissionDenial ? "camera-permission-denied" : "camera-stream-error",
           why: errorMessage(err),
         });
       } else if (recording === true || pendingRecording === true) {
@@ -330,9 +312,7 @@ export const getCameraStream = async (
         // Don't tear down the recording; surface a non-fatal toast.
         chrome.runtime.sendMessage({
           type: "camera-bubble-unavailable",
-          error: isPermissionDenial
-            ? "camera-permission-denied"
-            : "camera-stream-error",
+          error: isPermissionDenial ? "camera-permission-denied" : "camera-stream-error",
           why: errorMessage(err),
         });
       }
@@ -381,9 +361,7 @@ export const surfaceHandler = async (
 ): Promise<void> => {
   console.log("Picture in Picture request ready");
 
-  if (
-    !videoRef?.current?.requestPictureInPicture
-  ) {
+  if (!videoRef?.current?.requestPictureInPicture) {
     setPipMode(false);
     chrome.runtime.sendMessage({ type: "pip-ended" });
     return;
@@ -402,9 +380,7 @@ export const surfaceHandler = async (
 };
 
 let _cameraToggleReacquireTimer: ReturnType<typeof setTimeout> | null = null;
-export const cameraToggledToolbar = async (
-  request: CameraToggleRequest,
-): Promise<void> => {
+export const cameraToggledToolbar = async (request: CameraToggleRequest): Promise<void> => {
   if (request.active) {
     // Cancel any pending re-acquire so rapid toolbar toggles don't stack
     // up multiple getCameraStream calls fighting for the same device.

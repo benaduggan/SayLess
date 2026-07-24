@@ -1,10 +1,6 @@
 // IDB ChunkReader. Iterates chunksStore, sorts by (timestamp, index).
 import localforage from "localforage";
-import type {
-  ChunkReader,
-  ChunkReadResult,
-  RecordingBackendRef,
-} from "./chunkReaderInterface.ts";
+import type { ChunkReader, ChunkReadResult, RecordingBackendRef } from "./chunkReaderInterface.ts";
 
 interface StoredChunk {
   timestamp?: number;
@@ -50,9 +46,7 @@ export class IdbChunkReader implements ChunkReader {
       if (dt !== 0) return dt;
       return (a.index ?? 0) - (b.index ?? 0);
     });
-    const parts = items.map((c) =>
-      c.chunk instanceof Blob ? c.chunk : new Blob([c.chunk]),
-    );
+    const parts = items.map((c) => (c.chunk instanceof Blob ? c.chunk : new Blob([c.chunk])));
     const byteSize = parts.reduce((s, p) => s + (p?.size || 0), 0);
     const inferredType = parts[0]?.type || "video/mp4";
     const blob = parts.length

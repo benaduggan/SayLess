@@ -5,9 +5,11 @@
  */
 export const diagForward = (event: string, data?: unknown): void => {
   try {
-    const chromeApi = (globalThis as typeof globalThis & {
-      chrome: { runtime: { sendMessage: (message: unknown) => Promise<unknown> } };
-    }).chrome;
+    const chromeApi = (
+      globalThis as typeof globalThis & {
+        chrome: { runtime: { sendMessage: (message: unknown) => Promise<unknown> } };
+      }
+    ).chrome;
     chromeApi.runtime
       .sendMessage({ type: "diag-forward", event, data: data ?? null })
       .catch(() => {});

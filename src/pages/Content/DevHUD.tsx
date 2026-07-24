@@ -25,7 +25,7 @@ interface DevHudContentState {
 interface DevHudProps {
   contentStateRef: { current?: DevHudContentState | null };
   setContentState?: (
-    update: (previous: Record<string, unknown>) => Record<string, unknown>
+    update: (previous: Record<string, unknown>) => Record<string, unknown>,
   ) => void;
 }
 
@@ -34,10 +34,7 @@ interface DevHudAction {
   fn(): void;
 }
 
-const DevHUD: React.FC<DevHudProps> = ({
-  contentStateRef,
-  setContentState,
-}) => {
+const DevHUD: React.FC<DevHudProps> = ({ contentStateRef, setContentState }) => {
   const [collapsed, setCollapsed] = useState(true);
   const [portalEl, setPortalEl] = useState<HTMLDivElement | null>(null);
 
@@ -91,7 +88,7 @@ const DevHUD: React.FC<DevHudProps> = ({
               errorCode: "DEBUG_TEST",
               source: "stream-error",
             });
-          }
+          },
         );
       },
     },
@@ -133,7 +130,7 @@ const DevHUD: React.FC<DevHudProps> = ({
           chrome.i18n.getMessage("understoodButton"),
           null,
           () => {},
-          () => {}
+          () => {},
         );
       },
     },

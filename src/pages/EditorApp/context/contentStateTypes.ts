@@ -1,14 +1,8 @@
 import type { Dispatch, SetStateAction } from "react";
-import type {
-  CreateExportJobOptions,
-  ExportJob,
-  ExportJobStatus,
-} from "./exportJobState";
+import type { CreateExportJobOptions, ExportJob, ExportJobStatus } from "./exportJobState";
 import type { GifExportOptions } from "../../Editor/utils/toGIF";
 
-export type EditorHistorySnapshot = Partial<
-  Omit<EditorContentState, "history" | "redoHistory">
->;
+export type EditorHistorySnapshot = Partial<Omit<EditorContentState, "history" | "redoHistory">>;
 
 export interface EditorContentState {
   blob?: Blob | null;
@@ -90,7 +84,7 @@ export interface EditorContentState {
           burnInCaptions?: boolean;
           renderZoomKeyframes?: boolean;
           signal?: AbortSignal;
-        }
+        },
       ) => Promise<Blob | null>)
     | null;
   timelineExportDuration?: number | null;
@@ -122,13 +116,7 @@ export interface EditorContentState {
   cancelDownload: () => void;
   undo?: () => void;
   redo?: () => void;
-  openToast?:
-    | ((
-        title: string,
-        action?: (() => void) | null,
-        durationMs?: number
-      ) => void)
-    | null;
+  openToast?: ((title: string, action?: (() => void) | null, durationMs?: number) => void) | null;
   openModal?:
     | ((
         title: string,
@@ -142,7 +130,7 @@ export interface EditorContentState {
         learnMoreLink?: (() => void) | null,
         colorSafe?: boolean,
         sideButton?: string | false,
-        sideButtonAction?: (() => void) | null
+        sideButtonAction?: (() => void) | null,
       ) => void)
     | null;
   handleReencode?: (topLevel?: boolean) => Promise<true | undefined>;
@@ -151,5 +139,5 @@ export interface EditorContentState {
 
 export type EditorContentContextValue = [
   EditorContentState,
-  Dispatch<SetStateAction<EditorContentState>>
+  Dispatch<SetStateAction<EditorContentState>>,
 ];

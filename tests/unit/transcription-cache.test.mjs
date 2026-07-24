@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  buildTranscriptCacheKey,
-  hashTranscriptSource,
-} from "../../src/transcription/cache.ts";
+import { buildTranscriptCacheKey, hashTranscriptSource } from "../../src/transcription/cache.ts";
 
 test("transcript cache keys include provider model language and source", () => {
   const base = {

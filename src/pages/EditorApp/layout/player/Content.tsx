@@ -1,14 +1,12 @@
 import { useContext, Suspense, lazy } from "react";
-import styles from "../../styles/player/_Content.module.scss";
+import styles from "../../styles/player/_Content.module.css";
 
 // Components
 import VideoPlayer from "../../components/player/VideoPlayer";
 // Cropper drags in react-advanced-cropper (~218KB) and is only rendered
 // when the user opens the crop tool. Lazy-load so it doesn't eat the
 // editor's initial parse budget on every recording-stop.
-const CropperWrap = lazy(() =>
-  import("../../components/editor/CropperWrap"),
-);
+const CropperWrap = lazy(() => import("../../components/editor/CropperWrap"));
 import HelpButton from "../../components/player/HelpButton";
 
 // Context

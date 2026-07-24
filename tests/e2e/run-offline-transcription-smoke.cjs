@@ -75,17 +75,11 @@ const bundleHarness = (work) =>
           }
         }
         if (stats.hasErrors()) {
-          reject(
-            new Error(
-              info.errors
-                .map((error) => error.message || String(error))
-                .join("\n")
-            )
-          );
+          reject(new Error(info.errors.map((error) => error.message || String(error)).join("\n")));
           return;
         }
         resolve();
-      }
+      },
     );
   });
 
@@ -119,9 +113,7 @@ const createServer = (work) =>
 const copyOrtFiles = (work) => {
   const ortDir = path.join(work, "ort");
   fs.mkdirSync(ortDir);
-  for (const fileName of fs
-    .readdirSync(ORT_SRC)
-    .filter((name) => /^ort-wasm-/.test(name))) {
+  for (const fileName of fs.readdirSync(ORT_SRC).filter((name) => name.startsWith("ort-wasm-"))) {
     fs.copyFileSync(path.join(ORT_SRC, fileName), path.join(ortDir, fileName));
   }
 };
@@ -134,7 +126,7 @@ const copyOrtFiles = (work) => {
   copyOrtFiles(work);
   fs.writeFileSync(
     path.join(work, "harness.html"),
-    "<!doctype html><meta charset=utf-8><title>Offline transcription smoke</title><script type=module src=./bundle.js></script>"
+    "<!doctype html><meta charset=utf-8><title>Offline transcription smoke</title><script type=module src=./bundle.js></script>",
   );
 
   const server = createServer(work);
@@ -150,18 +142,15 @@ const copyOrtFiles = (work) => {
     headless: process.env.SAYLESS_E2E_HEADLESS !== "0",
   });
   const page = await browser.newPage();
-  page.on("console", (message) =>
-    console.log("  [page]", message.type(), message.text())
-  );
+  page.on("console", (message) => console.log("  [page]", message.type(), message.text()));
   page.on("pageerror", (error) => console.log("  [pageerror]", error.message));
 
   let result;
   try {
     await page.goto(`${origin}/harness.html`);
-    await page.waitForFunction(
-      "window.OFFLINE_TRANSCRIPTION_SMOKE_READY === true",
-      { timeout: 30000 }
-    );
+    await page.waitForFunction("window.OFFLINE_TRANSCRIPTION_SMOKE_READY === true", {
+      timeout: 30000,
+    });
     result = await page.evaluate(async (baseUrl) => {
       const makeSilentWav = (seconds = 1.2, sampleRate = 16000) => {
         const sampleCount = Math.round(seconds * sampleRate);
@@ -210,7 +199,7 @@ const copyOrtFiles = (work) => {
               device: "wasm",
             },
           },
-        }
+        },
       );
       return {
         durationMs: Math.round(performance.now() - startedAt),
@@ -233,9 +222,7 @@ const copyOrtFiles = (work) => {
     result.words >= 0 &&
     result.maxProgress >= 1 &&
     result.durationMs <= MAX_STARTUP_MS;
-  console.log(
-    ok ? "OFFLINE TRANSCRIPTION SMOKE PASS" : "OFFLINE TRANSCRIPTION SMOKE FAIL"
-  );
+  console.log(ok ? "OFFLINE TRANSCRIPTION SMOKE PASS" : "OFFLINE TRANSCRIPTION SMOKE FAIL");
   process.exit(ok ? 0 : 1);
 })().catch((error) => {
   console.error("RUNNER ERROR", error);

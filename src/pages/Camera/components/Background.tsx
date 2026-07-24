@@ -13,17 +13,10 @@ const Background = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasContextRef = useRef<CanvasRenderingContext2D | null>(null);
   const bottomCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const bottomCanvasContextRef =
-    useRef<CanvasRenderingContext2D | null>(null);
+  const bottomCanvasContextRef = useRef<CanvasRenderingContext2D | null>(null);
 
-  const {
-    videoRef,
-    backgroundEffects,
-    setBackgroundEffects,
-    segmenterRef,
-    blurRef,
-    effectRef,
-  } = useCameraContext();
+  const { videoRef, backgroundEffects, setBackgroundEffects, segmenterRef, blurRef, effectRef } =
+    useCameraContext();
 
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
@@ -60,16 +53,8 @@ const Background = () => {
   useEffect(() => {
     if (!effectRef.current || blurRef.current) return;
 
-    if (
-      bottomCanvasRef.current &&
-      bottomCanvasContextRef.current &&
-      canvasRef.current
-    ) {
-      renderEffectBackground(
-        effectRef.current,
-        bottomCanvasRef,
-        bottomCanvasContextRef,
-      );
+    if (bottomCanvasRef.current && bottomCanvasContextRef.current && canvasRef.current) {
+      renderEffectBackground(effectRef.current, bottomCanvasRef, bottomCanvasContextRef);
 
       resizeCanvases(
         effectRef.current.width,
@@ -109,7 +94,9 @@ const Background = () => {
         });
       } catch {}
       try {
-        try { segmenterRef.current?.close?.(); } catch {}
+        try {
+          segmenterRef.current?.close?.();
+        } catch {}
         const fresh = await loadSegmentationModel();
         if (fresh && running) {
           segmenterRef.current = fresh;
@@ -123,9 +110,7 @@ const Background = () => {
           } catch {}
         } else if (running) {
           // Recreate failed; disable effects so the camera feed isn't frozen.
-          console.warn(
-            "[SayLess] Segmenter recreate failed; disabling background effects",
-          );
+          console.warn("[SayLess] Segmenter recreate failed; disabling background effects");
           try {
             chrome.runtime.sendMessage({
               type: "diag-forward",
@@ -155,22 +140,10 @@ const Background = () => {
             if (blurRef.current) {
               renderBlurFromVideo(video, result, canvasRef);
             } else if (effectRef.current) {
-              renderEffectBackground(
-                effectRef.current,
-                bottomCanvasRef,
-                bottomCanvasContextRef,
-              );
-              renderPersonCutoutFromVideo(
-                video,
-                result,
-                canvasRef,
-                canvasContextRef,
-              );
+              renderEffectBackground(effectRef.current, bottomCanvasRef, bottomCanvasContextRef);
+              renderPersonCutoutFromVideo(video, result, canvasRef, canvasContextRef);
             }
-          } else if (
-            Date.now() - lastSuccessAt > STALE_MASK_THRESHOLD_MS &&
-            !recreatingSegmenter
-          ) {
+          } else if (Date.now() - lastSuccessAt > STALE_MASK_THRESHOLD_MS && !recreatingSegmenter) {
             // Video frames flowing but segmenter silent: GPU context loss.
             recreateSegmenter();
           }
@@ -185,9 +158,7 @@ const Background = () => {
               type: "diag-forward",
               event: "recorder-segmenter-disabled-after-errors",
               data: {
-                error: String(
-                  error instanceof Error ? error.message : error,
-                ).slice(0, 200),
+                error: String(error instanceof Error ? error.message : error).slice(0, 200),
               },
             });
           } catch {}

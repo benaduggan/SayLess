@@ -45,6 +45,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint with Oxlint
+        run: npm run lint
+
+      - name: Check formatting with Oxfmt
+        run: npm run format:check
+
       - name: Typecheck with TypeScript 7
         run: npm run typecheck
 

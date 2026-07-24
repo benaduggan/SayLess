@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import type { ChangeEvent } from "react";
-import styles from "../../styles/player/_RightPanel.module.scss";
+import styles from "../../styles/player/_RightPanel.module.css";
 
 import { ReactSVG } from "react-svg";
 
@@ -94,9 +94,7 @@ const CropUI = () => {
           <ReactSVG src={URL + "editor/icons/alert.svg"} />
         </div>
         <div className={styles.buttonMiddle}>
-          <div className={styles.buttonTitle}>
-            {chrome.i18n.getMessage("croppingInfoTitle")}
-          </div>
+          <div className={styles.buttonTitle}>{chrome.i18n.getMessage("croppingInfoTitle")}</div>
           <div className={styles.buttonDescription}>
             {chrome.i18n.getMessage("videoProcessingLabelDescription")}
           </div>
@@ -111,14 +109,10 @@ const CropUI = () => {
         </div>
       </div>
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>
-          {chrome.i18n.getMessage("sandboxCropTitle")}
-        </div>
+        <div className={styles.sectionTitle}>{chrome.i18n.getMessage("sandboxCropTitle")}</div>
         <div className={styles.inputs}>
           <div className={styles.input}>
-            <div className={styles.inputTitle}>
-              {chrome.i18n.getMessage("widthLabel")}
-            </div>
+            <div className={styles.inputTitle}>{chrome.i18n.getMessage("widthLabel")}</div>
             <input
               data-testid="project-crop-width"
               type="text"
@@ -137,9 +131,7 @@ const CropUI = () => {
             <span>px</span>
           </div>
           <div className={styles.input}>
-            <div className={styles.inputTitle}>
-              {chrome.i18n.getMessage("heightLabel")}
-            </div>
+            <div className={styles.inputTitle}>{chrome.i18n.getMessage("heightLabel")}</div>
             <input
               data-testid="project-crop-height"
               type="text"
@@ -160,9 +152,7 @@ const CropUI = () => {
         </div>
         <div className={styles.inputs}>
           <div className={styles.input}>
-            <div className={styles.inputTitle}>
-              {chrome.i18n.getMessage("leftLabel")}
-            </div>
+            <div className={styles.inputTitle}>{chrome.i18n.getMessage("leftLabel")}</div>
             <input
               data-testid="project-crop-left"
               type="text"
@@ -181,9 +171,7 @@ const CropUI = () => {
             <span>px</span>
           </div>
           <div className={styles.input}>
-            <div className={styles.inputTitle}>
-              {chrome.i18n.getMessage("topLabel")}
-            </div>
+            <div className={styles.inputTitle}>{chrome.i18n.getMessage("topLabel")}</div>
             <input
               data-testid="project-crop-top"
               type="text"

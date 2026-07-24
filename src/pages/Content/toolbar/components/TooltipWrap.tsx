@@ -23,9 +23,7 @@ const TooltipWrap = (props: TooltipWrapProps) => {
   const [open, setOpen] = useState(false);
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const content =
-    props.shortcut && props.content
-      ? `${props.content} (${props.shortcut})`
-      : props.content;
+    props.shortcut && props.content ? `${props.content} (${props.shortcut})` : props.content;
 
   useEffect(() => {
     if (contentState.hideUI) {
@@ -72,22 +70,12 @@ const TooltipWrap = (props: TooltipWrapProps) => {
             >
               {props.children}
             </Tooltip.Trigger>
-            <Tooltip.Portal
-              container={
-                document.getElementsByClassName("screenity-shadow-dom")[0]
-              }
-            >
+            <Tooltip.Portal container={document.getElementsByClassName("screenity-shadow-dom")[0]}>
               <Tooltip.Content
                 onPointerEnter={cancelOpenTimer}
                 onPointerLeave={() => setOpen(false)}
                 className={
-                  "TooltipContent" +
-                  " " +
-                  props.override +
-                  " " +
-                  props.hide +
-                  " " +
-                  override
+                  "TooltipContent" + " " + props.override + " " + props.hide + " " + override
                 }
               >
                 {content}
