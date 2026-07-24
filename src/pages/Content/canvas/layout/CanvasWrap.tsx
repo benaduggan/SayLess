@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useContext } from "react";
 import { fabric } from "../fabricCompat";
 
 import { contentStateContext } from "../../context/ContentState";
+import { shouldEnableAnnotationPointerEvents } from "../../captureUi";
 
 import CustomControls from "../modules/CustomControls";
 
@@ -281,8 +282,7 @@ const CanvasWrap = (_props: Record<string, never>) => {
   return (
     <div
       style={
-        !contentState.drawingMode ||
-        (contentState.hideToolbar && contentState.hideUI)
+        !shouldEnableAnnotationPointerEvents(contentState)
           ? { all: "unset", pointerEvents: "none" }
           : { all: "unset", pointerEvents: "all" }
       }

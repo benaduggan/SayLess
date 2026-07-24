@@ -10,6 +10,7 @@ import * as ToastEl from "@radix-ui/react-toast";
 
 // Context
 import { contentStateContext } from "../../context/ContentState";
+import { shouldShowRecorderToast } from "../../captureUi";
 
 const Toast = () => {
   const [contentState, setContentState] = useContext(contentStateContext);
@@ -25,13 +26,19 @@ const Toast = () => {
     contentStateRef.current = contentState;
   }, [contentState]);
 
+  useEffect(() => {
+    if (!shouldShowRecorderToast(contentState)) {
+      setOpen(false);
+    }
+  }, [contentState.hideUI, contentState.hideUIAlerts]);
+
   const openToast = useCallback(
     (
       title: string,
       actionOrDuration?: (() => void) | number,
       durationMs = 2000
     ) => {
-      if (contentStateRef.current.hideUI) return;
+      if (!shouldShowRecorderToast(contentStateRef.current)) return;
       const action =
         typeof actionOrDuration === "function" ? actionOrDuration : () => {};
       const resolvedDuration =

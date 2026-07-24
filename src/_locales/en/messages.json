@@ -144,8 +144,8 @@
     "description": "Tab/system audio label"
   },
   "hideToolbarLabel": {
-    "message": "Hide toolbar",
-    "description": "Hide toolbar label"
+    "message": "Hide toolbar (keep drawings)",
+    "description": "Capture-clean toolbar mode label; annotations and shortcuts remain active"
   },
   "countdownLabel": {
     "message": "Countdown",

@@ -2,6 +2,7 @@ import React, { useContext, useRef, useEffect, useState } from "react";
 
 import PopupContainer from "./popup/PopupContainer";
 import Toolbar from "./toolbar/Toolbar";
+import { isRecorderToolbarHidden } from "./captureUi";
 import Camera from "./camera/Camera";
 import CameraOnly from "./camera-only/CameraOnly";
 // Static import (fabric is ~313KB). React.lazy can't dynamic-import in
@@ -508,7 +509,7 @@ const Wrapper = () => {
               {contentState.recordingType === "camera" && (
                 <CameraOnly shadowRef={shadowRef} />
               )}
-              {!(contentState.hideToolbar && contentState.hideUI) &&
+              {!isRecorderToolbarHidden(contentState) &&
                 !contentState.onboarding && <Toolbar />}
               {contentState.showPopup && (
                 <PopupContainer shadowRef={shadowRef} />

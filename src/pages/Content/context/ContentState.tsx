@@ -1926,16 +1926,6 @@ const ContentState = (props: React.PropsWithChildren) => {
   }, [contentState.customRegion]);
 
   useEffect(() => {
-    if (contentState.hideToolbar && contentState.hideUI) {
-      setContentState((prevContentState) => ({
-        ...prevContentState,
-        drawingMode: false,
-        blurMode: false,
-      }));
-    }
-  }, [contentState.hideToolbar, contentState.hideUI]);
-
-  useEffect(() => {
     if (window.__screenitySetupHandlersInitialized) return;
     window.__screenitySetupHandlersInitialized = true;
     setupHandlers();

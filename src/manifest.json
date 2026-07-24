@@ -94,6 +94,9 @@
       "description": "Toggle blur mode"
     },
     "toggle-hide-ui": {
+      "suggested_key": {
+        "default": "Alt+Shift+H"
+      },
       "description": "Toggle hide UI"
     },
     "toggle-cursor-mode": {

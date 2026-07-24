@@ -15,6 +15,9 @@ import {
 } from "mediabunny";
 import { videoConverter } from "./videoConverter";
 
+const AAC_SAMPLE_RATE = 48000;
+const AAC_CHANNELS = 2;
+
 export class VideoAudioMixer {
   async addAudio(
     videoBlob,
@@ -123,8 +126,6 @@ export class VideoAudioMixer {
 
       if (hasVideoAudio && mode === "mix") {
         const audioSink = new AudioSampleSink(videoAudioTrack);
-        let lastSr = bgSr;
-        let lastNumCh = 1;
         let lastEnd = 0;
         for await (const sample of audioSink.samples()) {
           let out = null;
@@ -134,33 +135,47 @@ export class VideoAudioMixer {
             const sr = sample.sampleRate;
             const N = sample.numberOfFrames;
             const ts = sample.timestamp;
-            lastSr = sr;
-            lastNumCh = numCh;
-
-            const mixed = new Float32Array(N * numCh);
+            const source = new Float32Array(N * numCh);
             for (let ch = 0; ch < numCh; ch++) {
-              const plane = mixed.subarray(ch * N, (ch + 1) * N);
+              const plane = source.subarray(ch * N, (ch + 1) * N);
               sample.copyTo(plane, { format: "f32-planar", planeIndex: ch });
             }
-            for (let ch = 0; ch < numCh; ch++) {
-              const offset = ch * N;
-              for (let f = 0; f < N; f++) {
-                const t = ts + f / sr;
-                mixed[offset + f] =
-                  mixed[offset + f] * videoVolume + bgSampleAt(t) * audioVolume;
+
+            const sourceDuration = sample.duration || N / sr;
+            const outputFrames = Math.max(
+              1,
+              Math.round(sourceDuration * AAC_SAMPLE_RATE)
+            );
+            const mixed = new Float32Array(outputFrames * AAC_CHANNELS);
+            for (let ch = 0; ch < AAC_CHANNELS; ch++) {
+              const sourceChannel = Math.min(ch, numCh - 1);
+              const sourceOffset = sourceChannel * N;
+              const outputOffset = ch * outputFrames;
+              for (let f = 0; f < outputFrames; f++) {
+                const sourcePosition = (f * sr) / AAC_SAMPLE_RATE;
+                const i0 = Math.min(N - 1, Math.floor(sourcePosition));
+                const i1 = Math.min(N - 1, i0 + 1);
+                const fraction = sourcePosition - i0;
+                const sourceValue =
+                  source[sourceOffset + i0] +
+                  (source[sourceOffset + i1] - source[sourceOffset + i0]) *
+                    fraction;
+                const t = ts + f / AAC_SAMPLE_RATE;
+                mixed[outputOffset + f] =
+                  sourceValue * videoVolume + bgSampleAt(t) * audioVolume;
               }
             }
 
             out = new AudioSample({
               data: mixed,
               format: "f32-planar",
-              numberOfChannels: numCh,
-              sampleRate: sr,
+              numberOfChannels: AAC_CHANNELS,
+              sampleRate: AAC_SAMPLE_RATE,
               timestamp: ts,
-              duration: N / sr,
+              duration: outputFrames / AAC_SAMPLE_RATE,
             });
             await audioSource.add(out);
-            lastEnd = ts + N / sr;
+            lastEnd = ts + outputFrames / AAC_SAMPLE_RATE;
             if (onProgress && videoDuration > 0)
               onProgress(0.8 + Math.min(1, ts / videoDuration) * 0.2);
             throwIfAborted(signal);
@@ -172,8 +187,8 @@ export class VideoAudioMixer {
 
         // Source audio shorter than video: fill remainder with BG only.
         if (lastEnd < videoDuration - 0.01) {
-          const sr = lastSr;
-          const numCh = lastNumCh;
+          const sr = AAC_SAMPLE_RATE;
+          const numCh = AAC_CHANNELS;
           const totalFrames = Math.floor((videoDuration - lastEnd) * sr);
           const chunkFrames = sr * 2;
           let frame = 0;
@@ -205,22 +220,25 @@ export class VideoAudioMixer {
           }
         }
       } else {
-        const sr = bgSr;
+        const sr = AAC_SAMPLE_RATE;
         const totalFrames = Math.floor(videoDuration * sr);
         const chunkFrames = sr * 2;
         let frame = 0;
         while (frame < totalFrames) {
           throwIfAborted(signal);
           const n = Math.min(chunkFrames, totalFrames - frame);
-          const chunk = new Float32Array(n);
-          for (let f = 0; f < n; f++) {
-            const t = (frame + f) / sr;
-            chunk[f] = bgSampleAt(t) * audioVolume;
+          const chunk = new Float32Array(n * AAC_CHANNELS);
+          for (let ch = 0; ch < AAC_CHANNELS; ch++) {
+            const offset = ch * n;
+            for (let f = 0; f < n; f++) {
+              const t = (frame + f) / sr;
+              chunk[offset + f] = bgSampleAt(t) * audioVolume;
+            }
           }
           const out = new AudioSample({
             data: chunk,
             format: "f32-planar",
-            numberOfChannels: 1,
+            numberOfChannels: AAC_CHANNELS,
             sampleRate: sr,
             timestamp: frame / sr,
             duration: n / sr,
