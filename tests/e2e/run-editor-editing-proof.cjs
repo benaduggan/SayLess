@@ -319,6 +319,8 @@ const seedRecording = async (page) => {
   fs.rmSync(OUT_DIR, { recursive: true, force: true });
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
+  const forceTimelineAacUnsupported =
+    process.env.SAYLESS_TEST_FORCE_AAC_UNSUPPORTED === "1";
   const { context, userDataDir } = await launchExtension();
   const consoleErrors = [];
   let activePage = null;
@@ -759,6 +761,90 @@ const seedRecording = async (page) => {
     );
     await screenshot(page, "11-project-audio-persisted-after-reopen.png");
 
+    const timelineAacSupported = await page.evaluate(
+      async (forceAacUnsupported) => {
+        if (forceAacUnsupported) return false;
+        if (
+          typeof AudioEncoder === "undefined" ||
+          typeof AudioEncoder.isConfigSupported !== "function" ||
+          typeof AudioData === "undefined"
+        ) {
+          return false;
+        }
+        const config = {
+          codec: "mp4a.40.2",
+          bitrate: 192000,
+          numberOfChannels: 2,
+          sampleRate: 48000,
+        };
+        let encoder = null;
+        try {
+          const support = await AudioEncoder.isConfigSupported(config);
+          if (support.supported !== true) return false;
+
+          let encodedChunks = 0;
+          let encodeError = null;
+          encoder = new AudioEncoder({
+            output: () => {
+              encodedChunks += 1;
+            },
+            error: (error) => {
+              encodeError = error;
+            },
+          });
+          encoder.configure(config);
+          const sample = new AudioData({
+            format: "f32-planar",
+            sampleRate: config.sampleRate,
+            numberOfFrames: 1024,
+            numberOfChannels: config.numberOfChannels,
+            timestamp: 0,
+            data: new Float32Array(1024 * config.numberOfChannels),
+          });
+          encoder.encode(sample);
+          sample.close();
+          await encoder.flush();
+          return encodeError === null && encodedChunks > 0;
+        } catch {
+          return false;
+        } finally {
+          if (encoder && encoder.state !== "closed") encoder.close();
+        }
+      },
+      forceTimelineAacUnsupported
+    );
+    let projectAudioRemovedBeforeApply = false;
+    if (!timelineAacSupported) {
+      await page.getByTestId("player-audio-action").click();
+      await visibleBox(
+        page.getByTestId("project-audio-remove"),
+        "project audio remove action"
+      );
+      await page.getByTestId("project-audio-remove").click();
+      await page.getByTestId("project-audio-save").click();
+      await visibleBox(
+        page.getByTestId("player-audio-action"),
+        "player audio action after unsupported AAC removal"
+      );
+      await page.waitForFunction(
+        (recordingId) =>
+          chrome.storage.local
+            .get(["localRecordingLibraryIndex"])
+            .then(
+              ({ localRecordingLibraryIndex }) =>
+                localRecordingLibraryIndex?.[recordingId]?.project
+                  ?.audioTrack == null
+            ),
+        seed.recordingId,
+        { timeout: 10000 }
+      );
+      projectAudioRemovedBeforeApply = true;
+      await screenshot(
+        page,
+        "11a-project-audio-removed-before-unsupported-aac-bake.png"
+      );
+    }
+
     const playerSummary = await page.evaluate(() => ({
       bodyText: document.body.innerText,
       hasEditAction: Boolean(
@@ -1078,6 +1164,8 @@ const seedRecording = async (page) => {
           editorSummary,
           cropSummary,
           projectAudioSummary,
+          timelineAacSupported,
+          projectAudioRemovedBeforeApply,
           playerSummary,
           appliedSummary,
           cancelledSaveSummary,

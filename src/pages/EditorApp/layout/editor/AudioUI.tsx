@@ -88,9 +88,12 @@ const AudioUI = () => {
             <ReactSVG src={URL + "editor/icons/alert.svg"} />
           </div>
           <div className={styles.buttonMiddle}>
-            <div className={styles.buttonTitle}>Project audio needs relinking</div>
+            <div className={styles.buttonTitle}>
+              Project audio needs relinking
+            </div>
             <div className={styles.buttonDescription}>
-              Choose the original audio file again. Its portable project reference was preserved.
+              Choose the original audio file again. Its portable project
+              reference was preserved.
             </div>
           </div>
         </div>
@@ -109,30 +112,36 @@ const AudioUI = () => {
           (!edlCtx?.audioTrack ||
             contentState.removeProjectAudio ||
             edlCtx.audioAssetStatus === "missing") && (
-          <div
-            className={styles.uploadArea}
-            onClick={() => inputRef.current?.click()}
-          >
-            <ReactSVG src={URL + "editor/icons/upload.svg"} />
-            <div className={styles.uploadDetails}>
-              <div className={styles.uploadText}>
-                {chrome.i18n.getMessage("sandboxAudioDragAndDrop")}
-              </div>
-              <div className={styles.uploadDescription}>
-                {chrome.i18n.getMessage("sandboxAudioOrBrowse")}
+            <div
+              className={styles.uploadArea}
+              onClick={() => inputRef.current?.click()}
+            >
+              <ReactSVG src={URL + "editor/icons/upload.svg"} />
+              <div className={styles.uploadDetails}>
+                <div className={styles.uploadText}>
+                  {chrome.i18n.getMessage("sandboxAudioDragAndDrop")}
+                </div>
+                <div className={styles.uploadDescription}>
+                  {chrome.i18n.getMessage("sandboxAudioOrBrowse")}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
         {(audio || edlCtx?.audioTrack) && !contentState.removeProjectAudio && (
-          <div className={styles.audioDetails} data-testid="project-audio-details">
+          <div
+            className={styles.audioDetails}
+            data-testid="project-audio-details"
+          >
             <div className={styles.audioDetailsLeft}>
               <ReactSVG src={URL + "editor/icons/attachment.svg"} />
             </div>
             <div className={styles.audioDetailsMiddle}>
               <span>{audio?.name || edlCtx?.audioTrack?.fileName}</span>
             </div>
-            <div className={styles.audioDetailsRight}>
+            <div
+              className={styles.audioDetailsRight}
+              data-testid="project-audio-remove"
+            >
               <ReactSVG
                 src={URL + "editor/icons/cross.svg"}
                 onClick={() => {
