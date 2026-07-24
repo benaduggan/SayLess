@@ -1193,6 +1193,37 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
         duration: nextDuration,
       });
       const recordingId = contentState.localRecordingId;
+      setContentState((prev) => ({
+        ...prev,
+        blob: out,
+        duration: nextDuration,
+        width: nextWidth,
+        height: nextHeight,
+        start: 0,
+        end: 1,
+        hasBeenEdited: true,
+        mp4ready: true,
+      }));
+      setEditSource(out);
+      setTimeline(nextTimeline);
+      setTimelinePast([]);
+      setTimelineFuture([]);
+      setTranscript(null); // stale against the new (re-timed) source
+      setZoomKeyframes([]);
+      setCrop(null);
+      if (contentState.localRecordingId && audioTrack) {
+        await deleteLocalRecordingAudioAsset(
+          contentState.localRecordingId,
+          audioTrack,
+        ).catch(() => false);
+      }
+      setAudioTrack(null);
+      setAudioAsset(null);
+      setAudioAssetStatus("idle");
+      lastTranscriptCacheKeyRef.current = null;
+      setTranscriptCacheStatus("idle");
+      setSelectedClipId(null);
+      setExportSettings(nextExportSettings);
       if (recordingId) {
         const revision = ++projectSaveRevisionRef.current;
         if (projectSaveTimerRef.current) {
@@ -1227,37 +1258,6 @@ export const EdlProvider = ({ children }: PropsWithChildren) => {
         projectSaveQueueRef.current = applyCheckpoint;
         await applyCheckpoint;
       }
-      setContentState((prev) => ({
-        ...prev,
-        blob: out,
-        duration: nextDuration,
-        width: nextWidth,
-        height: nextHeight,
-        start: 0,
-        end: 1,
-        hasBeenEdited: true,
-        mp4ready: true,
-      }));
-      setEditSource(out);
-      setTimeline(nextTimeline);
-      setTimelinePast([]);
-      setTimelineFuture([]);
-      setTranscript(null); // stale against the new (re-timed) source
-      setZoomKeyframes([]);
-      setCrop(null);
-      if (contentState.localRecordingId && audioTrack) {
-        await deleteLocalRecordingAudioAsset(
-          contentState.localRecordingId,
-          audioTrack,
-        ).catch(() => false);
-      }
-      setAudioTrack(null);
-      setAudioAsset(null);
-      setAudioAssetStatus("idle");
-      lastTranscriptCacheKeyRef.current = null;
-      setTranscriptCacheStatus("idle");
-      setSelectedClipId(null);
-      setExportSettings(nextExportSettings);
     } catch (e) {
       setError(errorMessage(e));
       throw e;
